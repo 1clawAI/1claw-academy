@@ -1,0 +1,436 @@
+[
+  {
+    "id": "key-hierarchy-and-hsm",
+    "title": "Key hierarchy and the HSM",
+    "summary": "See how envelope encryption keeps a stored secret useless without KMS access.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "1Claw encrypts every secret with envelope encryption. A random 256-bit DEK encrypts the value with AES-256-GCM, then a per-vault KEK that never leaves the HSM wraps the DEK. In production the HSM is Google Cloud KMS at FIPS 140-2 Level 3 protection."
+      },
+      {
+        "type": "points",
+        "items": [
+          "JWT signing key: one Ed25519 key per deployment, in the same KMS key ring",
+          "KEK: one symmetric key per vault, wraps and unwraps DEKs",
+          "DEK: fresh 256-bit key per secret version, never persisted in the clear",
+          "KEKs rotate on a 365-day period; KMS keeps old versions for decrypt"
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Every KMS encrypt, decrypt, and sign includes a CRC32C checksum. If the checksum mismatches in transit, the operation fails immediately instead of returning corrupt data."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Mint an agent JWT (or use a user key) with write access to a vault.",
+            "code": "export TOKEN=<agent-or-user-jwt>",
+            "lang": "bash"
+          },
+          {
+            "text": "Store a secret. On the wire this is plaintext; at rest 1Claw generates a DEK, encrypts the value, and wraps the DEK with the vault KEK.",
+            "code": "curl -s -X PUT https://api.1claw.xyz/v1/vaults/<vault-uuid>/secrets/api-keys/demo \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"type\":\"api_key\",\"value\":\"sk_live_demo_123\"}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Read the metadata back. Reason about the row: the database holds only ciphertext, the wrapped DEK, IV, and tag. Without a KMS unwrap none of it decrypts.",
+            "code": "curl -s https://api.1claw.xyz/v1/vaults/<vault-uuid>/secrets/api-keys/demo \\\n  -H \"Authorization: Bearer $TOKEN\"",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "You stored a secret and can now explain why a stolen database is worthless: the plaintext DEK exists only in memory during the operation, and the KEK never leaves the HSM."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What wraps the DEK before it is stored?",
+        "options": [
+          "Another DEK",
+          "The per-vault KEK inside the HSM",
+          "The agent's ocv_ key",
+          "The JWT signing key"
+        ],
+        "correctIndex": 1,
+        "explanation": "Each vault has one KEK in KMS that wraps and unwraps that vault's DEKs."
+      },
+      {
+        "question": "What FIPS level is the production HSM?",
+        "options": [
+          "140-2 Level 1",
+          "140-2 Level 2",
+          "140-2 Level 3",
+          "140-3 Level 4"
+        ],
+        "correctIndex": 2,
+        "explanation": "Production KMS keys use HSM protection at FIPS 140-2 Level 3."
+      },
+      {
+        "question": "How often do KEKs rotate automatically?",
+        "options": [
+          "Every 30 days",
+          "Every 90 days",
+          "Every 365 days",
+          "Never"
+        ],
+        "correctIndex": 2,
+        "explanation": "KEKs rotate on a 365-day period, the NIST SP 800-57 maximum for symmetric KEKs."
+      }
+    ]
+  },
+  {
+    "id": "customer-managed-keys-cmek",
+    "title": "Customer-managed keys (CMEK)",
+    "summary": "Add a client-side AES-256-GCM layer so 1Claw stores only your key's fingerprint.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "CMEK double-encrypts secrets. You encrypt the value with your own AES-256-GCM key in the browser or your process, then 1Claw applies its HSM envelope encryption on top. Your key never touches the server; only its SHA-256 fingerprint is stored so the vault knows which key was used. CMEK is available on Business and Enterprise plans."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "The client-side wire format is one version byte (0x01), a 12-byte IV, the ciphertext, then a 16-byte GCM auth tag. A full server compromise yields only doubly-encrypted blobs."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Install the SDK and have a user token plus a vault UUID ready.",
+            "code": "npm install @1claw/sdk",
+            "lang": "bash"
+          },
+          {
+            "text": "Generate a 256-bit key and its fingerprint. Store the key safely because you need it for every read and write.",
+            "code": "import { generateCmekKey, cmekFingerprint, toBase64 } from \"@1claw/sdk\";\nconst key = await generateCmekKey();\nconst fingerprint = await cmekFingerprint(key);\nconsole.log(\"key:\", toBase64(key), \"fingerprint:\", fingerprint);",
+            "lang": "typescript"
+          },
+          {
+            "text": "Enable CMEK on the vault by sending only the fingerprint.",
+            "code": "curl -s -X POST https://api.1claw.xyz/v1/vaults/<vault-uuid>/cmek \\\n  -H \"Authorization: Bearer $ONECLAW_USER_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"fingerprint\":\"<sha256-fingerprint>\"}'",
+            "lang": "bash"
+          },
+          {
+            "text": "From now on encrypt before writing and decrypt after reading. The cmek_encrypted flag on a GET response tells you the value needs client-side decryption.",
+            "code": "import { cmekEncrypt, toBase64 } from \"@1claw/sdk\";\nconst blob = await cmekEncrypt(new TextEncoder().encode(\"my-secret\"), key);\nawait client.secrets.put(vaultId, \"api-keys/stripe\", { type: \"api_key\", value: toBase64(blob) });",
+            "lang": "typescript"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "To rotate, send the old and new keys to POST /v1/vaults/:id/cmek-rotate. The server re-encrypts in batches of 100, atomically per batch, and holds both keys in memory only for the duration of the job."
+      },
+      {
+        "type": "prose",
+        "text": "The vault now requires your key for every value, and 1Claw cannot decrypt your secrets unilaterally."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What does 1Claw store about your CMEK key?",
+        "options": [
+          "The full key",
+          "Only its SHA-256 fingerprint",
+          "An encrypted copy in the HSM",
+          "Nothing at all"
+        ],
+        "correctIndex": 1,
+        "explanation": "Only the SHA-256 fingerprint is stored so the vault can track which key was used."
+      },
+      {
+        "question": "What algorithm does the client-side CMEK layer use?",
+        "options": [
+          "RSA-2048",
+          "AES-256-GCM",
+          "ChaCha20 only",
+          "Ed25519"
+        ],
+        "correctIndex": 1,
+        "explanation": "CMEK encrypts values client-side with AES-256-GCM before the HSM layer is applied."
+      },
+      {
+        "question": "What protects a secret if the CMEK vault's database is stolen?",
+        "options": [
+          "Nothing extra",
+          "It is doubly encrypted and useless without your key",
+          "Only the fingerprint is needed to decrypt",
+          "The IV alone"
+        ],
+        "correctIndex": 1,
+        "explanation": "Each secret carries two independent encryption layers, so a backup yields only doubly-encrypted blobs."
+      }
+    ]
+  },
+  {
+    "id": "mpc-secret-storage",
+    "title": "MPC secret storage",
+    "summary": "Split a secret's DEK across parties so no single holder can reconstruct it.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "MPC splits each secret's DEK into shares so one compromised holder cannot decrypt. It layers on top of the standard HSM envelope encryption and is set per vault. The custody mode is immutable once set."
+      },
+      {
+        "type": "points",
+        "items": [
+          "2of2_client_custody: XOR split between the server HSM and you; you hold a client_share",
+          "2of3_multi_hsm: Shamir 2-of-3 across GCP, AWS, and Azure; no client share",
+          "2of3_client_custody: Shamir 2-of-3 with two HSMs plus your client share"
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "For client-custody modes, store the client_share safely. Lose it on a 2of2_client_custody vault and the secret cannot be recovered, because the server holds only its single share."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Use a user key on a Pro or higher plan and a vault you own.",
+            "code": "export TOKEN=1ck_your_user_key",
+            "lang": "bash"
+          },
+          {
+            "text": "Enable MPC with XOR client custody. This choice is permanent for the vault.",
+            "code": "curl -s -X POST https://api.1claw.xyz/v1/vaults/<vault-uuid>/mpc \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"custody_mode\":\"2of2_client_custody\"}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Write a secret. The PUT response includes a base64 client_share you must keep.",
+            "code": "curl -s -X PUT https://api.1claw.xyz/v1/vaults/<vault-uuid>/secrets/api-keys/stripe \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"value\":\"sk_live_abc123\",\"type\":\"api_key\"}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Read it back by sending your share in X-Client-Share. Without the header the read fails.",
+            "code": "curl -s https://api.1claw.xyz/v1/vaults/<vault-uuid>/secrets/api-keys/stripe \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"X-Client-Share: <base64-client-share>\"",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "The vault now returns a client_share on write and requires it on read, so 1Claw alone cannot reconstruct the DEK."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Which mode returns a client_share and needs X-Client-Share on reads?",
+        "options": [
+          "2of3_multi_hsm",
+          "2of2_client_custody",
+          "Standard HSM only",
+          "CMEK"
+        ],
+        "correctIndex": 1,
+        "explanation": "The 2of2_client_custody XOR split gives you a client_share and requires it on every read."
+      },
+      {
+        "question": "Can a vault's MPC custody mode be changed after it is set?",
+        "options": [
+          "Yes, anytime",
+          "Yes, once per year",
+          "No, it is immutable",
+          "Only by support"
+        ],
+        "correctIndex": 2,
+        "explanation": "The custody mode is immutable once set on a vault."
+      },
+      {
+        "question": "Where are the shares stored in 2of3_multi_hsm?",
+        "options": [
+          "All on GCP",
+          "Across GCP, AWS, and Azure",
+          "On the client only",
+          "In a single HSM"
+        ],
+        "correctIndex": 1,
+        "explanation": "2of3_multi_hsm distributes three Shamir shares across GCP KMS, AWS KMS, and Azure Key Vault."
+      }
+    ]
+  },
+  {
+    "id": "shroud-tee-proxy",
+    "title": "Shroud TEE proxy",
+    "summary": "Route a chat completion through Shroud so it is inspected inside a hardware TEE.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Shroud is an OpenAI-compatible LLM proxy running inside a confidential GKE node with AMD SEV-SNP. Your agent sends chat completions to Shroud instead of the provider. Shroud authenticates the agent, resolves the provider key, runs threat detection and secret redaction, then forwards the request. Secrets never leave your infrastructure in the clear."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Endpoint: POST https://shroud.1claw.xyz/v1/chat/completions",
+          "X-Shroud-Agent-Key: agent_id:api_key (the agent's ocv_ key)",
+          "X-Shroud-Provider: openai, anthropic, google, gemini, and others",
+          "Secret redaction, PII detection, and prompt-injection scoring run before the model sees the prompt"
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Prompt injection is scored 0.0 to 1.0. Anything above 0.9 is a hard block regardless of the agent's configured threshold, which defaults to 0.7."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Use a Shroud-enabled agent. Store the provider key in the vault at providers/openai/api-key and grant the agent read access, or pass X-Shroud-Api-Key directly.",
+            "code": "export ONECLAW_AGENT_ID=<agent-uuid>\nexport ONECLAW_AGENT_API_KEY=ocv_your_agent_api_key",
+            "lang": "bash"
+          },
+          {
+            "text": "Send a chat completion. Shroud resolves the provider key from the vault when X-Shroud-Api-Key is omitted.",
+            "code": "curl -s -X POST https://shroud.1claw.xyz/v1/chat/completions \\\n  -H \"X-Shroud-Agent-Key: $ONECLAW_AGENT_ID:$ONECLAW_AGENT_API_KEY\" \\\n  -H \"X-Shroud-Provider: openai\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}]}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Read the response. It follows the standard OpenAI shape, so the content is at choices[0].message.content.",
+            "lang": "text"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "No editor supports the X-Shroud headers natively. Run npx @1claw/cli proxy locally to bridge Cursor, Claude Code, and Copilot traffic into Shroud."
+      },
+      {
+        "type": "prose",
+        "text": "Your agent's LLM traffic now flows through the TEE proxy, inspected and redacted, with a normal OpenAI-style response coming back."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What is the format of the X-Shroud-Agent-Key header value?",
+        "options": [
+          "Just the ocv_ key",
+          "agent_id:api_key",
+          "A Bearer JWT",
+          "vault_id:secret_path"
+        ],
+        "correctIndex": 1,
+        "explanation": "The value is exactly agent_id:api_key, with the agent's ocv_ key on the right."
+      },
+      {
+        "question": "At what prompt-injection score does Shroud hard-block regardless of config?",
+        "options": [
+          "Above 0.5",
+          "Above 0.7",
+          "Above 0.9",
+          "Only at 1.0"
+        ],
+        "correctIndex": 2,
+        "explanation": "Scores above 0.9 are always blocked, even if the agent's threshold is higher."
+      },
+      {
+        "question": "What TEE technology runs the Shroud proxy?",
+        "options": [
+          "Intel SGX",
+          "AMD SEV-SNP on confidential GKE",
+          "Apple Secure Enclave",
+          "AWS Nitro only"
+        ],
+        "correctIndex": 1,
+        "explanation": "Shroud runs on GKE confidential nodes using AMD SEV-SNP."
+      }
+    ]
+  },
+  {
+    "id": "zero-trust-and-risk-engine",
+    "title": "Zero trust and the risk engine",
+    "summary": "Plant a honeytoken canary so any read trips a critical verdict and revokes sessions.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "1Claw assumes no implicit trust. Every request is authenticated, authorized against policy, and audited to a tamper-evident SHA-256 hash chain. Revocation is immediate: delete a policy and access stops on the next request. On top of that, the risk engine scores every authentication event in real time."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Geo-velocity: impossible travel between two locations",
+          "First-seen: a new ASN, country, or device for this principal",
+          "Honeytokens: decoy secrets whose access records a critical verdict",
+          "DPoP binds a JWT to a client keypair (RFC 9449)"
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "A critical verdict triggers Continuous Access Evaluation: all of that principal's active tokens are revoked, their JTIs are added to the revoked list, and their next request fails auth. Verdicts carry a 15-minute TTL."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Use a user token and a vault UUID. Pick a path that looks valuable so an attacker is tempted.",
+            "code": "export TOKEN=1ck_your_user_key",
+            "lang": "bash"
+          },
+          {
+            "text": "Create a honeytoken. Reading this decoy later marks the reader for denial.",
+            "code": "curl -s -X POST https://api.1claw.xyz/v1/risk/honeytokens \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"vault_id\":\"<vault-uuid>\",\"secret_path\":\"api-keys/production\",\"notes\":\"Canary for vault breach\"}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Confirm it is armed by listing your honeytokens.",
+            "code": "curl -s https://api.1claw.xyz/v1/risk/honeytokens \\\n  -H \"Authorization: Bearer $TOKEN\"",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "When a honeytoken is read, the current request is not blocked so the attacker is not tipped off. Their next authentication attempt is denied instead."
+      },
+      {
+        "type": "prose",
+        "text": "You now have a live canary: any read of api-keys/production records a critical verdict and revokes that principal's sessions."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What does the audit log use to stay tamper-evident?",
+        "options": [
+          "A SHA-256 hash chain",
+          "Nightly backups",
+          "Row-level encryption only",
+          "A blockchain"
+        ],
+        "correctIndex": 0,
+        "explanation": "Audit entries form a SHA-256 hash chain, and inserts go through a SECURITY DEFINER function."
+      },
+      {
+        "question": "What happens the moment a honeytoken is read?",
+        "options": [
+          "The request is blocked immediately",
+          "A critical verdict is recorded but the request proceeds",
+          "The vault is locked",
+          "Nothing until a human reviews it"
+        ],
+        "correctIndex": 1,
+        "explanation": "The read is allowed to avoid tipping off the attacker, but a critical verdict blocks their next auth."
+      },
+      {
+        "question": "What does DPoP protect against?",
+        "options": [
+          "Weak passwords",
+          "Use of a stolen JWT without the matching private key",
+          "Database theft",
+          "Slow token refresh"
+        ],
+        "correctIndex": 1,
+        "explanation": "DPoP binds a JWT to a client keypair, so a stolen token is useless without the private key."
+      }
+    ]
+  }
+]

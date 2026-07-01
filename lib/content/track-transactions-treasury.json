@@ -1,0 +1,398 @@
+[
+  {
+    "id": "intents-api-transaction-signing",
+    "title": "Intents API transaction signing",
+    "summary": "Let an agent sign and submit an on-chain transaction while the private key stays in the vault.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The Intents API lets an agent sign transactions without ever seeing the raw private key. The vault decrypts the key inside the HSM, signs, and broadcasts. The agent only gets back a tx_hash."
+      },
+      {
+        "type": "points",
+        "items": [
+          "POST /v1/agents/:id/transactions signs and broadcasts",
+          "POST /v1/agents/:id/transactions/sign signs only (BYORPC), returns signed_tx",
+          "Unified POST /v1/agents/:id/sign takes intent_type: personal_sign, typed_data, or transaction"
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "The intents_api_enabled flag is two-sided. It grants the transaction endpoints and also blocks direct reads of private_key or ssh_key through the normal secrets endpoint, so the agent can only use keys through the proxy."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Get a human API key from the dashboard at Settings, API Keys.",
+            "code": "export TOKEN=1ck_your_key_here",
+            "lang": "bash"
+          },
+          {
+            "text": "Create an agent with intents_api_enabled and guardrails so runaway spend is capped.",
+            "code": "curl -X POST \"https://api.1claw.xyz/v1/agents\" \\\n  -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \\\n  -d '{\n    \"name\": \"DeFi Bot\",\n    \"intents_api_enabled\": true,\n    \"tx_allowed_chains\": [\"sepolia\", \"base\"],\n    \"tx_to_allowlist\": [\"0xRecipient\"],\n    \"tx_max_value_eth\": \"0.01\",\n    \"tx_daily_limit_eth\": \"0.05\"\n  }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Provision an HSM-backed Ethereum signing key for the agent. The private key lands in the __agent-keys vault.",
+            "code": "curl -X POST \"https://api.1claw.xyz/v1/agents/$AGENT_ID/signing-keys\" \\\n  -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \\\n  -d '{ \"chain\": \"ethereum\" }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Exchange the agent api_key for a JWT.",
+            "code": "curl -X POST \"https://api.1claw.xyz/v1/auth/agent-token\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{ \"agent_id\": \"'$AGENT_ID'\", \"api_key\": \"ocv_...\" }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Submit a transaction on Sepolia with simulate_first so a revert returns 422 and nothing is signed.",
+            "code": "curl -X POST \"https://api.1claw.xyz/v1/agents/$AGENT_ID/transactions\" \\\n  -H \"Authorization: Bearer $AGENT_JWT\" -H \"Content-Type: application/json\" \\\n  -d '{\n    \"chain\": \"sepolia\",\n    \"to\": \"0xRecipient\",\n    \"value\": \"0.001\",\n    \"data\": \"0x\",\n    \"simulate_first\": true\n  }'",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Want to sign but broadcast yourself? Call /transactions/sign with the same body. You get signed_tx and tx_hash back, and all guardrails still apply."
+      },
+      {
+        "type": "prose",
+        "text": "You now have an agent that submits a simulated, guardrailed transaction with the signing key locked inside the vault."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What does intents_api_enabled: true do besides granting the transaction endpoints?",
+        "options": [
+          "It exports the private key to the agent",
+          "It blocks the agent from reading private_key or ssh_key via the secrets endpoint",
+          "It disables all guardrails",
+          "It rotates the signing key nightly"
+        ],
+        "correctIndex": 1,
+        "explanation": "The flag is two-sided: it grants transaction endpoints and blocks direct signing-key reads so keys are only usable through the proxy."
+      },
+      {
+        "question": "What happens when simulate_first: true and the simulation reverts?",
+        "options": [
+          "The tx is broadcast anyway",
+          "The API returns 422 and does not sign or broadcast",
+          "The agent is deactivated",
+          "The value cap is raised"
+        ],
+        "correctIndex": 1,
+        "explanation": "On a reverted simulation the API returns 422 and never signs or broadcasts."
+      },
+      {
+        "question": "Which endpoint signs a transaction without broadcasting it?",
+        "options": [
+          "POST /v1/agents/:id/transactions",
+          "POST /v1/agents/:id/transactions/sign",
+          "GET /v1/agents/:id/transactions",
+          "POST /v1/agents/:id/signing-keys"
+        ],
+        "correctIndex": 1,
+        "explanation": "The /transactions/sign endpoint returns signed_tx for you to broadcast yourself, with guardrails still enforced."
+      }
+    ]
+  },
+  {
+    "id": "treasury-and-smart-accounts",
+    "title": "Treasury wallets and smart accounts",
+    "summary": "Create human-owned multi-chain treasury wallets and drive a Safe multisig with proposals.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Treasury wallets are native HSM-backed wallets for human users across six chains. Keys are generated server-side, stored in a per-org __treasury-keys vault, and never leave the enclave unless you export them."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Treasury wallets require a Pro or higher plan and enforce require_human. Agents calling any treasury wallet endpoint get a 403. Direct API reads of __treasury-keys also return 403; use the export endpoint instead."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Six chains: Ethereum, Bitcoin, Solana, XRP, Cardano, Tron",
+          "Custody is XOR 2-of-2 on Pro and Team, Shamir 2-of-3 on Business and Enterprise",
+          "Safe multisig proposals collect signatures and auto-execute at threshold",
+          "Agent delegation modes: Owner (agent EOA is a Safe signer) or Delegated (agent signs with the treasury key via Intents API)"
+        ]
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Use a human API key. Free tier gets a 403 here.",
+            "code": "export TOKEN=1ck_your_key_here",
+            "lang": "bash"
+          },
+          {
+            "text": "Generate treasury wallets. Omit chains to create all six.",
+            "code": "curl -X POST \"https://api.1claw.xyz/v1/treasury/wallets/generate\" \\\n  -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \\\n  -d '{ \"chains\": [\"ethereum\", \"solana\"] }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Create a treasury bound to a Safe address so you can manage signers and proposals.",
+            "code": "curl -X POST \"https://api.1claw.xyz/v1/treasury\" \\\n  -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \\\n  -d '{ \"name\": \"Ops Treasury\", \"safe_address\": \"0xYourSafe\" }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Create a multisig proposal against that treasury.",
+            "code": "curl -X POST \"https://api.1claw.xyz/v1/treasury/$TREASURY_ID/proposals\" \\\n  -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \\\n  -d '{\n    \"to\": \"0xRecipient\",\n    \"value_wei\": \"1000000000000000000\",\n    \"data\": \"0x\",\n    \"operation\": 0,\n    \"safe_tx_hash\": \"0x...\",\n    \"nonce\": 5\n  }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Sign the proposal. When approve signatures reach the Safe threshold, the proposal auto-executes and broadcasts.",
+            "code": "curl -X POST \"https://api.1claw.xyz/v1/treasury/$TREASURY_ID/proposals/$PID/sign\" \\\n  -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \\\n  -d '{ \"signature\": \"0x...\", \"signer_address\": \"0xYou\", \"decision\": \"approve\" }'",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "In Delegated mode the agent submits transactions through the Intents API with treasury_id and mode: treasury. The handler applies the strictest of the agent-level and delegation-level guardrails."
+      },
+      {
+        "type": "prose",
+        "text": "You now have a treasury wallet and a Safe proposal that collects signatures and executes on its own once threshold is met."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why does an agent get a 403 when calling a treasury wallet endpoint?",
+        "options": [
+          "Treasury endpoints enforce require_human",
+          "The agent has no signing key",
+          "Treasury wallets are testnet only",
+          "The org is over quota"
+        ],
+        "correctIndex": 0,
+        "explanation": "All treasury wallet endpoints enforce require_human, so agents receive a 403."
+      },
+      {
+        "question": "In Delegated mode, where does the treasury private key live when an agent signs?",
+        "options": [
+          "It is copied to the agent",
+          "It stays in __treasury-keys and signs via the Intents API",
+          "It is returned in the response",
+          "It moves to the Safe contract"
+        ],
+        "correctIndex": 1,
+        "explanation": "Delegated mode signs with the treasury key through the Intents API; the key never leaves __treasury-keys."
+      },
+      {
+        "question": "What triggers a Safe proposal to execute automatically?",
+        "options": [
+          "A single approve signature",
+          "Approve signatures reaching the Safe threshold",
+          "A human clicking export",
+          "The daily limit resetting"
+        ],
+        "correctIndex": 1,
+        "explanation": "When approve signatures reach the Safe threshold, the proposal auto-executes and broadcasts."
+      }
+    ]
+  },
+  {
+    "id": "x402-micropayments",
+    "title": "x402 micropayments for overages",
+    "summary": "Handle an HTTP 402 from the API and retry with an on-chain payment proof.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "When your org is over its monthly request quota and the overage method is x402, payable endpoints return 402 Payment Required. You pay on Base with USDC and retry with an X-PAYMENT header."
+      },
+      {
+        "type": "points",
+        "items": [
+          "402 body is spec-compliant with an accepts[] array",
+          "accepts[] uses scheme exact, network eip155:8453, asset USDC on Base",
+          "Amounts are atomic units (USDC has 6 decimals, so 1500 is 0.0015 USDC)",
+          "1Claw settles through the Coinbase CDP facilitator on Base (chain 8453)"
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "New orgs default to credits for overages. Switch to x402 explicitly before you rely on per-request on-chain payment."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Set your credentials.",
+            "code": "export TOKEN=1ck_your_key_here\nexport VAULT_ID=your_vault_uuid",
+            "lang": "bash"
+          },
+          {
+            "text": "Switch the org overage method to x402.",
+            "code": "curl -X PATCH \"https://api.1claw.xyz/v1/billing/overage-method\" \\\n  -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \\\n  -d '{ \"overage_method\": \"x402\" }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Hit a payable endpoint. When over quota you get a 402 with accepts[].",
+            "code": "curl -i \"https://api.1claw.xyz/v1/vaults/$VAULT_ID/secrets/db/password\" \\\n  -H \"Authorization: Bearer $TOKEN\"",
+            "lang": "bash"
+          },
+          {
+            "text": "Read the 402 accepts[] entry: scheme, network, maxAmountRequired, payTo, and asset.",
+            "code": "{\n  \"x402Version\": 1,\n  \"accepts\": [{\n    \"scheme\": \"exact\",\n    \"network\": \"eip155:8453\",\n    \"maxAmountRequired\": \"1500\",\n    \"payTo\": \"0x...\",\n    \"asset\": \"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913\"\n  }]\n}",
+            "lang": "json"
+          },
+          {
+            "text": "Generate an EOA key, fund it with USDC on Base, and let an x402 client sign the payment and retry. The x402-payments example does this with @x402/evm.",
+            "code": "cd examples/x402-payments\nnpm install && cp .env.example .env\n# set X402_PRIVATE_KEY, ONECLAW_API_KEY, ONECLAW_VAULT_ID\nnpm start",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Run npm run probe with no payment key to confirm the 402 behavior before you fund a wallet. It only sends GET requests and prints status codes."
+      },
+      {
+        "type": "prose",
+        "text": "You can now take a 402, sign a USDC payment on Base, and retry the same request with X-PAYMENT to get a 200."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Which network and asset do 1Claw x402 payments use?",
+        "options": [
+          "Ethereum mainnet ETH",
+          "Base USDC (eip155:8453)",
+          "Solana USDC",
+          "Polygon DAI"
+        ],
+        "correctIndex": 1,
+        "explanation": "The accepts[] entry uses network eip155:8453 with USDC on Base, settled via the Coinbase CDP facilitator."
+      },
+      {
+        "question": "The 402 shows maxAmountRequired: 1500 for USDC. What is that?",
+        "options": [
+          "1500 dollars",
+          "0.0015 USDC in atomic units",
+          "1500 requests",
+          "1500 wei of ETH"
+        ],
+        "correctIndex": 1,
+        "explanation": "Amounts are atomic units and USDC has 6 decimals, so 1500 is 0.0015 USDC."
+      },
+      {
+        "question": "After the API returns 402, how does the client complete the request?",
+        "options": [
+          "It waits for the quota to reset",
+          "It signs the payment and retries with an X-PAYMENT header",
+          "It upgrades the subscription tier",
+          "It switches to credits automatically"
+        ],
+        "correctIndex": 1,
+        "explanation": "An x402 client pays the required amount on-chain and retries with the X-PAYMENT header."
+      }
+    ]
+  },
+  {
+    "id": "embedded-wallets-and-wallet-react",
+    "title": "Embedded wallets and wallet-react",
+    "summary": "Give users an email-login wallet and render it with the wallet-react widget.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Embedded wallets give users a wallet from just an email address. No extensions, no seed phrases. You provision them with a platform app key and email OTP login."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "You need a Pro or higher plan and a platform app plt_ key created in the dashboard at the Platform page."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Install the SDK.",
+            "code": "npm install @1claw/sdk",
+            "lang": "bash"
+          },
+          {
+            "text": "Create the client with your platform app key.",
+            "code": "import { createClient } from \"@1claw/sdk\";\nconst client = createClient({ baseUrl: \"https://api.1claw.xyz\", apiKey: \"plt_...\" });",
+            "lang": "typescript"
+          },
+          {
+            "text": "Send a login code to the user's email.",
+            "code": "await client.auth.sendEmailOtp({ email: \"user@example.com\" });",
+            "lang": "typescript"
+          },
+          {
+            "text": "Verify the 6-digit code and auto-provision an Ethereum wallet. You get back a token and wallet_address.",
+            "code": "const { token, wallet_address } = await client.auth.verifyEmailOtp({\n  email: \"user@example.com\",\n  code: \"123456\",\n  auto_provision_chains: [\"ethereum\"],\n});",
+            "lang": "typescript"
+          },
+          {
+            "text": "Set a spend policy so users cannot move more than you allow.",
+            "code": "await client.platform.createSpendPolicy(appId, {\n  max_value_per_tx_eth: \"0.1\",\n  daily_limit_eth: \"1.0\",\n  allowed_chains: [\"ethereum\", \"base\"],\n});",
+            "lang": "typescript"
+          },
+          {
+            "text": "Render the widget with wallet-react. OneclawWalletProvider wraps OneclawEmbeddedWallet.",
+            "code": "npm install @1claw/wallet-react",
+            "lang": "bash"
+          },
+          {
+            "text": "Drop the provider and widget into your app.",
+            "code": "import { OneclawWalletProvider, OneclawEmbeddedWallet } from \"@1claw/wallet-react\";\n\nfunction App() {\n  return (\n    <OneclawWalletProvider apiKey=\"plt_...\" chains={[\"ethereum\", \"base\"]}>\n      <OneclawEmbeddedWallet\n        features={[\"send\", \"swap\", \"receive\", \"buy\"]}\n        socialProviders={[\"google\", \"apple\", \"email\"]}\n      />\n    </OneclawWalletProvider>\n  );\n}",
+            "lang": "typescript"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "You can override the app-wide spend policy per user with client.platform.setUserSpendPolicy(connectionId, {...})."
+      },
+      {
+        "type": "prose",
+        "text": "You now render a working embedded wallet widget backed by email OTP login and a spend policy."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What do you need before creating embedded wallets?",
+        "options": [
+          "A Free plan and a 1ck_ key",
+          "A Pro+ plan and a platform app plt_ key",
+          "Only an EOA private key",
+          "A Safe multisig"
+        ],
+        "correctIndex": 1,
+        "explanation": "Embedded wallets require a Pro or higher plan plus a platform app plt_ key."
+      },
+      {
+        "question": "How does a user log in to get a wallet?",
+        "options": [
+          "Seed phrase import",
+          "Email OTP with sendEmailOtp and verifyEmailOtp",
+          "MetaMask connect",
+          "Password only"
+        ],
+        "correctIndex": 1,
+        "explanation": "You send a code with sendEmailOtp and confirm it with verifyEmailOtp, which returns the wallet_address."
+      },
+      {
+        "question": "Which two components does wallet-react provide for the widget?",
+        "options": [
+          "OneclawClient and OneclawAuth",
+          "OneclawWalletProvider and OneclawEmbeddedWallet",
+          "WalletKit and WalletButton",
+          "ProviderRoot and WalletCard"
+        ],
+        "correctIndex": 1,
+        "explanation": "OneclawWalletProvider wraps the OneclawEmbeddedWallet component."
+      }
+    ]
+  }
+]

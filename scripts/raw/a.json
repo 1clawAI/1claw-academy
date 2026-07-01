@@ -1,0 +1,206 @@
+{
+  "foundations": [
+    {
+      "id": "what-is-1claw",
+      "title": "What is 1Claw",
+      "summary": "1Claw is an HSM-backed, zero-trust vault that lets humans store secrets and lets AI agents fetch only what they're allowed to at runtime.",
+      "blocks": [
+        { "type": "prose", "text": "1Claw solves a specific problem: your API keys, tokens, and private keys end up pasted into .env files, prompts, and CI configs where anything can read them. 1Claw stores them in HSM-backed vaults instead, and hands them out only to principals a human explicitly allowed." },
+        { "type": "points", "items": ["HSM-backed: each vault's key encryption key lives in a hardware security module", "Zero-trust: an agent gets zero secrets until a human writes a policy", "Two principals: humans own secrets, agents fetch them at runtime", "Same API for both at https://api.1claw.xyz"] },
+        { "type": "callout", "variant": "info", "text": "Humans authenticate with email/password, Google, passkey, or a personal API key (1ck_). Agents authenticate with an agent API key (ocv_) that they trade for a short-lived JWT." },
+        { "type": "steps", "steps": [
+          { "text": "Sign up for a free account at the dashboard. The free tier gives you 1,000 requests/month, 3 vaults, and 2 agents.", "code": "open https://1claw.xyz", "lang": "bash" },
+          { "text": "Get a personal API key from Settings then API Keys. It starts with 1ck_. Export it so the next commands can use it.", "code": "export ONECLAW_API_KEY=\"1ck_your_key_here\"", "lang": "bash" },
+          { "text": "Verify the key works by exchanging it for an access token against the real API. You'll get back an access_token you can use as a Bearer token.", "code": "curl -s -X POST https://api.1claw.xyz/v1/auth/api-key-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"api_key\\\":\\\"$ONECLAW_API_KEY\\\"}\"", "lang": "bash" }
+        ] },
+        { "type": "prose", "text": "You now have a verified 1Claw account and a working API key. That's the credential every other lesson builds on." }
+      ],
+      "quiz": [
+        { "question": "What backs the encryption key for each 1Claw vault?", "options": ["A password in a config file", "A hardware security module (HSM)", "The agent's API key", "A browser cookie"], "correctIndex": 1, "explanation": "Each vault has its own HSM-backed key encryption key." },
+        { "question": "By default, how much access does a new agent have?", "options": ["Full access to every vault", "Read access to one vault", "Zero access until a human writes a policy", "Access to all secrets tagged public"], "correctIndex": 2, "explanation": "1Claw is zero-trust: agents get nothing until a human grants specific paths via a policy." },
+        { "question": "Which prefix identifies a human's personal API key?", "options": ["ocv_", "1ck_", "sk_", "jwt_"], "correctIndex": 1, "explanation": "Human personal API keys start with 1ck_; agent keys start with ocv_." }
+      ]
+    },
+    {
+      "id": "core-concepts",
+      "title": "Vaults, Secrets, and Envelope Encryption",
+      "summary": "Secrets live at slash-separated paths inside vaults, get a new version on every write, and are protected by a per-secret data key wrapped by the vault's HSM key.",
+      "blocks": [
+        { "type": "prose", "text": "A vault is a container for secrets. A secret is a value stored at a path like api-keys/openai. Every time you write to a path, 1Claw keeps the old value and bumps the version, so you always have history." },
+        { "type": "points", "items": ["Vault: isolated container, has its own HSM key encryption key (KEK)", "Secret: value at a slash-separated path (api-keys/stripe, passwords/db)", "Version: every write creates a new version, newest wins on read", "Types: api_key, password, private_key, certificate, ssh_key, note, env_bundle"] },
+        { "type": "callout", "variant": "info", "text": "Envelope encryption: each secret is encrypted with its own random data encryption key (DEK). That DEK is then wrapped by the vault's KEK, which lives in the HSM. The plaintext DEK never sits at rest." },
+        { "type": "steps", "steps": [
+          { "text": "Make sure your personal API key is exported (from the previous lesson).", "code": "export ONECLAW_API_KEY=\"1ck_your_key_here\"", "lang": "bash" },
+          { "text": "Get an access token and save it as TOKEN.", "code": "export TOKEN=$(curl -s -X POST https://api.1claw.xyz/v1/auth/api-key-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"api_key\\\":\\\"$ONECLAW_API_KEY\\\"}\" | jq -r .access_token)", "lang": "bash" },
+          { "text": "Create a vault. Save the id it returns as VAULT_ID.", "code": "curl -s -X POST https://api.1claw.xyz/v1/vaults \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"My Vault\",\"description\":\"Secrets for my app\"}'", "lang": "bash" },
+          { "text": "Store a secret at a path inside that vault.", "code": "export VAULT_ID=\"paste-the-id-here\"\ncurl -s -X PUT \"https://api.1claw.xyz/v1/vaults/$VAULT_ID/secrets/api-keys/openai\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"type\":\"api_key\",\"value\":\"sk-proj-demo\"}'", "lang": "bash" },
+          { "text": "Read it back. The response includes the decrypted value plus metadata like version.", "code": "curl -s \"https://api.1claw.xyz/v1/vaults/$VAULT_ID/secrets/api-keys/openai\" \\\n  -H \"Authorization: Bearer $TOKEN\"", "lang": "bash" }
+        ] },
+        { "type": "prose", "text": "You've now created a vault, written a secret to a path, and read the decrypted value back. That round trip is the whole 1Claw data model in action." }
+      ],
+      "quiz": [
+        { "question": "How are secrets addressed inside a vault?", "options": ["By numeric index", "By slash-separated paths like api-keys/stripe", "By UUID only", "By tag name"], "correctIndex": 1, "explanation": "Secrets live at slash-separated paths within a vault." },
+        { "question": "In envelope encryption, what wraps the per-secret data encryption key (DEK)?", "options": ["The agent's JWT", "The vault's HSM-backed key encryption key (KEK)", "Another DEK", "The user's password"], "correctIndex": 1, "explanation": "Each secret's DEK is wrapped by the vault KEK, which lives in the HSM." },
+        { "question": "What happens when you PUT a new value to an existing secret path?", "options": ["It overwrites and deletes the old value", "It errors because the path exists", "It creates a new version and keeps the old one in history", "It creates a second vault"], "correctIndex": 2, "explanation": "Every write creates a new version; previous versions stay in history." }
+      ]
+    },
+    {
+      "id": "humans-vs-agents",
+      "title": "Humans vs Agents",
+      "summary": "1Claw has two principal types: humans who own secrets with 1ck_ keys, and agents who trade an ocv_ key for a short-lived JWT and see only what a policy allows.",
+      "blocks": [
+        { "type": "prose", "text": "There are two kinds of principal. Humans create vaults, store secrets, and write policies. Agents are AI assistants or automations that fetch secrets at runtime. Same base URL, same endpoints; only the way you authenticate and what you're allowed to see differ." },
+        { "type": "points", "items": ["Human key prefix: 1ck_ (personal API key), works as a Bearer token", "Agent key prefix: ocv_ (agent API key), exchanged for a short-lived JWT", "Agent JWTs are short-lived (e.g. 1 hour); refresh by exchanging the key again", "An agent with a key but no policy sees zero secrets"] },
+        { "type": "callout", "variant": "warn", "text": "Creating, updating, or deleting a policy for an agent automatically revokes that agent's active JWTs. The agent has to exchange its key again to pick up the new scope." },
+        { "type": "steps", "steps": [
+          { "text": "Get an agent's ocv_ key. A human registers the agent (dashboard or 1claw agent create) and shares the key once, or the agent self-enrolls via POST /v1/agents/enroll.", "code": "export AGENT_KEY=\"ocv_your_agent_key\"", "lang": "bash" },
+          { "text": "Exchange the agent key for a short-lived JWT. Key-only works: the server resolves the agent from the key prefix.", "code": "curl -s -X POST https://api.1claw.xyz/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"api_key\\\":\\\"$AGENT_KEY\\\"}\"", "lang": "bash" },
+          { "text": "Read access_token and expires_in from the response. Use the token as a Bearer header on the same secret endpoints humans use.", "code": "{\n  \"access_token\": \"eyJhbGciOiJFZERTQSIs...\",\n  \"token_type\": \"Bearer\",\n  \"expires_in\": 3600\n}", "lang": "json" }
+        ] },
+        { "type": "prose", "text": "You've turned an agent's ocv_ key into a usable JWT. That token now hits the same API as a human, but it only returns secrets a policy has granted." }
+      ],
+      "quiz": [
+        { "question": "Which prefix marks an agent API key?", "options": ["1ck_", "ocv_", "eyJ", "agt_"], "correctIndex": 1, "explanation": "Agent API keys start with ocv_; human personal keys start with 1ck_." },
+        { "question": "What does an agent do with its ocv_ key to call the API?", "options": ["Uses it directly as a permanent password", "Exchanges it for a short-lived JWT via POST /v1/auth/agent-token", "Emails it to the human each time", "Nothing, agents use email/password"], "correctIndex": 1, "explanation": "Agents exchange the ocv_ key for a short-lived JWT and send that as a Bearer token." },
+        { "question": "What happens to an agent's active tokens when a human changes its policy?", "options": ["Nothing, they keep working", "They're automatically revoked and must be re-exchanged", "They gain admin access", "They last 30 days longer"], "correctIndex": 1, "explanation": "Policy create/update/delete auto-revokes the agent's active JWTs, forcing a fresh exchange." }
+      ]
+    },
+    {
+      "id": "install-the-cli",
+      "title": "Install the CLI",
+      "summary": "Install @1claw/cli, log in with the browser device flow, and confirm access with whoami and vault list.",
+      "blocks": [
+        { "type": "prose", "text": "The CLI is the fastest way to work with 1Claw from a terminal. Install it, log in, and you'll have a working authenticated session in under a minute." },
+        { "type": "callout", "variant": "info", "text": "Prerequisite: Node 20+ if you install via npm. Homebrew works on macOS and Linux and needs nothing else." },
+        { "type": "steps", "steps": [
+          { "text": "Install the CLI with npm (needs Node 20+) or Homebrew.", "code": "npm install -g @1claw/cli\n# or\nbrew install 1clawAI/tap/oneclaw", "lang": "bash" },
+          { "text": "Log in. This opens your browser to 1claw.xyz, you approve, and the CLI polls until you confirm. No password typed in the terminal.", "code": "1claw login", "lang": "bash" },
+          { "text": "Confirm who you're logged in as.", "code": "1claw whoami", "lang": "bash" },
+          { "text": "List your vaults to prove the session reaches the API.", "code": "1claw vault list", "lang": "bash" }
+        ] },
+        { "type": "callout", "variant": "tip", "text": "For CI or any non-interactive shell, skip login and set env vars instead: export ONECLAW_TOKEN=\"your-jwt\" or export ONECLAW_API_KEY=\"1ck_...\" (add ONECLAW_VAULT_ID for vault-scoped commands)." },
+        { "type": "prose", "text": "The CLI is installed and authenticated. 1claw whoami and 1claw vault list both work, so you're ready to create vaults and secrets from the terminal." }
+      ],
+      "quiz": [
+        { "question": "What Node version does the npm install of the CLI require?", "options": ["Node 14+", "Node 16+", "Node 20+", "Any version"], "correctIndex": 2, "explanation": "npm install -g @1claw/cli requires Node 20 or newer." },
+        { "question": "What does 1claw login use so you never type a password in the terminal?", "options": ["A browser device flow", "An SSH key", "A QR code scanner", "A one-time SMS"], "correctIndex": 0, "explanation": "1claw login opens the browser, you approve there, and the CLI polls until confirmed." },
+        { "question": "Which env var lets the CLI run non-interactively with a personal API key in CI?", "options": ["ONECLAW_PASSWORD", "ONECLAW_API_KEY", "ONECLAW_LOGIN", "CLAW_SESSION"], "correctIndex": 1, "explanation": "Set ONECLAW_API_KEY (or ONECLAW_TOKEN) to skip interactive login." }
+      ]
+    },
+    {
+      "id": "first-vault-and-secret",
+      "title": "Your First Vault and Secret",
+      "summary": "Use the CLI to create a vault, store a secret, and read it back, with the dashboard as an alternative.",
+      "blocks": [
+        { "type": "prose", "text": "Now that the CLI is authenticated, storing and reading a secret is three commands. This is the everyday human workflow." },
+        { "type": "steps", "steps": [
+          { "text": "Confirm you're logged in (from the install lesson).", "code": "1claw whoami", "lang": "bash" },
+          { "text": "Create a vault. The command prints the new vault's id.", "code": "1claw vault create \"My Vault\"", "lang": "bash" },
+          { "text": "Store a secret at a path. Give it a type so 1Claw knows what it is.", "code": "1claw secret set api-keys/openai --value \"sk-proj-demo\" --type api_key", "lang": "bash" },
+          { "text": "Read the value back.", "code": "1claw secret get api-keys/openai", "lang": "bash" },
+          { "text": "List the secrets in the vault (metadata only, never values).", "code": "1claw secret list", "lang": "bash" }
+        ] },
+        { "type": "callout", "variant": "tip", "text": "Prefer clicking? In the dashboard at 1claw.xyz, go to Vaults then Create vault, then Secrets then Add secret at a path like api-keys/openai. It hits the same endpoints as the CLI." },
+        { "type": "prose", "text": "You have a real vault with a stored secret you can read on demand. From here you can grant an agent access or wire secrets into your app." }
+      ],
+      "quiz": [
+        { "question": "Which CLI command stores a secret at a path?", "options": ["1claw vault create", "1claw secret set", "1claw env pull", "1claw whoami"], "correctIndex": 1, "explanation": "1claw secret set &lt;path&gt; --value ... --type ... stores a secret." },
+        { "question": "What does 1claw secret list return?", "options": ["Decrypted values for every secret", "Metadata only, no values", "Only the vault name", "The vault's KEK"], "correctIndex": 1, "explanation": "Listing returns paths, types, and versions but never the secret values." },
+        { "question": "The dashboard is best described as what?", "options": ["A separate database", "A UI on top of the same API endpoints the CLI uses", "An offline-only tool", "A replacement for HSMs"], "correctIndex": 1, "explanation": "The dashboard at 1claw.xyz is a web UI over the same endpoints." }
+      ]
+    }
+  ],
+  "working-with-secrets": [
+    {
+      "id": "cli-for-cicd",
+      "title": "The CLI in CI/CD",
+      "summary": "Inject vault secrets into any process with env pull, push, and run, using ONECLAW_TOKEN and ONECLAW_VAULT_ID in CI.",
+      "blocks": [
+        { "type": "prose", "text": "In a pipeline you don't want secrets committed to a repo or pasted into CI settings one by one. The CLI pulls them from a vault at runtime and injects them into your process." },
+        { "type": "callout", "variant": "info", "text": "In CI, authenticate with env vars instead of 1claw login: set ONECLAW_TOKEN (a JWT) or ONECLAW_API_KEY, plus ONECLAW_VAULT_ID for the vault to read." },
+        { "type": "steps", "steps": [
+          { "text": "Set the non-interactive credentials in your shell or CI secrets store.", "code": "export ONECLAW_TOKEN=\"your-jwt\"\nexport ONECLAW_VAULT_ID=\"your-vault-uuid\"", "lang": "bash" },
+          { "text": "Pull secrets into a .env file for tooling that reads one.", "code": "1claw env pull -o .env.production", "lang": "bash" },
+          { "text": "Or skip the file entirely and run a command with secrets injected as env vars. This is the safest option since nothing lands on disk.", "code": "1claw env run -- npm start", "lang": "bash" },
+          { "text": "Push a local .env up to the vault when you need to seed it.", "code": "1claw env push .env", "lang": "bash" }
+        ] },
+        { "type": "code", "code": "- name: Deploy with secrets\n  env:\n    ONECLAW_TOKEN: ${{ secrets.ONECLAW_TOKEN }}\n    ONECLAW_VAULT_ID: ${{ secrets.ONECLAW_VAULT_ID }}\n  run: |\n    npx @1claw/cli env pull -o .env.production\n    npm run deploy", "lang": "yaml", "caption": "GitHub Actions step that pulls secrets from the vault" },
+        { "type": "callout", "variant": "tip", "text": "For offline or flaky-network builds, run 1claw env cache to store secrets in a local AES-256-GCM encrypted file (default TTL 300s). env run uses a valid cache automatically; add --no-cache to bypass it." },
+        { "type": "prose", "text": "Your build process now starts with secrets injected straight from the vault, with no plaintext secrets checked into the repo or pasted into CI config." }
+      ],
+      "quiz": [
+        { "question": "Which command runs a process with vault secrets injected as env vars and nothing written to disk?", "options": ["1claw env pull", "1claw env run -- &lt;cmd&gt;", "1claw secret get", "1claw vault create"], "correctIndex": 1, "explanation": "1claw env run -- &lt;cmd&gt; injects secrets into the process environment directly." },
+        { "question": "Which two env vars typically authenticate and scope the CLI in CI?", "options": ["ONECLAW_USER and ONECLAW_PASS", "ONECLAW_TOKEN and ONECLAW_VAULT_ID", "PATH and HOME", "CI_TOKEN and CI_VAULT"], "correctIndex": 1, "explanation": "ONECLAW_TOKEN (or ONECLAW_API_KEY) authenticates and ONECLAW_VAULT_ID scopes vault commands." },
+        { "question": "What does 1claw env cache store secrets in?", "options": ["Plaintext in /tmp", "An AES-256-GCM encrypted local file", "The system keychain only", "A remote S3 bucket"], "correctIndex": 1, "explanation": "env cache writes an AES-256-GCM encrypted local file for offline env run." }
+      ]
+    },
+    {
+      "id": "the-typescript-sdk",
+      "title": "The TypeScript SDK",
+      "summary": "Install @1claw/sdk, create a client, and fetch a secret using the {data, error} response envelope.",
+      "blocks": [
+        { "type": "prose", "text": "The SDK gives Node apps and agents typed, full-parity access to the API. Every call returns an envelope so you check for errors without try/catch everywhere." },
+        { "type": "callout", "variant": "info", "text": "Auth options when creating a client: a personal API key (apiKey: '1ck_...') for server-side work, agent credentials (agentId + apiKey: 'ocv_...') which the SDK exchanges for a JWT and refreshes automatically, or manual login." },
+        { "type": "steps", "steps": [
+          { "text": "Install the SDK in a Node 20+ project.", "code": "npm install @1claw/sdk", "lang": "bash" },
+          { "text": "Set your key in the environment so it stays out of source.", "code": "export ONECLAW_API_KEY=\"1ck_your_key\"", "lang": "bash" },
+          { "text": "Write a script that creates a client and fetches a secret. Check res.error before using res.data.", "code": "import { createClient } from \"@1claw/sdk\";\n\nconst client = createClient({\n  baseUrl: \"https://api.1claw.xyz\",\n  apiKey: process.env.ONECLAW_API_KEY,\n});\n\nconst res = await client.secrets.get(\"YOUR_VAULT_ID\", \"api-keys/openai\");\nif (res.error) {\n  console.error(res.error.message);\n} else {\n  console.log(res.data.value); // use securely, don't log in production\n}", "lang": "typescript" },
+          { "text": "Run it.", "code": "node --experimental-strip-types fetch-secret.ts", "lang": "bash" }
+        ] },
+        { "type": "callout", "variant": "tip", "text": "Every method returns { data, error, meta }. Typed error classes like AuthError (401), NotFoundError (404), and RateLimitError (429) are exported from @1claw/sdk if you prefer to switch on the type." },
+        { "type": "prose", "text": "You have a running script that authenticates with the SDK and prints a fetched secret value. That's the foundation for any Node service or agent that needs vault access." }
+      ],
+      "quiz": [
+        { "question": "What shape does every SDK method return?", "options": ["A raw string", "{ data, error, meta }", "A Promise that throws on any non-200", "An array of secrets"], "correctIndex": 1, "explanation": "The SDK returns a { data, error, meta } envelope on every call." },
+        { "question": "How do you construct a client for server-side work with a personal key?", "options": ["createClient({ baseUrl, apiKey: '1ck_...' })", "new Client('1ck_...')", "connect('1ck_...')", "createClient({ password: '...' })"], "correctIndex": 0, "explanation": "Pass baseUrl and apiKey (the 1ck_ personal key) to createClient." },
+        { "question": "When you pass agentId + apiKey (ocv_) to createClient, what does the SDK handle for you?", "options": ["Nothing, you refresh manually", "Exchanging credentials for a JWT and refreshing it before expiry", "Creating a vault", "Encrypting your disk"], "correctIndex": 1, "explanation": "With agent credentials the SDK exchanges them for a JWT and refreshes it automatically." }
+      ]
+    },
+    {
+      "id": "secret-versioning-and-rotation",
+      "title": "Versioning and Rotation",
+      "summary": "Rotate secrets server-side or with a client-supplied value, list version history, and disable old versions.",
+      "blocks": [
+        { "type": "prose", "text": "Every write to a path creates a new version and keeps the old ones. You can rotate in two ways: PUT a new value yourself, or have the vault generate a random one server-side so the plaintext never touches your client." },
+        { "type": "points", "items": ["Client-supplied: PUT a new value to the same path, creating a new version", "Server-side: POST to secret-rotate, the vault generates and stores the value", "List: GET secret-versions returns all versions newest first with is_disabled", "Disable: a disabled version is kept for audit but reads return 410 Gone"] },
+        { "type": "steps", "steps": [
+          { "text": "Set your token and vault id.", "code": "export TOKEN=\"your-jwt\"\nexport VAULT_ID=\"your-vault-uuid\"", "lang": "bash" },
+          { "text": "Rotate a secret server-side. The vault generates a random 32-char hex value and stores it as the next version. You never see or send the plaintext.", "code": "curl -s -X POST \"https://api.1claw.xyz/v1/vaults/$VAULT_ID/secret-rotate/api-keys%2Fdb-password\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"length\":32,\"charset\":\"hex\"}'", "lang": "bash" },
+          { "text": "Or do the same from the CLI.", "code": "1claw secret rotate api-keys/db-password --generate --length 32 --charset hex", "lang": "bash" },
+          { "text": "List versions to confirm a new one exists.", "code": "1claw secret versions api-keys/db-password", "lang": "bash" },
+          { "text": "Disable an old version so any read of it returns 410 Gone.", "code": "curl -s -X POST \"https://api.1claw.xyz/v1/vaults/$VAULT_ID/secret-version/api-keys%2Fdb-password/1/disable\" \\\n  -H \"Authorization: Bearer $TOKEN\"", "lang": "bash" }
+        ] },
+        { "type": "callout", "variant": "info", "text": "For AI agents, the MCP tools mirror this: rotate_generate creates a random value server-side, rotate_and_store persists a value the agent already regenerated, and list_versions shows history with [disabled] markers." },
+        { "type": "prose", "text": "You've rotated a secret to a fresh version and listed its history. Consumers reading the latest version pick up the new value automatically, and old versions can be disabled without losing the audit trail." }
+      ],
+      "quiz": [
+        { "question": "What's the key benefit of server-side rotation over a client PUT?", "options": ["It's faster to type", "The generated plaintext is never sent to or returned from the client", "It skips versioning", "It deletes the vault"], "correctIndex": 1, "explanation": "Server-side rotation generates the value in the vault, so the plaintext never touches the client." },
+        { "question": "What does a read of a disabled version return?", "options": ["The value normally", "404 Not Found", "410 Gone", "200 with an empty body"], "correctIndex": 2, "explanation": "Disabled versions are kept for audit but reads return 410 Gone." },
+        { "question": "Which MCP tool stores a value an agent already regenerated?", "options": ["rotate_generate", "rotate_and_store", "list_versions", "get_env_bundle"], "correctIndex": 1, "explanation": "rotate_and_store persists a new value the agent supplies; rotate_generate makes one server-side." }
+      ]
+    },
+    {
+      "id": "environment-bundles",
+      "title": "Environment Bundles",
+      "summary": "Store many env vars as one env_bundle secret, then inject them into an app with 1claw env run or parse them with get_env_bundle.",
+      "blocks": [
+        { "type": "prose", "text": "Instead of storing each environment variable as its own secret, you can store a whole set as one secret of type env_bundle. Its value is KEY=VALUE lines, one per line, just like a .env file." },
+        { "type": "callout", "variant": "info", "text": "The MCP tool get_env_bundle fetches an env_bundle secret, parses its KEY=VALUE lines, and returns a structured JSON object. Blank lines and lines starting with # are ignored." },
+        { "type": "steps", "steps": [
+          { "text": "Log in (or set ONECLAW_TOKEN and ONECLAW_VAULT_ID for CI).", "code": "1claw login", "lang": "bash" },
+          { "text": "Write a small .env file to seed the bundle.", "code": "printf 'DATABASE_URL=postgres://localhost/app\\nREDIS_URL=redis://localhost:6379\\n' > app.env", "lang": "bash" },
+          { "text": "Push those keys into the vault.", "code": "1claw env push app.env", "lang": "bash" },
+          { "text": "Run your app with the vault's env injected. The process starts with DATABASE_URL and REDIS_URL set.", "code": "1claw env run -- node server.js", "lang": "bash" },
+          { "text": "Confirm the injection worked with a quick echo instead of your real app.", "code": "1claw env run -- printenv DATABASE_URL", "lang": "bash" }
+        ] },
+        { "type": "callout", "variant": "tip", "text": "For an AI agent, point get_env_bundle at an env_bundle secret (for example config/prod-env) and it returns the variables as JSON your tool can spread into a subprocess." },
+        { "type": "prose", "text": "You started an app with a full set of environment variables pulled straight from the vault, so config lives in 1Claw instead of a checked-in .env file." }
+      ],
+      "quiz": [
+        { "question": "What format does an env_bundle secret's value use?", "options": ["JSON only", "One KEY=VALUE per line", "XML", "A single base64 blob"], "correctIndex": 1, "explanation": "An env_bundle holds KEY=VALUE lines, one per line, like a .env file." },
+        { "question": "Which MCP tool parses an env_bundle into a JSON object?", "options": ["get_secret", "get_env_bundle", "list_versions", "put_secret"], "correctIndex": 1, "explanation": "get_env_bundle fetches the bundle and returns parsed KEY=VALUE lines as JSON." },
+        { "question": "How do you start an app with the vault's env vars injected?", "options": ["1claw secret get", "1claw env run -- &lt;cmd&gt;", "1claw vault list", "1claw login"], "correctIndex": 1, "explanation": "1claw env run -- &lt;cmd&gt; launches the process with the vault's secrets set as env vars." }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,527 @@
+[
+  {
+    "id": "python-sdk",
+    "title": "Fetch a secret with the Python SDK",
+    "summary": "Install the oneclaw Python SDK, create a client, and print a secret from your vault.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The 1Claw Python SDK ships as the PyPI package oneclaw. You create a client with an API key, and it handles token exchange and refresh for you."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "You need Python 3.9+ and a 1Claw API key from 1claw.xyz/settings/api-keys. A 1ck_ key is a user key, an ocv_ key is an agent key. Both work here."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Create and activate a virtual environment.",
+            "code": "python3 -m venv .venv\nsource .venv/bin/activate",
+            "lang": "bash"
+          },
+          {
+            "text": "Install the SDK from PyPI.",
+            "code": "pip install oneclaw",
+            "lang": "bash"
+          },
+          {
+            "text": "Export your API key and the vault ID that holds a secret.",
+            "code": "export ONECLAW_API_KEY=1ck_your_user_key\nexport ONECLAW_VAULT_ID=your-vault-uuid",
+            "lang": "bash"
+          },
+          {
+            "text": "Write a script that creates a client and reads one secret by path.",
+            "code": "import os\nfrom oneclaw import create_client\n\nclient = create_client(api_key=os.environ[\"ONECLAW_API_KEY\"])\nvault_id = os.environ[\"ONECLAW_VAULT_ID\"]\n\nsecret = client.secrets.get(vault_id, \"demo/api-key\")\nprint(secret.data[\"value\"])",
+            "lang": "python"
+          },
+          {
+            "text": "Run it. The fetched secret value prints to your terminal.",
+            "code": "python fetch_secret.py",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Use create_client() inside a with block if you want the connection pool closed automatically when the script exits."
+      },
+      {
+        "type": "prose",
+        "text": "You now have a Python script that authenticates to 1Claw and prints a real secret pulled from your vault."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What is the PyPI package name for the 1Claw Python SDK?",
+        "options": [
+          "1claw",
+          "oneclaw",
+          "oneclaw-sdk",
+          "py1claw"
+        ],
+        "correctIndex": 1,
+        "explanation": "The SDK installs with pip install oneclaw."
+      },
+      {
+        "question": "Which call retrieves a single secret by path?",
+        "options": [
+          "client.vaults.get(path)",
+          "client.secrets.get(vault_id, path)",
+          "client.get_secret(path)",
+          "client.secrets.read(path)"
+        ],
+        "correctIndex": 1,
+        "explanation": "The README shows client.secrets.get(vault_id, path) returning the value under secret.data['value']."
+      },
+      {
+        "question": "What does an ocv_ prefixed key represent?",
+        "options": [
+          "A user key",
+          "An agent key",
+          "A platform key",
+          "A JWT"
+        ],
+        "correctIndex": 1,
+        "explanation": "ocv_ keys are agent keys, while 1ck_ keys are user keys."
+      }
+    ]
+  },
+  {
+    "id": "connect-ai-clients-with-mcp",
+    "title": "Wire an AI client to the 1Claw MCP server",
+    "summary": "Configure Claude Desktop, Cursor, or VS Code to reach the 1Claw MCP server and call list_secrets.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The 1Claw MCP server gives an AI client tools to list, get, and manage vault secrets. You can use the hosted server at mcp.1claw.xyz or run a local stdio process."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Prerequisites: a 1Claw account, a vault, an agent with an ocv_ API key, and a policy granting that agent read access to the secret paths it needs."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "For the local stdio option, add the 1claw MCP server to your client config. Only ONECLAW_AGENT_API_KEY is required. Agent ID and vault are auto-discovered.",
+            "code": "{\n  \"mcpServers\": {\n    \"1claw\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@1claw/mcp\"],\n      \"env\": {\n        \"ONECLAW_AGENT_API_KEY\": \"ocv_your_agent_api_key\"\n      }\n    }\n  }\n}",
+            "lang": "json"
+          },
+          {
+            "text": "For the hosted option, first get a JWT by calling the agent-token endpoint with your agent ID and API key.",
+            "code": "curl -s -X POST https://api.1claw.xyz/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"agent_id\":\"<your-agent-uuid>\",\"api_key\":\"ocv_...\"}' | jq -r '.access_token'",
+            "lang": "bash"
+          },
+          {
+            "text": "Use that token in a hosted MCP config. Claude Desktop, Cursor, and Claude Code all use this same shape.",
+            "code": "{\n  \"mcpServers\": {\n    \"1claw\": {\n      \"url\": \"https://mcp.1claw.xyz/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer <jwt-from-agent-token-endpoint>\",\n        \"X-Vault-ID\": \"your-vault-uuid-here\"\n      }\n    }\n  }\n}",
+            "lang": "json"
+          },
+          {
+            "text": "Restart the client, then ask it to list your secrets.",
+            "code": "List the secrets in my 1claw vault.",
+            "lang": "text"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "The hosted JWT expires in about an hour. The local stdio server exchanges the ocv_ key for a JWT and refreshes it automatically, so it is simpler for long sessions."
+      },
+      {
+        "type": "prose",
+        "text": "Your AI client now calls list_secrets against your vault and returns the secret paths and metadata."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Which single environment variable is required for the local stdio MCP server?",
+        "options": [
+          "ONECLAW_VAULT_ID",
+          "ONECLAW_AGENT_ID",
+          "ONECLAW_AGENT_API_KEY",
+          "ONECLAW_TOKEN"
+        ],
+        "correctIndex": 2,
+        "explanation": "Only ONECLAW_AGENT_API_KEY is required; agent ID and vault are auto-discovered from the token exchange."
+      },
+      {
+        "question": "How do you get the Bearer token for the hosted MCP server?",
+        "options": [
+          "From the dashboard settings page",
+          "By calling POST /v1/auth/agent-token with agent_id and api_key",
+          "It is the ocv_ key itself",
+          "From npx @1claw/mcp"
+        ],
+        "correctIndex": 1,
+        "explanation": "You POST your agent_id and api_key to /v1/auth/agent-token and use the returned access_token."
+      },
+      {
+        "question": "Which tool confirms the connection works?",
+        "options": [
+          "get_env_bundle",
+          "list_secrets",
+          "sign_message",
+          "create_vault"
+        ],
+        "correctIndex": 1,
+        "explanation": "Asking the client to list secrets triggers list_secrets and verifies the setup."
+      }
+    ]
+  },
+  {
+    "id": "langchain-integration",
+    "title": "Give a LangChain agent vault access",
+    "summary": "Wrap the 1Claw SDK in a LangChain tool so an agent fetches a vault secret on demand.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "This example lets a LangChain agent decide when to list and fetch vault secrets. You define custom tools that wrap @1claw/sdk, and the LLM calls them just in time so raw values never sit in the prompt."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Prerequisites: Node.js 20+, a 1Claw account with a vault containing at least one secret, and one LLM key (OPENAI_API_KEY or a Gemini free tier GOOGLE_API_KEY)."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Clone the example and install dependencies. This pulls @1claw/sdk.",
+            "code": "cd examples/langchain-agent\nnpm install\ncp .env.example .env",
+            "lang": "bash"
+          },
+          {
+            "text": "Fill in .env with your 1Claw and LLM credentials.",
+            "code": "ONECLAW_API_KEY=ocv_your_key_here\nONECLAW_VAULT_ID=your-vault-uuid\nGOOGLE_API_KEY=your-gemini-key",
+            "lang": "text"
+          },
+          {
+            "text": "If your vault is empty, add a test secret with the CLI.",
+            "code": "1claw secret put demo/hello-world --vault YOUR_VAULT_ID --value \"Hello from 1Claw!\" --type note",
+            "lang": "bash"
+          },
+          {
+            "text": "Note the tool pattern: a DynamicStructuredTool wraps the SDK client so the agent can list secrets.",
+            "code": "import { DynamicStructuredTool } from \"@langchain/core/tools\";\nimport { createClient } from \"@1claw/sdk\";\nimport { z } from \"zod\";\n\nconst client = createClient({ baseUrl: BASE_URL, apiKey: API_KEY });\n\nconst listSecretsTool = new DynamicStructuredTool({\n  name: \"list_vault_secrets\",\n  description: \"List all secrets in the vault (metadata only, never values).\",\n  schema: z.object({}),\n  func: async () => {\n    const res = await client.secrets.list(VAULT_ID);\n    return res.data.secrets.map(s => `${s.path} (${s.type})`).join(\"\\n\");\n  },\n});",
+            "lang": "typescript"
+          },
+          {
+            "text": "Run the tool-calling agent.",
+            "code": "npm start",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Run npm run mcp instead to connect LangChain to the hosted 1Claw MCP server, which loads all 27+ vault tools with zero manual tool definitions. That path needs ONECLAW_AGENT_API_KEY and OPENAI_API_KEY."
+      },
+      {
+        "type": "prose",
+        "text": "Your LangChain agent now lists the vault, fetches the first secret through the SDK, and reports its path and type without leaking the value."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "How does the agent avoid putting raw secret values in the prompt?",
+        "options": [
+          "It encrypts the prompt",
+          "It fetches secrets just in time via tools and the system prompt forbids echoing values",
+          "It uses a separate model",
+          "It disables logging"
+        ],
+        "correctIndex": 1,
+        "explanation": "The LLM calls vault tools on demand and is instructed never to reveal raw secret values."
+      },
+      {
+        "question": "Which package do the custom LangChain tools wrap?",
+        "options": [
+          "oneclaw",
+          "@1claw/sdk",
+          "@1claw/mcp",
+          "langchain-1claw"
+        ],
+        "correctIndex": 1,
+        "explanation": "The tool func calls createClient from @1claw/sdk."
+      },
+      {
+        "question": "What does npm run mcp do differently from npm start?",
+        "options": [
+          "It runs offline",
+          "It connects to the hosted 1Claw MCP server and loads all vault tools automatically",
+          "It uses Gemini only",
+          "It skips authentication"
+        ],
+        "correctIndex": 1,
+        "explanation": "The MCP client script connects to mcp.1claw.xyz and gets all 27+ tools without defining them by hand."
+      }
+    ]
+  },
+  {
+    "id": "crewai-integration",
+    "title": "Give a CrewAI crew secure secret access",
+    "summary": "Use the 1claw-crewai-tools package so a CrewAI agent fetches a secret at runtime.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The 1claw-crewai-tools package adds an OneclawVaultTool that fetches credentials from your vault at runtime using a scoped agent identity. Secrets are not copied into prompts, repos, or long-lived memory."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "The PyPI distribution name is 1claw-crewai-tools. The Python import package is oneclaw_crewai. You also need an agent bound to a vault with a read policy on the secret path, plus an LLM key."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Install the tools package.",
+            "code": "pip install 1claw-crewai-tools",
+            "lang": "bash"
+          },
+          {
+            "text": "Export the agent identity, vault, and an LLM key.",
+            "code": "export ONECLAW_AGENT_ID=\"<agent-uuid>\"\nexport ONECLAW_AGENT_API_KEY=\"ocv_...\"\nexport ONECLAW_VAULT_ID=\"<vault-uuid>\"\nexport GOOGLE_API_KEY=\"...\"",
+            "lang": "bash"
+          },
+          {
+            "text": "Build a crew that gives one agent the vault tool.",
+            "code": "import os\nfrom crewai import Agent, Crew, Process, Task\nfrom oneclaw_crewai import OneclawVaultTool\n\nvault_tool = OneclawVaultTool(\n    agent_id=os.environ[\"ONECLAW_AGENT_ID\"],\n    api_key=os.environ[\"ONECLAW_AGENT_API_KEY\"],\n    vault_id=os.environ[\"ONECLAW_VAULT_ID\"],\n)\n\nagent = Agent(\n    role=\"Engineer\",\n    goal=\"Build features using vault-stored API keys\",\n    backstory=\"You use tools instead of pasted secrets.\",\n    tools=[vault_tool],\n    verbose=False,\n)\n\ntask = Task(\n    description=\"Read path api-keys/example using the vault tool; do not echo raw values.\",\n    expected_output=\"Confirmation that the path was read.\",\n    agent=agent,\n)\n\ncrew = Crew(agents=[agent], tasks=[task], process=Process.sequential)\ncrew.kickoff()",
+            "lang": "python"
+          },
+          {
+            "text": "Run the crew.",
+            "code": "python crew_demo.py",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Keep verbose=False in production. With verbose=True, CrewAI logs the raw return value of every tool call, which prints secret values to stdout. Never print or log the tool return value."
+      },
+      {
+        "type": "prose",
+        "text": "Your crew now fetches a secret from 1Claw through the oneclaw_vault tool during a task, without the value ever landing in code or repo."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What is the import package name for the CrewAI tools?",
+        "options": [
+          "1claw_crewai_tools",
+          "oneclaw_crewai",
+          "crewai_1claw",
+          "oneclaw"
+        ],
+        "correctIndex": 1,
+        "explanation": "You pip install 1claw-crewai-tools but import from oneclaw_crewai."
+      },
+      {
+        "question": "Why should verbose stay False in production?",
+        "options": [
+          "It slows the crew down",
+          "CrewAI logs raw tool return values, which can print secrets",
+          "It disables the vault tool",
+          "It breaks Gemini"
+        ],
+        "correctIndex": 1,
+        "explanation": "With verbose=True, CrewAI's executor prints the raw return value of every tool call, including secret values."
+      },
+      {
+        "question": "How are the vault credentials retrieved?",
+        "options": [
+          "At import time from a config file",
+          "At runtime using a scoped agent identity",
+          "Copied into the prompt once",
+          "From a local .env only"
+        ],
+        "correctIndex": 1,
+        "explanation": "Credentials are fetched at runtime with a scoped agent identity, not baked into prompts or repos."
+      }
+    ]
+  },
+  {
+    "id": "elizaos-plugin",
+    "title": "Load the 1Claw plugin into an elizaOS agent",
+    "summary": "Bootstrap a vault and agent, then configure @1claw/plugin-elizaos in a character.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The @1claw/plugin-elizaos package gives an elizaOS character HSM-backed vault access and multi-chain signing. It wraps @1claw/sdk and exposes actions like GET_SECRET, LIST_SECRETS, and SIGN_MESSAGE."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Use a human 1ck_ API key only during bootstrap to provision resources. The bootstrap script never stores the human key. It writes an agent-only ocv_ key for your character."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Clone the plugin repo and install.",
+            "code": "git clone https://github.com/1clawAI/1claw-elizaos-plugin.git\ncd 1claw-elizaos-plugin\nnpm install",
+            "lang": "bash"
+          },
+          {
+            "text": "Run bootstrap with your human key to create a vault, agent, and policy.",
+            "code": "ONECLAW_HUMAN_API_KEY=1ck_your_key npm run bootstrap",
+            "lang": "bash"
+          },
+          {
+            "text": "Bootstrap writes .env.elizaos with agent credentials. Validate them.",
+            "code": "export $(grep -v '^#' .env.elizaos | xargs)\nnpm run validate",
+            "lang": "bash"
+          },
+          {
+            "text": "Add the plugin to your character and set the agent key in settings.secrets.",
+            "code": "{\n  \"name\": \"my-agent\",\n  \"plugins\": [\"@1claw/plugin-elizaos\"],\n  \"settings\": {\n    \"secrets\": {\n      \"ONECLAW_AGENT_API_KEY\": \"ocv_...\",\n      \"ONECLAW_AGENT_ID\": \"uuid-from-bootstrap\",\n      \"ONECLAW_VAULT_ID\": \"uuid-from-bootstrap\"\n    }\n  }\n}",
+            "lang": "json"
+          },
+          {
+            "text": "If you are adding the plugin to an existing project, install it directly.",
+            "code": "npm install @1claw/plugin-elizaos",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Pass ONECLAW_ENABLE_INTENTS=true to the bootstrap command if you want transaction signing enabled on the agent at create time."
+      },
+      {
+        "type": "prose",
+        "text": "Your elizaOS agent now boots with the 1Claw plugin loaded, authenticates with its ocv_ key, and can run vault and signing actions."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What is the human 1ck_ key used for in this flow?",
+        "options": [
+          "Runtime access for the character",
+          "Setup only, to provision the vault, agent, and policy",
+          "Signing transactions",
+          "Nothing, it is optional"
+        ],
+        "correctIndex": 1,
+        "explanation": "The human key is used only during bootstrap and is never written to disk; the character runs on the agent ocv_ key."
+      },
+      {
+        "question": "Which file does bootstrap write agent credentials to?",
+        "options": [
+          ".env",
+          "character.json",
+          ".env.elizaos",
+          "secrets.json"
+        ],
+        "correctIndex": 2,
+        "explanation": "Bootstrap writes ONECLAW_AGENT_API_KEY, ONECLAW_AGENT_ID, and ONECLAW_VAULT_ID to .env.elizaos with mode 600."
+      },
+      {
+        "question": "Where do private signing keys live?",
+        "options": [
+          "In the character JSON",
+          "In the HSM or TEE, never leaving it",
+          "In .env.elizaos",
+          "In the LLM context"
+        ],
+        "correctIndex": 1,
+        "explanation": "Private signing keys never leave the HSM/TEE; the agent submits intents and 1Claw signs server-side."
+      }
+    ]
+  },
+  {
+    "id": "agentkit-onchain-agent",
+    "title": "Sign onchain with 1Claw AgentKit on Base",
+    "summary": "Run the 1Claw AgentKit MCP server so an autonomous agent signs Base transactions with no keys on disk.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "@1claw/agentkit is a hardened MCP server built on Coinbase AgentKit. Your agent gets the full onchain toolkit for Base, but signing happens in a TEE via the Intents API and secrets are resolved from your vault at boot, never touching disk."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "This path is for autonomous agents that run without a human approving each transaction. Guardrails like per-tx caps, daily limits, and address allowlists are enforced server-side."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Clone the repo and run the setup wizard. It asks for your human 1ck_ key and provisions a vault, an agent with Intents API and Base guardrails, a Base signing key, and a read policy on agentkit/*.",
+            "code": "git clone https://github.com/1clawAI/1claw-agentkit.git\ncd 1claw-agentkit\nnpm install\nnpm run setup",
+            "lang": "bash"
+          },
+          {
+            "text": "The wizard outputs an MCP config that pairs 1claw-agentkit with the 1claw MCP server under one agent key.",
+            "code": "{\n  \"mcpServers\": {\n    \"1claw-agentkit\": {\n      \"command\": \"npx\",\n      \"args\": [\"@1claw/agentkit\"],\n      \"env\": { \"ONECLAW_AGENT_API_KEY\": \"ocv_your_key_here\" }\n    },\n    \"1claw\": {\n      \"command\": \"npx\",\n      \"args\": [\"@1claw/mcp\"],\n      \"env\": { \"ONECLAW_AGENT_API_KEY\": \"ocv_your_key_here\" }\n    }\n  }\n}",
+            "lang": "json"
+          },
+          {
+            "text": "To use it as a library, resolve secrets and build a Base wallet provider, then send a TEE-signed transaction.",
+            "code": "import { createBaseMainnetProvider } from \"@1claw/agentkit\";\n\nconst wallet = createBaseMainnetProvider({\n  agentApiKey: \"ocv_...\",\n  agentId: \"your-agent-id\",\n});\n\nconst result = await wallet.sendTransaction({\n  to: \"0xRecipient\",\n  value: \"0.001\",\n});\n\nconsole.log(`TX: ${result.txHash} (${result.status})`);",
+            "lang": "typescript"
+          },
+          {
+            "text": "To bootstrap a full-stack onchain dApp instead, use Scaffold-Agent, which wires HSM-backed secrets and Intents signing into a Scaffold-ETH 2 scaffold.",
+            "code": "# See scaffoldagent.xyz and github.com/1clawAI/scaffoldagent_xyz",
+            "lang": "text"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Set ONECLAW_CHAIN_ID to 84532 to target Base Sepolia for testing before you move to Base mainnet (8453)."
+      },
+      {
+        "type": "prose",
+        "text": "Your agent now signs and broadcasts transactions on Base through the Intents API, with keys held in the vault TEE and guardrails capping what a prompt injection could ever do."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Where are the signing keys stored with @1claw/agentkit?",
+        "options": [
+          "In a .env file",
+          "In the 1Claw Vault with HSM and MPC, never on disk",
+          "In the agent's process forever",
+          "On the Base chain"
+        ],
+        "correctIndex": 1,
+        "explanation": "Credentials resolve from the HSM-encrypted vault at boot and never touch disk; signing happens in a TEE."
+      },
+      {
+        "question": "When should you pick @1claw/agentkit over mcp.base.org?",
+        "options": [
+          "When a human approves every transaction",
+          "When the agent runs autonomously with no human per transaction",
+          "For Claude Desktop chat only",
+          "When you have no vault"
+        ],
+        "correctIndex": 1,
+        "explanation": "@1claw/agentkit is for autonomous agents with programmatic guardrails, while mcp.base.org suits human-in-the-loop use."
+      },
+      {
+        "question": "What starter kit bootstraps a full onchain dApp with 1Claw?",
+        "options": [
+          "create-react-app",
+          "Scaffold-Agent",
+          "Hardhat",
+          "Base Wizard"
+        ],
+        "correctIndex": 1,
+        "explanation": "Scaffold-Agent wires HSM-backed secrets and Intents API signing into a Scaffold-ETH 2 scaffold."
+      }
+    ]
+  }
+]

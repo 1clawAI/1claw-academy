@@ -1,26 +1,118 @@
 @import "tailwindcss";
 
+/*
+ * 1Claw brand palette: matte black, metallic grays, signature red.
+ * Tokens mirror the official brand kit (1claw.xyz/brand-kit).
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #030304;
+  --surface: #0a090b;
+  --surface-2: #141012;
+  --border: #322e30;
+  --border-soft: #1e1c1d;
+  --foreground: #ffffff;
+  --muted: #6b6b73;
+
+  /* Signature red + gradient stops */
+  --primary: #df171a;
+  --primary-2: #ff5a5c;
+  --primary-deep: #990029;
+  --crimson: #c4123a;
+
+  /* Functional semantic colors */
+  --success: #1fb97a;
+  --danger: #c4123a;
+  --warn: #e0a13a;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-2: var(--primary-2);
+  --color-crimson: var(--crimson);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warn: var(--warn);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-logo: var(--font-bakbak), var(--font-geist-sans), sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(60rem 40rem at 82% -12%, rgba(223, 23, 26, 0.14), transparent 58%),
+    radial-gradient(48rem 40rem at -5% 8%, rgba(153, 0, 41, 0.1), transparent 55%),
+    var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(223, 23, 26, 0.35);
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3f3a3c; }
+
+.brand-wordmark {
+  font-family: var(--font-logo);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+.brand-gradient {
+  background: linear-gradient(135deg, #df171a, #c4123a, #990029);
+}
+
+.brand-gradient-text {
+  background: linear-gradient(135deg, #ff5a5c, #df171a, #990029);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)), var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.prose-body p { line-height: 1.7; color: #d6d3d6; }
+.prose-body code {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--primary-2);
+}
+
+@keyframes fadeup {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fadeup { animation: fadeup 0.5s ease both; }
+
+.grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 44px 44px;
 }

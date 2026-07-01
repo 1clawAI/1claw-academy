@@ -1,0 +1,299 @@
+[
+  {
+    "id": "audit-and-compliance",
+    "title": "Audit and compliance",
+    "summary": "Query the tamper-evident audit log and understand how writes are hardened.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Every API access and relevant failure can be recorded in an audit log. Only metadata is stored: path, action, actor, timestamp, IP. Secret values are never logged."
+      },
+      {
+        "type": "points",
+        "items": [
+          "GET /v1/audit/events with filters: resource_id, actor_id, action, from, to, limit, offset",
+          "Each event carries prev_event_id and integrity_hash forming a SHA-256 hash chain",
+          "Modifying or deleting any event breaks the chain for every later entry",
+          "The app runs as vault_app, which cannot INSERT into audit_events directly"
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Audit writes go through a SECURITY DEFINER function (insert_audit_event) owned by a privileged role. Even a compromised app connection cannot fabricate events or bypass the hash chain."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Set your API key.",
+            "code": "export TOKEN=1ck_your_key_here",
+            "lang": "bash"
+          },
+          {
+            "text": "Query recent secret reads.",
+            "code": "curl \"https://api.1claw.xyz/v1/audit/events?action=secret.read&limit=25\" \\\n  -H \"Authorization: Bearer $TOKEN\"",
+            "lang": "bash"
+          },
+          {
+            "text": "Notice the response includes metadata only, plus prev_event_id and integrity_hash for chain verification.",
+            "code": "{\n  \"events\": [{\n    \"action\": \"secret.read\",\n    \"actor_id\": \"agent-uuid\",\n    \"details\": { \"path\": \"keys/eth-signer\" },\n    \"created_at\": \"2026-02-27T14:00:00Z\"\n  }],\n  \"count\": 1\n}",
+            "lang": "json"
+          },
+          {
+            "text": "Filter by a single actor to review one agent's activity.",
+            "code": "curl \"https://api.1claw.xyz/v1/audit/events?actor_id=$AGENT_ID&limit=50\" \\\n  -H \"Authorization: Bearer $TOKEN\"",
+            "lang": "bash"
+          },
+          {
+            "text": "To forward events to your SIEM, register an AuditSink when constructing the TypeScript SDK client. Every event your session produces is mirrored to your target.",
+            "code": "// see the SDK overview for the AuditSink plugin interface",
+            "lang": "typescript"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Verify integrity by walking the chain from the latest event back to the first, where prev_event_id is NULL. Any break flags tampering."
+      },
+      {
+        "type": "prose",
+        "text": "You can now query the audit log by action and actor and explain why the chain plus SECURITY DEFINER insert makes it tamper-evident, which supports SOC 2 controls like CC6 and CC7."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What is stored in an audit event?",
+        "options": [
+          "The secret value and the metadata",
+          "Only metadata such as path, action, actor, and timestamp",
+          "The private key hash",
+          "Nothing until export"
+        ],
+        "correctIndex": 1,
+        "explanation": "Audit events store metadata only; secret values are never logged."
+      },
+      {
+        "question": "How does the log resist tampering at write time?",
+        "options": [
+          "It is read-only after 24 hours",
+          "Writes go through a SECURITY DEFINER function since vault_app cannot INSERT directly",
+          "Events are encrypted with the org KEK",
+          "Only admins can query it"
+        ],
+        "correctIndex": 1,
+        "explanation": "vault_app has direct INSERT revoked, so all writes funnel through the trusted insert_audit_event function that enforces the chain."
+      },
+      {
+        "question": "What links each event to the previous one?",
+        "options": [
+          "A sequential integer ID",
+          "prev_event_id plus a SHA-256 integrity_hash",
+          "The actor's IP address",
+          "A Stripe invoice ID"
+        ],
+        "correctIndex": 1,
+        "explanation": "Each event carries prev_event_id and an integrity_hash, forming an append-only SHA-256 chain."
+      }
+    ]
+  },
+  {
+    "id": "agent-fleet-management",
+    "title": "Agent fleet management",
+    "summary": "Provision agents at scale, scope their vaults, then rotate a key and deactivate an agent.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "When you run dozens or hundreds of agents you need repeatable patterns for enrollment, vault layout, and lifecycle. Bulk provisioning plus tight policies keeps the blast radius small."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Shared vault with path-scoped policies: api-keys/** shared, agents/{name}/** per-agent",
+          "Per-agent vaults for strict isolation in multi-tenant or compliance setups",
+          "Vault binding via vault_ids limits which vaults an agent JWT can touch even if a policy is too broad",
+          "Conditional policies add ip_allowlist and time_window on sensitive paths"
+        ]
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Set a human API key.",
+            "code": "export TOKEN=1ck_your_key_here",
+            "lang": "bash"
+          },
+          {
+            "text": "Bulk provision agents with the CLI.",
+            "code": "for name in worker-1 worker-2 worker-3; do\n  1claw agent create \"$name\" --scopes \"vaults:read\"\ndone",
+            "lang": "bash"
+          },
+          {
+            "text": "Bind each agent to just its intended vaults so a stray policy cannot widen access.",
+            "code": "1claw agent update $AGENT_ID --vault-ids \"$VAULT_1,$VAULT_2\"",
+            "lang": "bash"
+          },
+          {
+            "text": "Set transaction guardrails for any agent using the Intents API.",
+            "code": "1claw agent update $AGENT_ID \\\n  --tx-max-value 0.05 --tx-daily-limit 0.5 --tx-allowed-chains \"base\"",
+            "lang": "bash"
+          },
+          {
+            "text": "Rotate an agent's key. This invalidates the old credential.",
+            "code": "1claw agent rotate-key $AGENT_ID",
+            "lang": "bash"
+          },
+          {
+            "text": "Deactivate the agent when its task is done. This keeps the audit trail, unlike delete.",
+            "code": "1claw agent update $AGENT_ID --active false",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Prefer deactivate over delete. A deactivated agent cannot exchange tokens or read secrets, but its records and audit events are preserved for review."
+      },
+      {
+        "type": "prose",
+        "text": "You now rotate a key and deactivate an agent while keeping its audit trail, and you can scope a fleet with vault binding and conditional policies."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What does vault binding (vault_ids) add on top of policies?",
+        "options": [
+          "It grants access to every vault",
+          "It restricts which vaults the agent JWT works for regardless of policies",
+          "It rotates keys nightly",
+          "It disables audit logging"
+        ],
+        "correctIndex": 1,
+        "explanation": "Vault binding is a second layer: even a too-broad policy cannot let the JWT reach vaults outside vault_ids."
+      },
+      {
+        "question": "Why deactivate an agent instead of deleting it?",
+        "options": [
+          "Deactivate is faster to type",
+          "Deactivate preserves the records and audit trail",
+          "Delete keeps the token valid",
+          "There is no difference"
+        ],
+        "correctIndex": 1,
+        "explanation": "Deactivating with --active false blocks access but preserves records and audit events; delete removes them."
+      },
+      {
+        "question": "For a common set of secrets shared by all fleet agents, what layout is recommended?",
+        "options": [
+          "One vault per secret",
+          "A shared vault with path-scoped policies",
+          "A single wildcard policy on production",
+          "No policies at all"
+        ],
+        "correctIndex": 1,
+        "explanation": "A shared vault with path-based policies (api-keys/** shared, agents/{name}/** per-agent) scales cleanly."
+      }
+    ]
+  },
+  {
+    "id": "platform-api-multitenancy",
+    "title": "Platform API multitenancy",
+    "summary": "Register a platform app and bootstrap a user's vault, agent, and signing keys from a template.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The Platform API lets you build multi-tenant products on 1Claw. You register an app, define a bootstrap template, provision users, and hand each user a claim URL, all without your platform being able to read their secrets."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "The Platform API requires a Pro or higher plan. Save the returned plt_ key when you create the app; it is not shown again."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Templates create a vault, agents, and policies in one atomic operation",
+          "In templates use nested intents: { enabled: true }, not the flat intents_api_enabled",
+          "signing_keys in the template are provisioned server-side; the plt_ key cannot read them across the org boundary",
+          "Bootstrap returns claim_url plus a one-time agent_api_key in summary"
+        ]
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Register a platform app with your user JWT and save the plt_ key.",
+            "code": "curl -X POST \"https://api.1claw.xyz/v1/platform/apps\" \\\n  -H \"Authorization: Bearer $USER_JWT\" -H \"Content-Type: application/json\" \\\n  -d '{ \"name\": \"My DeFi Platform\", \"slug\": \"my-defi\", \"auth_mode\": \"silent\" }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Create a bootstrap template. Note intents is a nested object here.",
+            "code": "curl -X POST \"https://api.1claw.xyz/v1/platform/apps/$APP_ID/templates\" \\\n  -H \"Authorization: Bearer plt_YOUR_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{\n    \"name\": \"default-template\",\n    \"spec\": {\n      \"vault\": { \"name\": \"user-vault\" },\n      \"agents\": [{ \"name\": \"defi-bot\", \"intents\": { \"enabled\": true } }],\n      \"signing_keys\": [{ \"chain\": \"ethereum\" }],\n      \"policies\": [{ \"principal_ref\": \"agents.primary\", \"vault_ref\": \"vault\", \"paths\": [\"keys/*\"] }]\n    }\n  }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Upsert a user.",
+            "code": "curl -X POST \"https://api.1claw.xyz/v1/platform/users/upsert\" \\\n  -H \"Authorization: Bearer plt_YOUR_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{ \"email\": \"user@example.com\", \"external_subject\": \"telegram:123456789\" }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Bootstrap the user from the template. The response has claim_url and a one-time summary.agent_api_key.",
+            "code": "curl -X POST \"https://api.1claw.xyz/v1/platform/connections/$CONNECTION_ID/bootstrap\" \\\n  -H \"Authorization: Bearer plt_YOUR_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{ \"template_id\": \"'$TEMPLATE_ID'\" }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Share the claim_url with the user. It expires in 10 minutes; reissue with the reissue-claim endpoint if it lapses.",
+            "code": "# claim_url format: https://1claw.xyz/connect/{slug}/claim/{token}",
+            "lang": "text"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "For Sign in with 1Claw, the OAuth client_id must be your app slug (for example my-defi), not the app UUID. Passing the UUID returns Unknown client_id."
+      },
+      {
+        "type": "prose",
+        "text": "You now register a platform app and bootstrap a user with a vault, an intents-enabled agent, and server-side signing keys your platform cannot read, plus a claim URL to hand off."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "In a bootstrap template, how do you enable the Intents API on an agent?",
+        "options": [
+          "intents_api_enabled: true (flat)",
+          "intents: { enabled: true } (nested)",
+          "enable_intents: 1",
+          "scopes: [intents]"
+        ],
+        "correctIndex": 1,
+        "explanation": "Templates use the nested intents: { enabled: true }; the flat intents_api_enabled is the direct agent-creation form."
+      },
+      {
+        "question": "What must client_id be for Sign in with 1Claw?",
+        "options": [
+          "The app UUID",
+          "The app slug",
+          "The plt_ key",
+          "The user email"
+        ],
+        "correctIndex": 1,
+        "explanation": "client_id is the app slug; passing the UUID returns Unknown client_id."
+      },
+      {
+        "question": "Why can't the platform read a bootstrapped user's signing keys?",
+        "options": [
+          "They are deleted after bootstrap",
+          "The plt_ key cannot read signing keys across the org boundary",
+          "They are only on testnets",
+          "Signing keys are never provisioned"
+        ],
+        "correctIndex": 1,
+        "explanation": "Signing keys are provisioned server-side and the plt_ key cannot read them across the org boundary, keeping custody separated."
+      }
+    ]
+  }
+]
