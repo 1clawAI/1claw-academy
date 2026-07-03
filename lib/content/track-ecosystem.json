@@ -27,14 +27,19 @@
             "lang": "bash"
           },
           {
-            "text": "Export your API key and the vault ID that holds a secret.",
+            "text": "Export your API key and the vault ID that holds a secret. Replace `1ck_your_user_key` with your 1ck_ key from Settings \u2192 API Keys. Use your vault UUID from `1claw vault list` or the Foundations track.",
             "code": "export ONECLAW_API_KEY=1ck_your_user_key\nexport ONECLAW_VAULT_ID=your-vault-uuid",
             "lang": "bash"
           },
           {
-            "text": "Write a script that creates a client and reads one secret by path.",
-            "code": "import os\nfrom oneclaw import create_client\n\nclient = create_client(api_key=os.environ[\"ONECLAW_API_KEY\"])\nvault_id = os.environ[\"ONECLAW_VAULT_ID\"]\n\nsecret = client.secrets.get(vault_id, \"demo/api-key\")\nprint(secret.data[\"value\"])",
+            "text": "Write the following script and save it as `fetch_secret.py`. It creates a client and reads one secret by path.",
+            "code": "import os\nfrom oneclaw import create_client\n\nclient = create_client(api_key=os.environ[\"ONECLAW_API_KEY\"])\nvault_id = os.environ[\"ONECLAW_VAULT_ID\"]\n\nsecret = client.secrets.get(vault_id, \"api-keys/openai\")\nprint(secret.data[\"value\"])",
             "lang": "python"
+          },
+          {
+            "text": "Create the secret if it doesn't already exist.",
+            "code": "1claw secret set api-keys/openai --vault $ONECLAW_VAULT_ID --value 'your-openai-key' --type api_key",
+            "lang": "bash"
           },
           {
             "text": "Run it. The fetched secret value prints to your terminal.",
@@ -101,24 +106,24 @@
       {
         "type": "callout",
         "variant": "info",
-        "text": "Prerequisites: a 1Claw account, a vault, an agent with an ocv_ API key, and a policy granting that agent read access to the secret paths it needs."
+        "text": "Prerequisites: a 1Claw account, a vault, an agent with an ocv_ API key, and a policy granting that agent read access to the secret paths it needs. Create an agent in the Agents & Access Control track, or via `POST /v1/agents`. Copy agent_id and api_key from the creation response."
       },
       {
         "type": "steps",
         "steps": [
           {
-            "text": "For the local stdio option, add the 1claw MCP server to your client config. Only ONECLAW_AGENT_API_KEY is required. Agent ID and vault are auto-discovered.",
-            "code": "{\n  \"mcpServers\": {\n    \"1claw\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@1claw/mcp\"],\n      \"env\": {\n        \"ONECLAW_AGENT_API_KEY\": \"ocv_your_agent_api_key\"\n      }\n    }\n  }\n}",
+            "text": "Option A: Local stdio (recommended for development). Add the 1claw MCP server to your client config. Only ONECLAW_AGENT_API_KEY is required. Agent ID and vault are auto-discovered. Paste your real ocv_ key from agent creation in place of the placeholder.",
+            "code": "{\n  \"mcpServers\": {\n    \"1claw\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@1claw/mcp\"],\n      \"env\": {\n        \"ONECLAW_AGENT_API_KEY\": \"ocv_paste_your_agent_api_key_here\"\n      }\n    }\n  }\n}",
             "lang": "json"
           },
           {
-            "text": "For the hosted option, first get a JWT by calling the agent-token endpoint with your agent ID and API key.",
-            "code": "curl -s -X POST https://api.1claw.xyz/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"agent_id\":\"<your-agent-uuid>\",\"api_key\":\"ocv_...\"}' | jq -r '.access_token'",
+            "text": "Option B: Hosted server. First get a JWT by calling the agent-token endpoint. Replace the placeholders with your real agent_id and ocv_ key from agent creation.",
+            "code": "export AGENT_ID=\"paste-your-agent-uuid-here\"\nexport AGENT_KEY=\"ocv_paste_your_agent_key_here\"\n\nTOKEN=$(curl -s -X POST https://api.1claw.xyz/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"agent_id\\\":\\\"$AGENT_ID\\\",\\\"api_key\\\":\\\"$AGENT_KEY\\\"}\" | jq -r '.access_token')\n\nexport VAULT_ID=\"paste-your-vault-uuid-here\"",
             "lang": "bash"
           },
           {
-            "text": "Use that token in a hosted MCP config. Claude Desktop, Cursor, and Claude Code all use this same shape.",
-            "code": "{\n  \"mcpServers\": {\n    \"1claw\": {\n      \"url\": \"https://mcp.1claw.xyz/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer <jwt-from-agent-token-endpoint>\",\n        \"X-Vault-ID\": \"your-vault-uuid-here\"\n      }\n    }\n  }\n}",
+            "text": "Use that token in a hosted MCP config. Claude Desktop, Cursor, and Claude Code all use this same shape. Replace $TOKEN and $VAULT_ID with the values from the previous step.",
+            "code": "{\n  \"mcpServers\": {\n    \"1claw\": {\n      \"url\": \"https://mcp.1claw.xyz/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer $TOKEN\",\n        \"X-Vault-ID\": \"$VAULT_ID\"\n      }\n    }\n  }\n}",
             "lang": "json"
           },
           {
@@ -127,6 +132,11 @@
             "lang": "text"
           }
         ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Config file locations \u2014 Claude Desktop: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS). Cursor: Settings \u2192 MCP Servers. VS Code: .vscode/mcp.json."
       },
       {
         "type": "callout",
@@ -192,23 +202,23 @@
         "type": "steps",
         "steps": [
           {
-            "text": "Clone the example and install dependencies. This pulls @1claw/sdk.",
-            "code": "cd examples/langchain-agent\nnpm install\ncp .env.example .env",
+            "text": "Clone the examples repository and install dependencies.",
+            "code": "git clone https://github.com/1clawAI/1claw-examples.git\ncd 1claw-examples/langchain-agent\nnpm install\ncp .env.example .env",
             "lang": "bash"
           },
           {
-            "text": "Fill in .env with your 1Claw and LLM credentials.",
-            "code": "ONECLAW_API_KEY=ocv_your_key_here\nONECLAW_VAULT_ID=your-vault-uuid\nGOOGLE_API_KEY=your-gemini-key",
+            "text": "Fill in .env with your 1Claw and LLM credentials. `npm start` uses ONECLAW_API_KEY (user key), while `npm run mcp` uses ONECLAW_AGENT_API_KEY (agent key).",
+            "code": "ONECLAW_API_KEY=1ck_your_user_key_here\nONECLAW_VAULT_ID=your-vault-uuid\nONECLAW_AGENT_API_KEY=ocv_your_agent_key_here\nGOOGLE_API_KEY=your-gemini-key",
             "lang": "text"
           },
           {
             "text": "If your vault is empty, add a test secret with the CLI.",
-            "code": "1claw secret put demo/hello-world --vault YOUR_VAULT_ID --value \"Hello from 1Claw!\" --type note",
+            "code": "1claw secret put demo/hello-world --vault $ONECLAW_VAULT_ID --value \"Hello from 1Claw!\" --type note",
             "lang": "bash"
           },
           {
-            "text": "Note the tool pattern: a DynamicStructuredTool wraps the SDK client so the agent can list secrets.",
-            "code": "import { DynamicStructuredTool } from \"@langchain/core/tools\";\nimport { createClient } from \"@1claw/sdk\";\nimport { z } from \"zod\";\n\nconst client = createClient({ baseUrl: BASE_URL, apiKey: API_KEY });\n\nconst listSecretsTool = new DynamicStructuredTool({\n  name: \"list_vault_secrets\",\n  description: \"List all secrets in the vault (metadata only, never values).\",\n  schema: z.object({}),\n  func: async () => {\n    const res = await client.secrets.list(VAULT_ID);\n    return res.data.secrets.map(s => `${s.path} (${s.type})`).join(\"\\n\");\n  },\n});",
+            "text": "Note the tool pattern: a DynamicStructuredTool wraps the SDK client so the agent can list secrets. BASE_URL, API_KEY, and VAULT_ID are defined from environment variables at the top of the file.",
+            "code": "import { DynamicStructuredTool } from \"@langchain/core/tools\";\nimport { createClient } from \"@1claw/sdk\";\nimport { z } from \"zod\";\n\nconst BASE_URL = process.env.ONECLAW_BASE_URL || \"https://api.1claw.xyz\";\nconst API_KEY = process.env.ONECLAW_API_KEY!;\nconst VAULT_ID = process.env.ONECLAW_VAULT_ID!;\n\nconst client = createClient({ baseUrl: BASE_URL, apiKey: API_KEY });\n\nconst listSecretsTool = new DynamicStructuredTool({\n  name: \"list_vault_secrets\",\n  description: \"List all secrets in the vault (metadata only, never values).\",\n  schema: z.object({}),\n  func: async () => {\n    const res = await client.secrets.list(VAULT_ID);\n    return res.data.secrets.map(s => `${s.path} (${s.type})`).join(\"\\n\");\n  },\n});",
             "lang": "typescript"
           },
           {
@@ -221,11 +231,11 @@
       {
         "type": "callout",
         "variant": "tip",
-        "text": "Run npm run mcp instead to connect LangChain to the hosted 1Claw MCP server, which loads all 27+ vault tools with zero manual tool definitions. That path needs ONECLAW_AGENT_API_KEY and OPENAI_API_KEY."
+        "text": "Run `npm run mcp` instead to connect LangChain to the hosted 1Claw MCP server, which loads all 27+ vault tools with zero manual tool definitions. That path needs ONECLAW_AGENT_API_KEY and OPENAI_API_KEY."
       },
       {
         "type": "prose",
-        "text": "Your LangChain agent now lists the vault, fetches the first secret through the SDK, and reports its path and type without leaking the value."
+        "text": "Your LangChain agent now lists vault secrets through the SDK tool and reports paths and types without leaking the value."
       }
     ],
     "quiz": [
@@ -276,25 +286,30 @@
       {
         "type": "callout",
         "variant": "info",
-        "text": "The PyPI distribution name is 1claw-crewai-tools. The Python import package is oneclaw_crewai. You also need an agent bound to a vault with a read policy on the secret path, plus an LLM key."
+        "text": "The PyPI distribution name is 1claw-crewai-tools. The Python import package is oneclaw_crewai. You also need an agent bound to a vault with a read policy on the secret path, plus an LLM key. Requires an agent with a read policy on the secret path. See the Agents & Access Control track for setup."
       },
       {
         "type": "steps",
         "steps": [
           {
-            "text": "Install the tools package.",
-            "code": "pip install 1claw-crewai-tools",
+            "text": "Install the tools package and CrewAI.",
+            "code": "pip install 1claw-crewai-tools crewai",
             "lang": "bash"
           },
           {
-            "text": "Export the agent identity, vault, and an LLM key.",
-            "code": "export ONECLAW_AGENT_ID=\"<agent-uuid>\"\nexport ONECLAW_AGENT_API_KEY=\"ocv_...\"\nexport ONECLAW_VAULT_ID=\"<vault-uuid>\"\nexport GOOGLE_API_KEY=\"...\"",
+            "text": "Export the agent identity, vault, and an LLM key. Use values from agent creation (see Agents & Access Control track) and your vault UUID from `1claw vault list`.",
+            "code": "export ONECLAW_AGENT_ID=\"paste-your-agent-uuid-here\"\nexport ONECLAW_AGENT_API_KEY=\"ocv_paste_your_agent_key_here\"\nexport ONECLAW_VAULT_ID=\"paste-your-vault-uuid-here\"\nexport GOOGLE_API_KEY=\"your-gemini-key\"",
             "lang": "bash"
           },
           {
-            "text": "Build a crew that gives one agent the vault tool.",
-            "code": "import os\nfrom crewai import Agent, Crew, Process, Task\nfrom oneclaw_crewai import OneclawVaultTool\n\nvault_tool = OneclawVaultTool(\n    agent_id=os.environ[\"ONECLAW_AGENT_ID\"],\n    api_key=os.environ[\"ONECLAW_AGENT_API_KEY\"],\n    vault_id=os.environ[\"ONECLAW_VAULT_ID\"],\n)\n\nagent = Agent(\n    role=\"Engineer\",\n    goal=\"Build features using vault-stored API keys\",\n    backstory=\"You use tools instead of pasted secrets.\",\n    tools=[vault_tool],\n    verbose=False,\n)\n\ntask = Task(\n    description=\"Read path api-keys/example using the vault tool; do not echo raw values.\",\n    expected_output=\"Confirmation that the path was read.\",\n    agent=agent,\n)\n\ncrew = Crew(agents=[agent], tasks=[task], process=Process.sequential)\ncrew.kickoff()",
+            "text": "Build a crew that gives one agent the vault tool. Save the script as `crew_demo.py`.",
+            "code": "import os\nfrom crewai import Agent, Crew, Process, Task\nfrom oneclaw_crewai import OneclawVaultTool\n\nvault_tool = OneclawVaultTool(\n    agent_id=os.environ[\"ONECLAW_AGENT_ID\"],\n    api_key=os.environ[\"ONECLAW_AGENT_API_KEY\"],\n    vault_id=os.environ[\"ONECLAW_VAULT_ID\"],\n)\n\nagent = Agent(\n    role=\"Engineer\",\n    goal=\"Build features using vault-stored API keys\",\n    backstory=\"You use tools instead of pasted secrets.\",\n    tools=[vault_tool],\n    verbose=False,\n)\n\ntask = Task(\n    description=\"Read path api-keys/openai using the vault tool; do not echo raw values.\",\n    expected_output=\"Confirmation that the path was read.\",\n    agent=agent,\n)\n\ncrew = Crew(agents=[agent], tasks=[task], process=Process.sequential)\ncrew.kickoff()",
             "lang": "python"
+          },
+          {
+            "text": "Create the secret if it doesn't already exist.",
+            "code": "1claw secret set api-keys/openai --vault $ONECLAW_VAULT_ID --value 'your-openai-key' --type api_key",
+            "lang": "bash"
           },
           {
             "text": "Run the crew.",
@@ -361,7 +376,7 @@
       {
         "type": "callout",
         "variant": "info",
-        "text": "Use a human 1ck_ API key only during bootstrap to provision resources. The bootstrap script never stores the human key. It writes an agent-only ocv_ key for your character."
+        "text": "Use a human 1ck_ API key only during bootstrap to provision resources. The bootstrap script never stores the human key. It writes an agent-only ocv_ key for your character. If you don't have an existing elizaOS project, see the elizaOS quickstart at https://elizaos.github.io/eliza/docs/quickstart to set one up first."
       },
       {
         "type": "steps",
@@ -382,13 +397,18 @@
             "lang": "bash"
           },
           {
-            "text": "Add the plugin to your character and set the agent key in settings.secrets.",
-            "code": "{\n  \"name\": \"my-agent\",\n  \"plugins\": [\"@1claw/plugin-elizaos\"],\n  \"settings\": {\n    \"secrets\": {\n      \"ONECLAW_AGENT_API_KEY\": \"ocv_...\",\n      \"ONECLAW_AGENT_ID\": \"uuid-from-bootstrap\",\n      \"ONECLAW_VAULT_ID\": \"uuid-from-bootstrap\"\n    }\n  }\n}",
+            "text": "Add the plugin to your character file. Copy ONECLAW_AGENT_API_KEY, ONECLAW_AGENT_ID, and ONECLAW_VAULT_ID from .env.elizaos into settings.secrets in your character file.",
+            "code": "{\n  \"name\": \"my-agent\",\n  \"plugins\": [\"@1claw/plugin-elizaos\"],\n  \"settings\": {\n    \"secrets\": {\n      \"ONECLAW_AGENT_API_KEY\": \"ocv_from_env_elizaos\",\n      \"ONECLAW_AGENT_ID\": \"uuid-from-env-elizaos\",\n      \"ONECLAW_VAULT_ID\": \"uuid-from-env-elizaos\"\n    }\n  }\n}",
             "lang": "json"
           },
           {
-            "text": "If you are adding the plugin to an existing project, install it directly.",
+            "text": "Alternative: add to an existing project. If you already have an elizaOS project, install the plugin directly instead of cloning the repo.",
             "code": "npm install @1claw/plugin-elizaos",
+            "lang": "bash"
+          },
+          {
+            "text": "Start your elizaOS agent and verify the 1claw plugin loaded. You should see a log line confirming the plugin registered its actions.",
+            "code": "npx elizaos start --character your-character.json",
             "lang": "bash"
           }
         ]
@@ -457,22 +477,27 @@
         "type": "steps",
         "steps": [
           {
-            "text": "Clone the repo and run the setup wizard. It asks for your human 1ck_ key and provisions a vault, an agent with Intents API and Base guardrails, a Base signing key, and a read policy on agentkit/*.",
+            "text": "Path A: MCP server setup. Clone the repo and run the setup wizard. It asks for your human 1ck_ key and provisions a vault, an agent with Intents API and Base guardrails, a Base signing key, and a read policy on agentkit/*.",
             "code": "git clone https://github.com/1clawAI/1claw-agentkit.git\ncd 1claw-agentkit\nnpm install\nnpm run setup",
             "lang": "bash"
           },
           {
-            "text": "The wizard outputs an MCP config that pairs 1claw-agentkit with the 1claw MCP server under one agent key.",
-            "code": "{\n  \"mcpServers\": {\n    \"1claw-agentkit\": {\n      \"command\": \"npx\",\n      \"args\": [\"@1claw/agentkit\"],\n      \"env\": { \"ONECLAW_AGENT_API_KEY\": \"ocv_your_key_here\" }\n    },\n    \"1claw\": {\n      \"command\": \"npx\",\n      \"args\": [\"@1claw/mcp\"],\n      \"env\": { \"ONECLAW_AGENT_API_KEY\": \"ocv_your_key_here\" }\n    }\n  }\n}",
-            "lang": "json"
+            "text": "The wizard prints an MCP config JSON. Paste the JSON the wizard prints into your AI client config. It pairs 1claw-agentkit with the 1claw MCP server under the agent key the wizard provisioned.",
+            "code": "# The wizard outputs something like:\n# {\n#   \"mcpServers\": {\n#     \"1claw-agentkit\": { ... },\n#     \"1claw\": { ... }\n#   }\n# }\n# Paste that output into your client config file.",
+            "lang": "text"
           },
           {
-            "text": "To use it as a library, resolve secrets and build a Base wallet provider, then send a TEE-signed transaction.",
-            "code": "import { createBaseMainnetProvider } from \"@1claw/agentkit\";\n\nconst wallet = createBaseMainnetProvider({\n  agentApiKey: \"ocv_...\",\n  agentId: \"your-agent-id\",\n});\n\nconst result = await wallet.sendTransaction({\n  to: \"0xRecipient\",\n  value: \"0.001\",\n});\n\nconsole.log(`TX: ${result.txHash} (${result.status})`);",
+            "text": "Set the chain ID for Base Sepolia (testnet) before moving to mainnet.",
+            "code": "export ONECLAW_CHAIN_ID=84532",
+            "lang": "bash"
+          },
+          {
+            "text": "Path B: Library API. Resolve secrets and build a Base wallet provider, then send a TEE-signed transaction. Use the agent credentials from the `npm run setup` wizard. Value is in ETH (0.001 ETH \u2248 a few dollars).",
+            "code": "import { createBaseMainnetProvider } from \"@1claw/agentkit\";\n\nconst wallet = createBaseMainnetProvider({\n  agentApiKey: process.env.ONECLAW_AGENT_API_KEY!,\n  agentId: process.env.ONECLAW_AGENT_ID!,\n});\n\nconst result = await wallet.sendTransaction({\n  to: \"0xRecipient\",\n  value: \"0.001\",\n});\n\nconsole.log(`TX: ${result.txHash} (${result.status})`);",
             "lang": "typescript"
           },
           {
-            "text": "To bootstrap a full-stack onchain dApp instead, use Scaffold-Agent, which wires HSM-backed secrets and Intents signing into a Scaffold-ETH 2 scaffold.",
+            "text": "Path C: Full-stack starter (Scaffold-Agent). To bootstrap a full-stack onchain dApp instead, use Scaffold-Agent, which wires HSM-backed secrets and Intents signing into a Scaffold-ETH 2 scaffold.",
             "code": "# See scaffoldagent.xyz and github.com/1clawAI/scaffoldagent_xyz",
             "lang": "text"
           }
@@ -481,7 +506,7 @@
       {
         "type": "callout",
         "variant": "tip",
-        "text": "Set ONECLAW_CHAIN_ID to 84532 to target Base Sepolia for testing before you move to Base mainnet (8453)."
+        "text": "Set ONECLAW_CHAIN_ID to 84532 for Base Sepolia (testnet) or 8453 for Base mainnet. Always test on Sepolia first."
       },
       {
         "type": "prose",

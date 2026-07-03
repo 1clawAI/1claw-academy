@@ -25,31 +25,46 @@
         "type": "steps",
         "steps": [
           {
-            "text": "Get a human API key from the dashboard at Settings, API Keys.",
+            "text": "Get a human API key from the dashboard. Replace with your 1ck_ key from Settings → API Keys.",
             "code": "export TOKEN=1ck_your_key_here",
             "lang": "bash"
           },
           {
-            "text": "Create an agent with intents_api_enabled and guardrails so runaway spend is capped.",
+            "text": "Create an agent with intents_api_enabled and guardrails so runaway spend is capped. Replace 0xRecipient with a real Ethereum address. Use the same address in both tx_to_allowlist and the transaction to field.",
             "code": "curl -X POST \"https://api.1claw.xyz/v1/agents\" \\\n  -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \\\n  -d '{\n    \"name\": \"DeFi Bot\",\n    \"intents_api_enabled\": true,\n    \"tx_allowed_chains\": [\"sepolia\", \"base\"],\n    \"tx_to_allowlist\": [\"0xRecipient\"],\n    \"tx_max_value_eth\": \"0.01\",\n    \"tx_daily_limit_eth\": \"0.05\"\n  }'",
             "lang": "bash"
           },
           {
-            "text": "Provision an HSM-backed Ethereum signing key for the agent. The private key lands in the __agent-keys vault.",
+            "text": "Export the agent_id and api_key from the creation response (the ocv_ key is shown only once).",
+            "code": "export AGENT_ID=\"paste-agent-id-from-response\"\nexport AGENT_API_KEY=\"paste-ocv-key-from-response\"",
+            "lang": "bash"
+          },
+          {
+            "text": "Provision an HSM-backed Ethereum signing key for the agent (using $AGENT_ID from the previous step). The private key lands in the __agent-keys vault.",
             "code": "curl -X POST \"https://api.1claw.xyz/v1/agents/$AGENT_ID/signing-keys\" \\\n  -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \\\n  -d '{ \"chain\": \"ethereum\" }'",
             "lang": "bash"
           },
           {
-            "text": "Exchange the agent api_key for a JWT.",
-            "code": "curl -X POST \"https://api.1claw.xyz/v1/auth/agent-token\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{ \"agent_id\": \"'$AGENT_ID'\", \"api_key\": \"ocv_...\" }'",
+            "text": "Exchange the agent api_key for a JWT (using $AGENT_ID and $AGENT_API_KEY captured earlier).",
+            "code": "export AGENT_JWT=$(curl -s -X POST https://api.1claw.xyz/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"agent_id\\\":\\\"$AGENT_ID\\\",\\\"api_key\\\":\\\"$AGENT_API_KEY\\\"}\" | jq -r .access_token)",
             "lang": "bash"
           },
           {
-            "text": "Submit a transaction on Sepolia with simulate_first so a revert returns 422 and nothing is signed.",
+            "text": "Submit a transaction on Sepolia with simulate_first so a revert returns 422 and nothing is signed. Replace 0xRecipient with a real Ethereum address. Use the same address in both tx_to_allowlist and the transaction to field.",
             "code": "curl -X POST \"https://api.1claw.xyz/v1/agents/$AGENT_ID/transactions\" \\\n  -H \"Authorization: Bearer $AGENT_JWT\" -H \"Content-Type: application/json\" \\\n  -d '{\n    \"chain\": \"sepolia\",\n    \"to\": \"0xRecipient\",\n    \"value\": \"0.001\",\n    \"data\": \"0x\",\n    \"simulate_first\": true\n  }'",
             "lang": "bash"
           }
         ]
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Signing keys provisioned as 'ethereum' work on Sepolia and other EVM chains allowed by your guardrails."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Fund the returned address with Sepolia ETH from a faucet (e.g. sepoliafaucet.com) before submitting a real transaction."
       },
       {
         "type": "callout",
@@ -124,7 +139,7 @@
         "type": "steps",
         "steps": [
           {
-            "text": "Use a human API key. Free tier gets a 403 here.",
+            "text": "Use a human API key. Free tier gets a 403 here. Replace with your 1ck_ key from Settings → API Keys.",
             "code": "export TOKEN=1ck_your_key_here",
             "lang": "bash"
           },
@@ -134,21 +149,41 @@
             "lang": "bash"
           },
           {
-            "text": "Create a treasury bound to a Safe address so you can manage signers and proposals.",
+            "text": "Create a treasury bound to a Safe address so you can manage signers and proposals. Use the address of an existing deployed Safe multisig.",
             "code": "curl -X POST \"https://api.1claw.xyz/v1/treasury\" \\\n  -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \\\n  -d '{ \"name\": \"Ops Treasury\", \"safe_address\": \"0xYourSafe\" }'",
             "lang": "bash"
           },
           {
-            "text": "Create a multisig proposal against that treasury.",
+            "text": "Export the treasury ID from the creation response.",
+            "code": "export TREASURY_ID=\"paste-treasury-id-from-response\"",
+            "lang": "bash"
+          },
+          {
+            "text": "Create a multisig proposal against that treasury. Build the Safe transaction off-chain using the Safe SDK (@safe-global/protocol-kit) or the Safe Transaction Service API. Compute the EIP-712 safe_tx_hash and read the current Safe nonce from the Safe service.",
             "code": "curl -X POST \"https://api.1claw.xyz/v1/treasury/$TREASURY_ID/proposals\" \\\n  -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \\\n  -d '{\n    \"to\": \"0xRecipient\",\n    \"value_wei\": \"1000000000000000000\",\n    \"data\": \"0x\",\n    \"operation\": 0,\n    \"safe_tx_hash\": \"0x...\",\n    \"nonce\": 5\n  }'",
             "lang": "bash"
           },
           {
-            "text": "Sign the proposal. When approve signatures reach the Safe threshold, the proposal auto-executes and broadcasts.",
+            "text": "Export the proposal ID from the creation response.",
+            "code": "export PID=\"paste-proposal-id-from-response\"",
+            "lang": "bash"
+          },
+          {
+            "text": "Sign the proposal. When approve signatures reach the Safe threshold, the proposal auto-executes and broadcasts. signer_address must be a Safe owner. signature is the EIP-712 approval signature for the safe_tx_hash, produced by that owner's key.",
             "code": "curl -X POST \"https://api.1claw.xyz/v1/treasury/$TREASURY_ID/proposals/$PID/sign\" \\\n  -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \\\n  -d '{ \"signature\": \"0x...\", \"signer_address\": \"0xYou\", \"decision\": \"approve\" }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Poll GET /v1/treasury/$TREASURY_ID/proposals/$PID until status is 'executed'.",
+            "code": "curl \"https://api.1claw.xyz/v1/treasury/$TREASURY_ID/proposals/$PID\" \\\n  -H \"Authorization: Bearer $TOKEN\"",
             "lang": "bash"
           }
         ]
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Treasury wallet generation creates org-held HSM keys. Creating a treasury links an existing Safe for multisig proposals. These are related but distinct concepts."
       },
       {
         "type": "callout",
@@ -223,7 +258,7 @@
         "type": "steps",
         "steps": [
           {
-            "text": "Set your credentials.",
+            "text": "Set your credentials. Replace with your 1ck_ key from Settings → API Keys. Use your vault UUID from 1claw vault list or Foundations.",
             "code": "export TOKEN=1ck_your_key_here\nexport VAULT_ID=your_vault_uuid",
             "lang": "bash"
           },
@@ -234,7 +269,7 @@
           },
           {
             "text": "Hit a payable endpoint. When over quota you get a 402 with accepts[].",
-            "code": "curl -i \"https://api.1claw.xyz/v1/vaults/$VAULT_ID/secrets/db/password\" \\\n  -H \"Authorization: Bearer $TOKEN\"",
+            "code": "curl -i \"https://api.1claw.xyz/v1/vaults/$VAULT_ID/secrets/api-keys/openai\" \\\n  -H \"Authorization: Bearer $TOKEN\"",
             "lang": "bash"
           },
           {
@@ -243,11 +278,21 @@
             "lang": "json"
           },
           {
-            "text": "Generate an EOA key, fund it with USDC on Base, and let an x402 client sign the payment and retry. The x402-payments example does this with @x402/evm.",
-            "code": "cd examples/x402-payments\nnpm install && cp .env.example .env\n# set X402_PRIVATE_KEY, ONECLAW_API_KEY, ONECLAW_VAULT_ID\nnpm start",
+            "text": "Clone the x402 example from github.com/1clawAI/1claw-examples (or see the retry pattern below). Generate an EOA key, fund it with USDC on Base, and let an x402 client sign the payment and retry.",
+            "code": "git clone https://github.com/1clawAI/1claw-examples.git\ncd 1claw-examples/x402-payments\nnpm install && cp .env.example .env\n# set X402_PRIVATE_KEY, TOKEN, VAULT_ID\nnpm start",
+            "lang": "bash"
+          },
+          {
+            "text": "Alternatively, retry the request inline with an X-PAYMENT header containing the payment proof from your x402 client.",
+            "code": "curl -i \"https://api.1claw.xyz/v1/vaults/$VAULT_ID/secrets/api-keys/openai\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"X-PAYMENT: <payment-proof-from-x402-client>\"",
             "lang": "bash"
           }
         ]
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "A 402 response requires BOTH conditions: (1) overage_method set to x402, and (2) your monthly quota is exhausted. The example below is illustrative; you will only see 402 after exceeding your plan's quota."
       },
       {
         "type": "callout",
@@ -313,12 +358,17 @@
         "type": "steps",
         "steps": [
           {
-            "text": "Install the SDK.",
-            "code": "npm install @1claw/sdk",
+            "text": "Install both SDKs.",
+            "code": "npm install @1claw/sdk @1claw/wallet-react",
             "lang": "bash"
           },
           {
-            "text": "Create the client with your platform app key.",
+            "text": "Create a platform app from the dashboard or via API (see Compliance & Ops track), then use its ID.",
+            "code": "export ONECLAW_APP_ID=\"your-app-id\"",
+            "lang": "bash"
+          },
+          {
+            "text": "Create the client with your platform app key. Replace with your platform app key from the dashboard. This key is shown only once at app creation.",
             "code": "import { createClient } from \"@1claw/sdk\";\nconst client = createClient({ baseUrl: \"https://api.1claw.xyz\", apiKey: \"plt_...\" });",
             "lang": "typescript"
           },
@@ -328,26 +378,26 @@
             "lang": "typescript"
           },
           {
-            "text": "Verify the 6-digit code and auto-provision an Ethereum wallet. You get back a token and wallet_address.",
+            "text": "Verify the 6-digit code and auto-provision an Ethereum wallet. You get back a token and wallet_address. Enter the 6-digit code from the verification email (not this example).",
             "code": "const { token, wallet_address } = await client.auth.verifyEmailOtp({\n  email: \"user@example.com\",\n  code: \"123456\",\n  auto_provision_chains: [\"ethereum\"],\n});",
             "lang": "typescript"
           },
           {
             "text": "Set a spend policy so users cannot move more than you allow.",
-            "code": "await client.platform.createSpendPolicy(appId, {\n  max_value_per_tx_eth: \"0.1\",\n  daily_limit_eth: \"1.0\",\n  allowed_chains: [\"ethereum\", \"base\"],\n});",
+            "code": "const appId = process.env.ONECLAW_APP_ID!;\n\nawait client.platform.createSpendPolicy(appId, {\n  max_value_per_tx_eth: \"0.1\",\n  daily_limit_eth: \"1.0\",\n  allowed_chains: [\"ethereum\", \"base\"],\n});",
             "lang": "typescript"
           },
           {
-            "text": "Render the widget with wallet-react. OneclawWalletProvider wraps OneclawEmbeddedWallet.",
-            "code": "npm install @1claw/wallet-react",
-            "lang": "bash"
-          },
-          {
-            "text": "Drop the provider and widget into your app.",
+            "text": "Drop the provider and widget into your app. Replace plt_... with your platform app key from the dashboard. This key is shown only once at app creation.",
             "code": "import { OneclawWalletProvider, OneclawEmbeddedWallet } from \"@1claw/wallet-react\";\n\nfunction App() {\n  return (\n    <OneclawWalletProvider apiKey=\"plt_...\" chains={[\"ethereum\", \"base\"]}>\n      <OneclawEmbeddedWallet\n        features={[\"send\", \"swap\", \"receive\", \"buy\"]}\n        socialProviders={[\"google\", \"apple\", \"email\"]}\n      />\n    </OneclawWalletProvider>\n  );\n}",
             "lang": "typescript"
           }
         ]
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Steps 3\u20135 show the SDK auth flow (useful for backend or headless apps). Step 7 shows the React widget, which handles auth standalone via social providers. Choose the path that fits your use case."
       },
       {
         "type": "callout",

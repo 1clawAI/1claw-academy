@@ -26,18 +26,23 @@
         "type": "steps",
         "steps": [
           {
-            "text": "Mint an agent JWT (or use a user key) with write access to a vault.",
-            "code": "export TOKEN=<agent-or-user-jwt>",
+            "text": "Exchange your API key for a bearer token. Replace 1ck_your_key_here with your real key from Settings → API Keys.",
+            "code": "export ONECLAW_API_KEY=\"1ck_your_key_here\"\nexport TOKEN=$(curl -s -X POST https://api.1claw.xyz/v1/auth/api-key-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"api_key\\\":\\\"$ONECLAW_API_KEY\\\"}\" | jq -r .access_token)",
             "lang": "bash"
           },
           {
-            "text": "Store a secret. On the wire this is plaintext; at rest 1Claw generates a DEK, encrypts the value, and wraps the DEK with the vault KEK.",
-            "code": "curl -s -X PUT https://api.1claw.xyz/v1/vaults/<vault-uuid>/secrets/api-keys/demo \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"type\":\"api_key\",\"value\":\"sk_live_demo_123\"}'",
+            "text": "Use your vault UUID from `1claw vault list` or Foundations.",
+            "code": "export VAULT_ID=\"your-vault-uuid\"",
             "lang": "bash"
           },
           {
-            "text": "Read the metadata back. Reason about the row: the database holds only ciphertext, the wrapped DEK, IV, and tag. Without a KMS unwrap none of it decrypts.",
-            "code": "curl -s https://api.1claw.xyz/v1/vaults/<vault-uuid>/secrets/api-keys/demo \\\n  -H \"Authorization: Bearer $TOKEN\"",
+            "text": "Store a secret. Use a 1ck_ user key (which has full access), or an agent JWT with a write policy on this path. On the wire this is plaintext; at rest 1Claw generates a DEK, encrypts the value, and wraps the DEK with the vault KEK.",
+            "code": "curl -s -X PUT https://api.1claw.xyz/v1/vaults/$VAULT_ID/secrets/api-keys/demo \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"type\":\"api_key\",\"value\":\"sk_live_demo_123\"}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Read the secret back. The API returns the decrypted value; reason about what is stored at rest vs. returned in memory. The database holds only ciphertext, the wrapped DEK, IV, and tag. Without a KMS unwrap none of it decrypts.",
+            "code": "curl -s https://api.1claw.xyz/v1/vaults/$VAULT_ID/secrets/api-keys/demo \\\n  -H \"Authorization: Bearer $TOKEN\"",
             "lang": "bash"
           }
         ]
@@ -98,27 +103,37 @@
         "text": "The client-side wire format is one version byte (0x01), a 12-byte IV, the ciphertext, then a 16-byte GCM auth tag. A full server compromise yields only doubly-encrypted blobs."
       },
       {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Requires Business or Enterprise plan."
+      },
+      {
         "type": "steps",
         "steps": [
           {
-            "text": "Install the SDK and have a user token plus a vault UUID ready.",
+            "text": "Install the SDK and have an API key ready.",
             "code": "npm install @1claw/sdk",
             "lang": "bash"
           },
           {
-            "text": "Generate a 256-bit key and its fingerprint. Store the key safely because you need it for every read and write.",
-            "code": "import { generateCmekKey, cmekFingerprint, toBase64 } from \"@1claw/sdk\";\nconst key = await generateCmekKey();\nconst fingerprint = await cmekFingerprint(key);\nconsole.log(\"key:\", toBase64(key), \"fingerprint:\", fingerprint);",
-            "lang": "typescript"
-          },
-          {
-            "text": "Enable CMEK on the vault by sending only the fingerprint.",
-            "code": "curl -s -X POST https://api.1claw.xyz/v1/vaults/<vault-uuid>/cmek \\\n  -H \"Authorization: Bearer $ONECLAW_USER_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"fingerprint\":\"<sha256-fingerprint>\"}'",
+            "text": "Export your API key and vault ID. Replace with your real values from Settings → API Keys and `1claw vault list`.",
+            "code": "export ONECLAW_API_KEY=\"1ck_your_key_here\"\nexport ONECLAW_VAULT_ID=\"your-vault-uuid\"",
             "lang": "bash"
           },
           {
-            "text": "From now on encrypt before writing and decrypt after reading. The cmek_encrypted flag on a GET response tells you the value needs client-side decryption.",
-            "code": "import { cmekEncrypt, toBase64 } from \"@1claw/sdk\";\nconst blob = await cmekEncrypt(new TextEncoder().encode(\"my-secret\"), key);\nawait client.secrets.put(vaultId, \"api-keys/stripe\", { type: \"api_key\", value: toBase64(blob) });",
+            "text": "Exchange your API key for a bearer token.",
+            "code": "export TOKEN=$(curl -s -X POST https://api.1claw.xyz/v1/auth/api-key-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"api_key\\\":\\\"$ONECLAW_API_KEY\\\"}\" | jq -r .access_token)",
+            "lang": "bash"
+          },
+          {
+            "text": "Save the code below as `cmek-demo.ts`. It generates a 256-bit key, encrypts a secret, stores it, reads it back, and decrypts it. Store the key safely because you need it for every read and write.",
+            "code": "import { createClient, generateCmekKey, cmekEncrypt, cmekDecrypt, cmekFingerprint, toBase64 } from \"@1claw/sdk\";\n\nconst client = createClient({\n  baseUrl: \"https://api.1claw.xyz\",\n  apiKey: process.env.ONECLAW_API_KEY!,\n});\n\nconst vaultId = process.env.ONECLAW_VAULT_ID!;\n\nasync function main() {\n  const key = await generateCmekKey();\n  console.log(\"fingerprint:\", cmekFingerprint(key));\n\n  const blob = cmekEncrypt(key, \"sk-live-secret-value\");\n  await client.secrets.put(vaultId, \"api-keys/stripe\", {\n    type: \"api_key\",\n    value: toBase64(blob),\n  });\n\n  const res = await client.secrets.get(vaultId, \"api-keys/stripe\");\n  if (res.data) {\n    const plaintext = cmekDecrypt(key, res.data.value);\n    console.log(\"decrypted:\", plaintext);\n  }\n}\nmain();",
             "lang": "typescript"
+          },
+          {
+            "text": "Copy the fingerprint value printed above into the curl body below. Enable CMEK on the vault by sending only the fingerprint.",
+            "code": "curl -s -X POST https://api.1claw.xyz/v1/vaults/$ONECLAW_VAULT_ID/cmek \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"fingerprint\":\"<paste-fingerprint-from-above>\"}'",
+            "lang": "bash"
           }
         ]
       },
@@ -191,26 +206,41 @@
         "text": "For client-custody modes, store the client_share safely. Lose it on a 2of2_client_custody vault and the secret cannot be recovered, because the server holds only its single share."
       },
       {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Create a dedicated vault for MPC testing; custody mode cannot be changed after it is set."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Requires Pro or higher plan."
+      },
+      {
         "type": "steps",
         "steps": [
           {
-            "text": "Use a user key on a Pro or higher plan and a vault you own.",
-            "code": "export TOKEN=1ck_your_user_key",
+            "text": "Export your API key and vault ID. Use your vault UUID from `1claw vault list` or Foundations.",
+            "code": "export ONECLAW_API_KEY=\"1ck_your_key_here\"\nexport VAULT_ID=\"your-vault-uuid\"",
+            "lang": "bash"
+          },
+          {
+            "text": "Exchange your API key for a bearer token.",
+            "code": "export TOKEN=$(curl -s -X POST https://api.1claw.xyz/v1/auth/api-key-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"api_key\\\":\\\"$ONECLAW_API_KEY\\\"}\" | jq -r .access_token)",
             "lang": "bash"
           },
           {
             "text": "Enable MPC with XOR client custody. This choice is permanent for the vault.",
-            "code": "curl -s -X POST https://api.1claw.xyz/v1/vaults/<vault-uuid>/mpc \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"custody_mode\":\"2of2_client_custody\"}'",
+            "code": "curl -s -X POST https://api.1claw.xyz/v1/vaults/$VAULT_ID/mpc \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"custody_mode\":\"2of2_client_custody\"}'",
             "lang": "bash"
           },
           {
-            "text": "Write a secret. The PUT response includes a base64 client_share you must keep.",
-            "code": "curl -s -X PUT https://api.1claw.xyz/v1/vaults/<vault-uuid>/secrets/api-keys/stripe \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"value\":\"sk_live_abc123\",\"type\":\"api_key\"}'",
+            "text": "Write a secret. The PUT response includes a base64 client_share you must keep. Capture it from the response.",
+            "code": "RESPONSE=$(curl -s -X PUT https://api.1claw.xyz/v1/vaults/$VAULT_ID/secrets/api-keys/stripe \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"value\":\"sk_live_abc123\",\"type\":\"api_key\"}')\nCLIENT_SHARE=$(echo \"$RESPONSE\" | jq -r .client_share)\necho \"Save this client_share permanently: $CLIENT_SHARE\"",
             "lang": "bash"
           },
           {
             "text": "Read it back by sending your share in X-Client-Share. Without the header the read fails.",
-            "code": "curl -s https://api.1claw.xyz/v1/vaults/<vault-uuid>/secrets/api-keys/stripe \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"X-Client-Share: <base64-client-share>\"",
+            "code": "curl -s https://api.1claw.xyz/v1/vaults/$VAULT_ID/secrets/api-keys/stripe \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"X-Client-Share: $CLIENT_SHARE\"",
             "lang": "bash"
           }
         ]
@@ -283,18 +313,19 @@
         "type": "steps",
         "steps": [
           {
-            "text": "Use a Shroud-enabled agent. Store the provider key in the vault at providers/openai/api-key and grant the agent read access, or pass X-Shroud-Api-Key directly.",
-            "code": "export ONECLAW_AGENT_ID=<agent-uuid>\nexport ONECLAW_AGENT_API_KEY=ocv_your_agent_api_key",
+            "text": "Set your agent credentials. Replace with your agent_id from agent creation and your ocv_ key from the agent's settings page.",
+            "code": "export ONECLAW_AGENT_ID=\"your-agent-id-from-agent-creation\"\nexport ONECLAW_AGENT_API_KEY=\"ocv_your_agent_api_key\"",
             "lang": "bash"
           },
           {
-            "text": "Send a chat completion. Shroud resolves the provider key from the vault when X-Shroud-Api-Key is omitted.",
-            "code": "curl -s -X POST https://shroud.1claw.xyz/v1/chat/completions \\\n  -H \"X-Shroud-Agent-Key: $ONECLAW_AGENT_ID:$ONECLAW_AGENT_API_KEY\" \\\n  -H \"X-Shroud-Provider: openai\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}]}'",
+            "text": "Quick start: pass your provider key directly via X-Shroud-Api-Key. For production, store the key in the vault at providers/openai/api-key and grant the agent read access instead.",
+            "code": "curl -s -X POST https://shroud.1claw.xyz/v1/chat/completions \\\n  -H \"X-Shroud-Agent-Key: $ONECLAW_AGENT_ID:$ONECLAW_AGENT_API_KEY\" \\\n  -H \"X-Shroud-Provider: openai\" \\\n  -H \"X-Shroud-Api-Key: sk-your-openai-key\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}]}'",
             "lang": "bash"
           },
           {
-            "text": "Read the response. It follows the standard OpenAI shape, so the content is at choices[0].message.content.",
-            "lang": "text"
+            "text": "Parse the response. It follows the standard OpenAI shape.",
+            "code": "curl -s -X POST https://shroud.1claw.xyz/v1/chat/completions \\\n  -H \"X-Shroud-Agent-Key: $ONECLAW_AGENT_ID:$ONECLAW_AGENT_API_KEY\" \\\n  -H \"X-Shroud-Provider: openai\" \\\n  -H \"X-Shroud-Api-Key: sk-your-openai-key\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}]}' | jq -r '.choices[0].message.content'",
+            "lang": "bash"
           }
         ]
       },
@@ -371,18 +402,28 @@
         "type": "steps",
         "steps": [
           {
-            "text": "Use a user token and a vault UUID. Pick a path that looks valuable so an attacker is tempted.",
-            "code": "export TOKEN=1ck_your_user_key",
+            "text": "Export your API key and vault ID. Use your vault UUID from `1claw vault list` or Foundations.",
+            "code": "export ONECLAW_API_KEY=\"1ck_your_key_here\"\nexport VAULT_ID=\"your-vault-uuid\"",
             "lang": "bash"
           },
           {
-            "text": "Create a honeytoken. Reading this decoy later marks the reader for denial.",
-            "code": "curl -s -X POST https://api.1claw.xyz/v1/risk/honeytokens \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"vault_id\":\"<vault-uuid>\",\"secret_path\":\"api-keys/production\",\"notes\":\"Canary for vault breach\"}'",
+            "text": "Exchange your API key for a bearer token.",
+            "code": "export TOKEN=$(curl -s -X POST https://api.1claw.xyz/v1/auth/api-key-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"api_key\\\":\\\"$ONECLAW_API_KEY\\\"}\" | jq -r .access_token)",
+            "lang": "bash"
+          },
+          {
+            "text": "Create a honeytoken. The honeytoken registers a canary on this path. Any read of this path triggers a critical alert and session revocation. Pick a path that looks valuable so an attacker is tempted.",
+            "code": "curl -s -X POST https://api.1claw.xyz/v1/risk/honeytokens \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"vault_id\":\"'\"$VAULT_ID\"'\",\"secret_path\":\"api-keys/production\",\"notes\":\"Canary for vault breach\"}'",
             "lang": "bash"
           },
           {
             "text": "Confirm it is armed by listing your honeytokens.",
             "code": "curl -s https://api.1claw.xyz/v1/risk/honeytokens \\\n  -H \"Authorization: Bearer $TOKEN\"",
+            "lang": "bash"
+          },
+          {
+            "text": "Optional: read the honeytoken path and confirm the token is revoked on the next request.",
+            "code": "curl -s https://api.1claw.xyz/v1/vaults/$VAULT_ID/secrets/api-keys/production \\\n  -H \"Authorization: Bearer $TOKEN\"\n# Now try another request — it should fail with 401\ncurl -s https://api.1claw.xyz/v1/vaults/$VAULT_ID/secrets/api-keys/production \\\n  -H \"Authorization: Bearer $TOKEN\"",
             "lang": "bash"
           }
         ]

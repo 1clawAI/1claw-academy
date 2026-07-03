@@ -26,7 +26,7 @@
         "type": "steps",
         "steps": [
           {
-            "text": "Set your API key.",
+            "text": "Set your API key. Replace with your 1ck_ key from Settings → API Keys.",
             "code": "export TOKEN=1ck_your_key_here",
             "lang": "bash"
           },
@@ -36,9 +36,14 @@
             "lang": "bash"
           },
           {
-            "text": "Notice the response includes metadata only, plus prev_event_id and integrity_hash for chain verification.",
-            "code": "{\n  \"events\": [{\n    \"action\": \"secret.read\",\n    \"actor_id\": \"agent-uuid\",\n    \"details\": { \"path\": \"keys/eth-signer\" },\n    \"created_at\": \"2026-02-27T14:00:00Z\"\n  }],\n  \"count\": 1\n}",
+            "text": "Notice the response includes metadata only, plus prev_event_id and integrity_hash for chain verification. The actor_id shown is an example UUID.",
+            "code": "{\n  \"events\": [{\n    \"action\": \"secret.read\",\n    \"actor_id\": \"7e3ce911-e2a7-4f3a-8609-1851515d140f\",\n    \"prev_event_id\": \"evt_a1b2c3d4\",\n    \"integrity_hash\": \"sha256:9f86d08...\",\n    \"details\": { \"path\": \"keys/eth-signer\" },\n    \"created_at\": \"2026-02-27T14:00:00Z\"\n  }],\n  \"count\": 1\n}",
             "lang": "json"
+          },
+          {
+            "text": "Export an agent UUID from a prior lesson or from the dashboard. If the list is empty, read a secret first (see Foundations), then re-query.",
+            "code": "export AGENT_ID=\"your-agent-uuid\"",
+            "lang": "bash"
           },
           {
             "text": "Filter by a single actor to review one agent's activity.",
@@ -46,8 +51,8 @@
             "lang": "bash"
           },
           {
-            "text": "To forward events to your SIEM, register an AuditSink when constructing the TypeScript SDK client. Every event your session produces is mirrored to your target.",
-            "code": "// see the SDK overview for the AuditSink plugin interface",
+            "text": "To forward events to your SIEM, register an AuditSink when constructing the TypeScript SDK client. See the @1claw/sdk package documentation for the AuditSink plugin interface.",
+            "code": "import { OneClaw, AuditSink } from \"@1claw/sdk\";\n\nconst sink: AuditSink = {\n  send(event) {\n    fetch(\"https://your-siem.example.com/ingest\", {\n      method: \"POST\",\n      body: JSON.stringify(event),\n    });\n  },\n};\n\nconst client = new OneClaw({\n  token: process.env.ONECLAW_TOKEN,\n  auditSink: sink,\n});",
             "lang": "typescript"
           }
         ]
@@ -117,16 +122,31 @@
         ]
       },
       {
+        "type": "callout",
+        "variant": "info",
+        "text": "This lesson uses CLI agent commands. Make sure you completed 'Install the CLI' in Foundations and are logged in with `1claw login`."
+      },
+      {
         "type": "steps",
         "steps": [
           {
-            "text": "Set a human API key.",
-            "code": "export TOKEN=1ck_your_key_here",
+            "text": "All steps below use the CLI session from `1claw login`. The TOKEN export is not needed.",
+            "code": "# Verify you are logged in:\n1claw whoami",
             "lang": "bash"
           },
           {
-            "text": "Bulk provision agents with the CLI.",
+            "text": "Bulk provision agents with the CLI. The --scopes flag sets OAuth-style scopes. Fine-grained access is controlled by vault policies (see Agents & Access Control track).",
             "code": "for name in worker-1 worker-2 worker-3; do\n  1claw agent create \"$name\" --scopes \"vaults:read\"\ndone",
+            "lang": "bash"
+          },
+          {
+            "text": "List agents and pick one to configure further.",
+            "code": "1claw agent list\nexport AGENT_ID=\"paste-worker-1-uuid-here\"",
+            "lang": "bash"
+          },
+          {
+            "text": "List or create vaults and export their IDs.",
+            "code": "1claw vault list\nexport VAULT_1=\"first-vault-uuid\"\nexport VAULT_2=\"second-vault-uuid\"",
             "lang": "bash"
           },
           {
@@ -224,29 +244,49 @@
         "type": "steps",
         "steps": [
           {
-            "text": "Register a platform app with your user JWT and save the plt_ key.",
+            "text": "Exchange your API key for a user JWT. Replace 1ck_your_key_here with your real key.",
+            "code": "export ONECLAW_API_KEY=\"1ck_your_key_here\"\nexport USER_JWT=$(curl -s -X POST https://api.1claw.xyz/v1/auth/api-key-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"api_key\\\":\\\"$ONECLAW_API_KEY\\\"}\" | jq -r .access_token)",
+            "lang": "bash"
+          },
+          {
+            "text": "Register a platform app with your user JWT. Silent auth skips the interactive consent screen; use 'interactive' if your platform requires explicit user approval.",
             "code": "curl -X POST \"https://api.1claw.xyz/v1/platform/apps\" \\\n  -H \"Authorization: Bearer $USER_JWT\" -H \"Content-Type: application/json\" \\\n  -d '{ \"name\": \"My DeFi Platform\", \"slug\": \"my-defi\", \"auth_mode\": \"silent\" }'",
             "lang": "bash"
           },
           {
+            "text": "Save the plt_ key now — it is shown only once. Use $PLT_KEY as Bearer in later steps.",
+            "code": "# Save from the response:\nexport APP_ID=\"paste-app-id-from-response\"\nexport PLT_KEY=\"paste-plt-key-from-response\"",
+            "lang": "bash"
+          },
+          {
             "text": "Create a bootstrap template. Note intents is a nested object here.",
-            "code": "curl -X POST \"https://api.1claw.xyz/v1/platform/apps/$APP_ID/templates\" \\\n  -H \"Authorization: Bearer plt_YOUR_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{\n    \"name\": \"default-template\",\n    \"spec\": {\n      \"vault\": { \"name\": \"user-vault\" },\n      \"agents\": [{ \"name\": \"defi-bot\", \"intents\": { \"enabled\": true } }],\n      \"signing_keys\": [{ \"chain\": \"ethereum\" }],\n      \"policies\": [{ \"principal_ref\": \"agents.primary\", \"vault_ref\": \"vault\", \"paths\": [\"keys/*\"] }]\n    }\n  }'",
+            "code": "curl -X POST \"https://api.1claw.xyz/v1/platform/apps/$APP_ID/templates\" \\\n  -H \"Authorization: Bearer $PLT_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{\n    \"name\": \"default-template\",\n    \"spec\": {\n      \"vault\": { \"name\": \"user-vault\" },\n      \"agents\": [{ \"name\": \"defi-bot\", \"intents\": { \"enabled\": true } }],\n      \"signing_keys\": [{ \"chain\": \"ethereum\" }],\n      \"policies\": [{ \"principal_ref\": \"agents.primary\", \"vault_ref\": \"vault\", \"paths\": [\"keys/*\"] }]\n    }\n  }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Save the template ID from the response.",
+            "code": "export TEMPLATE_ID=\"paste-template-id-from-response\"",
             "lang": "bash"
           },
           {
             "text": "Upsert a user.",
-            "code": "curl -X POST \"https://api.1claw.xyz/v1/platform/users/upsert\" \\\n  -H \"Authorization: Bearer plt_YOUR_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{ \"email\": \"user@example.com\", \"external_subject\": \"telegram:123456789\" }'",
+            "code": "curl -X POST \"https://api.1claw.xyz/v1/platform/users/upsert\" \\\n  -H \"Authorization: Bearer $PLT_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{ \"email\": \"user@example.com\", \"external_subject\": \"telegram:123456789\" }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Save the connection_id from the upsert response.",
+            "code": "export CONNECTION_ID=\"paste-connection-id-from-response\"",
             "lang": "bash"
           },
           {
             "text": "Bootstrap the user from the template. The response has claim_url and a one-time summary.agent_api_key.",
-            "code": "curl -X POST \"https://api.1claw.xyz/v1/platform/connections/$CONNECTION_ID/bootstrap\" \\\n  -H \"Authorization: Bearer plt_YOUR_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{ \"template_id\": \"'$TEMPLATE_ID'\" }'",
+            "code": "BOOTSTRAP_RESPONSE=$(curl -s -X POST \"https://api.1claw.xyz/v1/platform/connections/$CONNECTION_ID/bootstrap\" \\\n  -H \"Authorization: Bearer $PLT_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{ \"template_id\": \"'$TEMPLATE_ID'\" }')",
             "lang": "bash"
           },
           {
             "text": "Share the claim_url with the user. It expires in 10 minutes; reissue with the reissue-claim endpoint if it lapses.",
-            "code": "# claim_url format: https://1claw.xyz/connect/{slug}/claim/{token}",
-            "lang": "text"
+            "code": "echo \"Claim URL: $(echo $BOOTSTRAP_RESPONSE | jq -r .claim_url)\"\n# Format: https://1claw.xyz/connect/{slug}/claim/{token}",
+            "lang": "bash"
           }
         ]
       },
