@@ -221,7 +221,7 @@
           },
           {
             "text": "Extract agent_id and api_key from the response above. The ocv_ key is shown only at creation time — save it somewhere safe.",
-            "code": "export ONECLAW_AGENT_ID=$(echo \"$AGENT_RESPONSE\" | jq -r .id)\nexport ONECLAW_AGENT_KEY=$(echo \"$AGENT_RESPONSE\" | jq -r .api_key)\necho \"AGENT_ID=$ONECLAW_AGENT_ID  KEY=$ONECLAW_AGENT_KEY\"",
+            "code": "export ONECLAW_AGENT_ID=$(echo \"$AGENT_RESPONSE\" | jq -r .agent.id)\nexport ONECLAW_AGENT_KEY=$(echo \"$AGENT_RESPONSE\" | jq -r .api_key)\necho \"AGENT_ID=$ONECLAW_AGENT_ID  KEY=$ONECLAW_AGENT_KEY\"",
             "lang": "bash"
           },
           {

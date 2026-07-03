@@ -30,13 +30,13 @@
             "lang": "bash"
           },
           {
-            "text": "Create an agent with intents_api_enabled and guardrails so runaway spend is capped. Replace 0xRecipient with a real Ethereum address. Use the same address in both tx_to_allowlist and the transaction to field.",
-            "code": "curl -X POST \"https://api.1claw.xyz/v1/agents\" \\\n  -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \\\n  -d '{\n    \"name\": \"DeFi Bot\",\n    \"intents_api_enabled\": true,\n    \"tx_allowed_chains\": [\"sepolia\", \"base\"],\n    \"tx_to_allowlist\": [\"0xRecipient\"],\n    \"tx_max_value_eth\": \"0.01\",\n    \"tx_daily_limit_eth\": \"0.05\"\n  }'",
+            "text": "Create an agent with intents_api_enabled and guardrails. Replace 0xRecipient with a real Ethereum address — use the same address in the transaction to field later.",
+            "code": "AGENT_RESPONSE=$(curl -s -X POST \"https://api.1claw.xyz/v1/agents\" \\\n  -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \\\n  -d '{\n    \"name\": \"DeFi Bot\",\n    \"intents_api_enabled\": true,\n    \"tx_allowed_chains\": [\"sepolia\", \"base\"],\n    \"tx_to_allowlist\": [\"0xRecipient\"],\n    \"tx_max_value_eth\": \"0.01\",\n    \"tx_daily_limit_eth\": \"0.05\"\n  }')\necho \"$AGENT_RESPONSE\"",
             "lang": "bash"
           },
           {
-            "text": "Export the agent_id and api_key from the creation response (the ocv_ key is shown only once).",
-            "code": "export AGENT_ID=\"paste-agent-id-from-response\"\nexport AGENT_API_KEY=\"paste-ocv-key-from-response\"",
+            "text": "Extract the agent id and api_key from the creation response. The agent id is at .agent.id and the api_key is at the top level. The ocv_ key is shown only once — save it.",
+            "code": "export AGENT_ID=$(echo \"$AGENT_RESPONSE\" | jq -r .agent.id)\nexport AGENT_API_KEY=$(echo \"$AGENT_RESPONSE\" | jq -r .api_key)\necho \"AGENT_ID=$AGENT_ID\"\necho \"AGENT_API_KEY=$AGENT_API_KEY\"",
             "lang": "bash"
           },
           {

@@ -35,8 +35,8 @@
             "lang": "bash"
           },
           {
-            "text": "Extract the agent_id and api_key from the response. The response looks like: {\"agent_id\":\"7e3ce911-...\",\"api_key\":\"ocv_...\",\"name\":\"web-backend\",...}. Save both values as env vars.",
-            "code": "export ONECLAW_AGENT_ID=$(echo \"$AGENT_RESPONSE\" | jq -r .agent_id)\nexport ONECLAW_AGENT_KEY=$(echo \"$AGENT_RESPONSE\" | jq -r .api_key)\necho \"Agent ID: $ONECLAW_AGENT_ID\"\necho \"Agent Key: $ONECLAW_AGENT_KEY\"",
+            "text": "Extract the agent id and api_key from the response. The response looks like: {\"agent\":{\"id\":\"7e3ce911-...\",\"name\":\"web-backend\",...},\"api_key\":\"ocv_...\"}. Save both values as env vars.",
+            "code": "export ONECLAW_AGENT_ID=$(echo \"$AGENT_RESPONSE\" | jq -r .agent.id)\nexport ONECLAW_AGENT_KEY=$(echo \"$AGENT_RESPONSE\" | jq -r .api_key)\necho \"Agent ID: $ONECLAW_AGENT_ID\"\necho \"Agent Key: $ONECLAW_AGENT_KEY\"",
             "lang": "bash"
           },
           {

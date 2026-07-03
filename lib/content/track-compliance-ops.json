@@ -156,7 +156,7 @@
           },
           {
             "text": "Set transaction guardrails for any agent using the Intents API.",
-            "code": "1claw agent update $AGENT_ID \\\n  --tx-max-value 0.05 --tx-daily-limit 0.5 --tx-allowed-chains \"base\"",
+            "code": "1claw agent update $AGENT_ID \\\n  --tx-max-value-eth 0.05 --tx-daily-limit-eth 0.5 --tx-allowed-chains \"base\"",
             "lang": "bash"
           },
           {
