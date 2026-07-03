@@ -215,8 +215,13 @@
             "lang": "bash"
           },
           {
-            "text": "Agent path. Get the agent's ocv_ key and its agent_id (a human runs 1claw agent create, or the agent self-enrolls via POST /v1/agents/enroll). Export both.",
-            "code": "export ONECLAW_AGENT_ID=\"<agent-uuid>\"\nexport ONECLAW_AGENT_KEY=\"ocv_your_agent_key\"",
+            "text": "Agent path. First, create an agent using your human 1ck_ key. You need at least one vault UUID (from Step 1). The response contains the agent_id and a plaintext api_key (starts with ocv_). Save both — the ocv_ key is shown only once.",
+            "code": "curl -s -X POST https://api.1claw.xyz/v1/agents \\\n  -H \"Authorization: Bearer $ONECLAW_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"my-first-agent\",\"token_ttl_seconds\":3600,\"vault_ids\":[\"YOUR_VAULT_UUID\"]}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Export the agent_id and api_key you received in the response above. Copy-paste the real values — do not use the example text literally.",
+            "code": "# Replace with the real values from the response above\nexport ONECLAW_AGENT_ID=\"agent_id from the response\"\nexport ONECLAW_AGENT_KEY=\"ocv_ key from the response\"",
             "lang": "bash"
           },
           {

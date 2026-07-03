@@ -35,8 +35,8 @@
             "lang": "bash"
           },
           {
-            "text": "Save the agent_id and api_key from the response, then exchange them for a JWT. This endpoint needs no bearer token; the credentials in the body are the auth.",
-            "code": "TOKEN=$(curl -s -X POST https://api.1claw.xyz/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"agent_id\":\"<agent-uuid>\",\"api_key\":\"ocv_...\"}' | jq -r .access_token)",
+            "text": "Copy the agent_id and api_key from the response above and paste them into the command below, replacing the placeholder values. The agent_id is a UUID (like 7e3ce911-...) and the api_key starts with ocv_. This endpoint needs no bearer token; the credentials in the body are the auth.",
+            "code": "# Replace <agent-uuid> with the real agent_id and <ocv_key> with the real api_key from Step 2\nTOKEN=$(curl -s -X POST https://api.1claw.xyz/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"agent_id\":\"YOUR_AGENT_ID_HERE\",\"api_key\":\"YOUR_ocv_KEY_HERE\"}' | jq -r .access_token)",
             "lang": "bash"
           },
           {
@@ -124,8 +124,8 @@
             "lang": "bash"
           },
           {
-            "text": "Re-exchange the agent key for a fresh JWT. The old token was revoked by the policy change.",
-            "code": "TOKEN=$(curl -s -X POST https://api.1claw.xyz/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"agent_id\":\"<agent-uuid>\",\"api_key\":\"ocv_...\"}' | jq -r .access_token)",
+            "text": "Re-exchange the agent key for a fresh JWT. The old token was revoked by the policy change. Use your real agent_id and ocv_ key from when you created the agent.",
+            "code": "TOKEN=$(curl -s -X POST https://api.1claw.xyz/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"agent_id\":\"YOUR_AGENT_ID_HERE\",\"api_key\":\"YOUR_ocv_KEY_HERE\"}' | jq -r .access_token)",
             "lang": "bash"
           },
           {
@@ -277,8 +277,8 @@
         "type": "steps",
         "steps": [
           {
-            "text": "Mint an agent JWT with your agent_id and ocv_ key. This is the Bearer value the client sends.",
-            "code": "curl -s -X POST https://api.1claw.xyz/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"agent_id\":\"<agent-uuid>\",\"api_key\":\"ocv_...\"}' | jq -r .access_token",
+            "text": "Mint an agent JWT with your real agent_id and ocv_ key from agent creation. This is the Bearer value the client sends.",
+            "code": "curl -s -X POST https://api.1claw.xyz/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"agent_id\":\"YOUR_AGENT_ID_HERE\",\"api_key\":\"YOUR_ocv_KEY_HERE\"}' | jq -r .access_token",
             "lang": "bash"
           },
           {
