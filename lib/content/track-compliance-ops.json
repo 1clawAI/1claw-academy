@@ -101,6 +101,13 @@
         "correctIndex": 1,
         "explanation": "Each event carries prev_event_id and an integrity_hash, forming an append-only SHA-256 chain."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "zero-trust-and-least-privilege",
+        "note": "attribution as a first-class control"
+      }
     ]
   },
   {
@@ -214,6 +221,13 @@
         ],
         "correctIndex": 1,
         "explanation": "A shared vault with path-based policies (api-keys/** shared, agents/{name}/** per-agent) scales cleanly."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "owasp-agentic-top-10",
+        "note": "ASI10: rogue agents look legitimate"
       }
     ]
   },
@@ -334,6 +348,13 @@
         "correctIndex": 1,
         "explanation": "Signing keys are provisioned server-side and the plt_ key cannot read them across the org boundary, keeping custody separated."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "access-control-models",
+        "note": "isolation between tenants"
+      }
     ]
   },
   {
@@ -417,6 +438,13 @@
         ],
         "correctIndex": 0,
         "explanation": "The DELETE endpoint archives the sub-org so historical activity stays auditable."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "access-control-models",
+        "note": "hierarchy and delegated permission"
       }
     ]
   }

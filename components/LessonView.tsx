@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { LessonSidebar } from "./LessonSidebar";
+import { ConceptLinks } from "./ConceptLinks";
+import { MobileContents } from "./MobileContents";
 import type { Lesson, LessonRef } from "@/lib/types";
 import { BlockRenderer } from "./BlockRenderer";
 import { Quiz } from "./Quiz";
@@ -89,6 +91,7 @@ export function LessonView({
       </aside>
       <article className="min-w-0 max-w-3xl flex-1 py-10 fadeup">
       <div className="mb-6 flex flex-wrap items-center gap-2 text-xs">
+        <MobileContents trackId={trackId} lessonId={lesson.id} />
         <Link
           href="/learn"
           className="text-[var(--muted)] transition hover:text-[var(--foreground)]"
@@ -117,6 +120,8 @@ export function LessonView({
           <Check size={13} /> Completed
         </div>
       ) : null}
+
+      <ConceptLinks concepts={lesson.concepts} />
 
       <div className="mt-8">
         <BlockRenderer blocks={lesson.blocks} />

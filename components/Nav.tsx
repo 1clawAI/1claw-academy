@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useProgress } from "@/lib/progress";
 import { Logo } from "./Logo";
 import { Search } from "lucide-react";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function Nav() {
   const { percent, ready, completedCount } = useProgress();
@@ -35,7 +36,7 @@ export function Nav() {
           </button>
           <Link
             href="/learn"
-            className="rounded-lg px-3 py-1.5 text-[var(--muted)] transition hover:bg-white/5 hover:text-[var(--foreground)]"
+            className="rounded-lg px-3 py-1.5 text-[var(--muted)] transition hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
           >
             Curriculum
           </Link>
@@ -43,7 +44,7 @@ export function Nav() {
             href="https://docs.1claw.co"
             target="_blank"
             rel="noreferrer"
-            className="rounded-lg px-3 py-1.5 text-[var(--muted)] transition hover:bg-white/5 hover:text-[var(--foreground)]"
+            className="rounded-lg px-3 py-1.5 text-[var(--muted)] transition hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
           >
             Docs ↗
           </a>
@@ -51,10 +52,11 @@ export function Nav() {
             href="https://1claw.co/for-ai"
             target="_blank"
             rel="noreferrer"
-            className="hidden rounded-lg px-3 py-1.5 text-[var(--muted)] transition hover:bg-white/5 hover:text-[var(--foreground)] sm:block"
+            className="hidden rounded-lg px-3 py-1.5 text-[var(--muted)] transition hover:bg-[var(--hover)] hover:text-[var(--foreground)] sm:block"
           >
             For AI ↗
           </a>
+          <ThemeToggle />
           {ready && completedCount > 0 ? (
             <div className="ml-2 hidden items-center gap-2 sm:flex">
               <div className="h-1.5 w-24 overflow-hidden rounded-full bg-[var(--surface-2)]">

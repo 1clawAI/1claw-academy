@@ -110,6 +110,13 @@
         "correctIndex": 1,
         "explanation": "The /transactions/sign endpoint returns signed_tx for you to broadcast yourself, with guardrails still enforced."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "public-key-crypto",
+        "note": "signing versus encryption, and blind signing"
+      }
     ]
   },
   {
@@ -228,6 +235,13 @@
         ],
         "correctIndex": 1,
         "explanation": "When approve signatures reach the Safe threshold, the proposal auto-executes and broadcasts."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "public-key-crypto",
+        "note": "curves and non-repudiation"
       }
     ]
   },
@@ -542,6 +556,13 @@
         "correctIndex": 0,
         "explanation": "A hard cap refuses. An approval policy routes the transaction to a human, so legitimate large transfers can proceed with oversight rather than simply failing."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "excessive-agency-confused-deputy",
+        "note": "why approval must be graduated"
+      }
     ]
   },
   {
@@ -642,6 +663,18 @@
         "correctIndex": 0,
         "explanation": "That four-part check on the 402 challenge is the payment security boundary, and it is why a malicious challenge cannot redirect funds elsewhere."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "excessive-agency-confused-deputy",
+        "note": "bounding what an agent may spend"
+      },
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "context-window-exfiltration",
+        "note": "why reveal is absent from MCP"
+      }
     ]
   },
   {
@@ -732,6 +765,13 @@
         ],
         "correctIndex": 0,
         "explanation": "Custody is set automatically by tier: XOR 2-of-2 for Pro and Team, Shamir 2-of-3 multi-HSM for Business and Enterprise."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "threshold-cryptography",
+        "note": "MPC custody by tier"
       }
     ]
   },
@@ -827,6 +867,13 @@
         "correctIndex": 0,
         "explanation": "5–15 minutes is recommended; the agent default is 15 minutes and 24 hours is the hard maximum, not a target."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "what-is-a-secret",
+        "note": "leasing beats storing when a credential can be minted"
+      }
     ]
   },
   {
@@ -916,6 +963,13 @@
         ],
         "correctIndex": 0,
         "explanation": "An EOA is one key with no on-chain policy. A Safe with modules can enforce constraints at the chain level, so a compromised Vault path is not automatically a compromised wallet."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "public-key-crypto",
+        "note": "why one key with no on-chain policy is fragile"
       }
     ]
   }

@@ -28,7 +28,7 @@ export function BlockRenderer({ blocks }: { blocks: Block[] }) {
               {b.items.map((it, j) => (
                 <li key={j} className="flex gap-3">
                   <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--signature)]" />
-                  <span className="leading-relaxed text-[#d6d3d6]">
+                  <span className="leading-relaxed text-[var(--prose-fg)]">
                     {renderInline(it)}
                   </span>
                 </li>
@@ -49,7 +49,7 @@ export function BlockRenderer({ blocks }: { blocks: Block[] }) {
                     {j + 1}
                   </span>
                   <div className="min-w-0 flex-1 pt-1">
-                    <p className="leading-relaxed text-[#d6d3d6]">
+                    <p className="leading-relaxed text-[var(--prose-fg)]">
                       {renderInline(s.text)}
                     </p>
                     {s.code ? (

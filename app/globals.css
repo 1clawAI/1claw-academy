@@ -15,6 +15,7 @@
  * The red is the only loud thing in the system — everything else stays quiet.
  */
 :root {
+  color-scheme: dark;
   /* --- Official dark-mode tokens (1claw.co `.dark`) --- */
   --background: #030304;
   --foreground: #ffffff;
@@ -56,6 +57,19 @@
   /* --- Functional semantics (not part of the brand palette) --- */
   --success: #00c758;
   --warn: #f99c00;
+
+  /* --- Surface treatments that must invert with the theme --- */
+  --prose-fg: #d6d3d6;        /* body copy inside lesson prose */
+  --code-fg: #d5d8e6;         /* fenced code block text */
+  --hairline: rgba(255, 255, 255, 0.03);   /* grid lines */
+  --card-sheen: rgba(255, 255, 255, 0.02); /* top-edge lift on cards */
+  --hover: rgba(255, 255, 255, 0.05);      /* hover wash */
+  --hover-strong: rgba(255, 255, 255, 0.08);
+  --scrim: rgba(0, 0, 0, 0.7);             /* modal backdrop */
+  --scrollbar-hover: #3f3a3c;
+  --glow-a: rgba(223, 23, 26, 0.14);
+  --glow-b: rgba(153, 0, 41, 0.1);
+  --logo-claw: #ffffff; /* light-bg variant swaps this to Matte Black */
 }
 
 /*
@@ -63,6 +77,7 @@
  * dark by default; opt a subtree in with data-theme="light".
  */
 [data-theme="light"] {
+  color-scheme: light;
   --background: #fafafa;
   --foreground: #0a0a0c;
   --card: #ffffff;
@@ -81,6 +96,18 @@
   --border: #e8d4d8;
   --input: #e8d4d8;
   --ring: #990029;
+
+  --prose-fg: #3f3f46;
+  --code-fg: #27272a;
+  --hairline: rgba(0, 0, 0, 0.05);
+  --card-sheen: rgba(0, 0, 0, 0.015);
+  --hover: rgba(0, 0, 0, 0.04);
+  --hover-strong: rgba(0, 0, 0, 0.06);
+  --scrim: rgba(24, 12, 16, 0.45);
+  --scrollbar-hover: #c9b3b8;
+  --glow-a: rgba(223, 23, 26, 0.05);
+  --glow-b: rgba(153, 0, 41, 0.035);
+  --logo-claw: #050505;
 }
 
 @theme inline {
@@ -103,6 +130,8 @@
   --color-success: var(--success);
   --color-warn: var(--warn);
   --color-danger: var(--danger);
+  --color-prose: var(--prose-fg);
+  --color-hover: var(--hover);
   --radius-lg: var(--radius);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
@@ -117,10 +146,16 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Theme flip should feel deliberate, not jarring. */
+body,
+.card {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
 body {
   background:
-    radial-gradient(60rem 40rem at 82% -12%, rgba(223, 23, 26, 0.14), transparent 58%),
-    radial-gradient(48rem 40rem at -5% 8%, rgba(153, 0, 41, 0.1), transparent 55%),
+    radial-gradient(60rem 40rem at 82% -12%, var(--glow-a), transparent 58%),
+    radial-gradient(48rem 40rem at -5% 8%, var(--glow-b), transparent 55%),
     var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
@@ -139,7 +174,7 @@ body {
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
-::-webkit-scrollbar-thumb:hover { background: #3f3a3c; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
 
 /*
  * Bakbak One is reserved for the "1Claw" wordmark alone — brand kit rule.
@@ -195,12 +230,12 @@ body {
 }
 
 .card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)), var(--card);
+  background: linear-gradient(180deg, var(--card-sheen), transparent), var(--card);
   border: 1px solid var(--border);
   border-radius: 16px;
 }
 
-.prose-body p { line-height: 1.7; color: #d6d3d6; }
+.prose-body p { line-height: 1.7; color: var(--prose-fg); }
 
 /*
  * Inline code only. Scoped away from `pre > code` so fenced blocks keep their
@@ -230,7 +265,7 @@ body {
 
 .grid-bg {
   background-image:
-    linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+    linear-gradient(to right, var(--hairline) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--hairline) 1px, transparent 1px);
   background-size: 44px 44px;
 }

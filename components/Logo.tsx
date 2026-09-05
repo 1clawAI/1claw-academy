@@ -1,5 +1,7 @@
-// The official 1Claw dual-claw mark: one red, one white.
-// Per brand guidelines it never tilts, recolors, or comes apart.
+// The official 1Claw dual-claw mark: one Signature Red, one solid.
+// Per brand guidelines it never tilts, recolors, or comes apart. The solid
+// claw uses the dark-bg (white) or light-bg (Matte Black) variant from the
+// brand kit via --logo-claw, which is a supported variant swap, not a recolor.
 export function Logo({ size = 26 }: { size?: number }) {
   return (
     <svg
@@ -18,7 +20,7 @@ export function Logo({ size = 26 }: { size?: number }) {
         />
         <path
           d="M699.532 147.014L698.514 147C698.788 147.537 723.505 164.895 726.334 167.079C843.062 257.175 875.025 413.422 795.812 539.242C805.25 543.926 808.588 546.936 814.184 555.59C804.964 562.668 785.375 573.334 774.082 574.811C769.861 575.363 763.05 575.262 758.597 575.2C738.583 590.467 718.672 605.868 698.863 621.404C688.81 629.322 679 636.925 669.433 645.446C656.698 656.787 658.292 672.827 657.84 688.72L656.788 727.894C655.414 777.363 654.468 826.845 653.95 876.328C670.266 852.895 679.485 840.538 689.177 813.845C685.324 807.044 684.038 804.133 681.982 796.583C683.029 792.357 684.367 788.166 686.31 784.269C702.656 751.474 772.771 709.751 807.245 698.056C815.019 714.726 811.094 745.17 805.353 762.711C798.825 782.652 792.923 791.322 774.793 800.873C769.998 803.58 763.939 806.26 758.889 808.646C753.867 815.328 745.103 838.327 739.019 848.452C721.654 877.349 699.494 903.098 676.041 927C820.574 899.173 934.094 774.452 967.214 633.339C992.917 523.832 974.297 402.985 915.653 306.884C865.31 224.386 792.907 169.824 699.532 147.014Z"
-          fill="#FFFFFF"
+          fill="var(--logo-claw)"
         />
       </g>
     </svg>

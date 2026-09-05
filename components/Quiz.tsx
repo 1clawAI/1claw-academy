@@ -63,7 +63,7 @@ export function Quiz({
                 const isChosen = chosen === oi;
                 const isCorrect = q.correctIndex === oi;
                 let cls =
-                  "border-[var(--border)] hover:border-[var(--signature)]/50 hover:bg-white/[0.02]";
+                  "border-[var(--border)] hover:border-[var(--signature)]/50 hover:bg-[var(--hover)]";
                 if (isSub && isCorrect)
                   cls =
                     "border-[var(--success)] bg-[var(--success)]/10 text-[var(--foreground)]";

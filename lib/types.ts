@@ -16,12 +16,22 @@ export type QuizQuestion = {
   explanation: string;
 };
 
+/** A pointer from a 1Claw lesson back to the concept it builds on. */
+export type ConceptLink = {
+  trackId: string;
+  lessonId: string;
+  /** Why this concept matters here, in a few words. */
+  note: string;
+};
+
 export type Lesson = {
   id: string;
   title: string;
   summary: string;
   blocks: Block[];
   quiz: QuizQuestion[];
+  /** Concept lessons this one assumes. Rendered above the body. */
+  concepts?: ConceptLink[];
 };
 
 export type Track = {

@@ -86,6 +86,18 @@
         "correctIndex": 2,
         "explanation": "KEKs rotate on a 365-day period, the NIST SP 800-57 maximum for symmetric KEKs."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "envelope-encryption",
+        "note": "the KEK/DEK hierarchy"
+      },
+      {
+        "trackId": "security-foundations",
+        "lessonId": "hsm-and-root-of-trust",
+        "note": "what non-exportability buys you"
+      }
     ]
   },
   {
@@ -180,6 +192,13 @@
         ],
         "correctIndex": 1,
         "explanation": "Each secret carries two independent encryption layers, so a backup yields only doubly-encrypted blobs."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "envelope-encryption",
+        "note": "holding the KEK yourself"
       }
     ]
   },
@@ -284,6 +303,13 @@
         "correctIndex": 1,
         "explanation": "2of3_multi_hsm distributes three Shamir shares across GCP KMS, AWS KMS, and Azure Key Vault."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "threshold-cryptography",
+        "note": "Shamir sharing and why MPC goes further"
+      }
     ]
   },
   {
@@ -372,6 +398,18 @@
         ],
         "correctIndex": 1,
         "explanation": "Shroud runs on GKE confidential nodes using AMD SEV-SNP."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "tees-and-confidential-computing",
+        "note": "attestation and what it does not prove"
+      },
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "prompt-injection",
+        "note": "what the proxy is inspecting for"
       }
     ]
   },
@@ -472,6 +510,13 @@
         "correctIndex": 1,
         "explanation": "DPoP binds a JWT to a client keypair, so a stolen token is useless without the private key."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "zero-trust-and-least-privilege",
+        "note": "assume breach, minimise blast radius"
+      }
     ]
   },
   {
@@ -570,6 +615,13 @@
         "correctIndex": 0,
         "explanation": "Without a password there is nothing to verify. They need to enrol a passkey or TOTP at /settings/security, or the policy should require one of those methods instead."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "excessive-agency-confused-deputy",
+        "note": "excessive autonomy and graduated approval"
+      }
     ]
   },
   {
@@ -663,6 +715,13 @@
         ],
         "correctIndex": 0,
         "explanation": "Agent JWTs use the EC_SIGN_ED25519 key (EdDSA); federation tokens use an HSM-backed RSA-2048 key (RS256), because external relying parties overwhelmingly expect RSA."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "authn-vs-authz",
+        "note": "JWKS, audience binding, and short expiry"
       }
     ]
   }

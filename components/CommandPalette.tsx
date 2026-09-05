@@ -51,6 +51,7 @@ export function CommandPalette() {
   const router = useRouter();
   const { isDone, ready } = useProgress();
   const listRef = useRef<HTMLDivElement>(null);
+  const restoreRef = useRef<HTMLElement | null>(null);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -66,6 +67,8 @@ export function CommandPalette() {
     setOpen(false);
     setQuery("");
     setActive(0);
+    // Return focus to whatever opened the palette.
+    restoreRef.current?.focus?.();
   }, []);
 
   const go = useCallback(
@@ -81,7 +84,10 @@ export function CommandPalette() {
     const onKey = (ev: KeyboardEvent) => {
       if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === "k") {
         ev.preventDefault();
-        setOpen((o) => !o);
+        setOpen((o) => {
+          if (!o) restoreRef.current = document.activeElement as HTMLElement;
+          return !o;
+        });
       }
     };
     window.addEventListener("keydown", onKey);
@@ -106,7 +112,7 @@ export function CommandPalette() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 px-4 pt-[12vh] backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-[var(--scrim)] px-4 pt-[12vh] backdrop-blur-sm"
       onClick={close}
       role="presentation"
     >
@@ -159,7 +165,7 @@ export function CommandPalette() {
                   onMouseEnter={() => setActive(i)}
                   onClick={() => go(e)}
                   className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition ${
-                    i === active ? "bg-white/[0.06]" : ""
+                    i === active ? "bg-[var(--hover-strong)]" : ""
                   }`}
                 >
                   <span

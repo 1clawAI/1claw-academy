@@ -90,6 +90,18 @@
         "correctIndex": 1,
         "explanation": "Every agent gets an Ed25519 signing keypair and a P-256 ECDH keypair at creation."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "authn-vs-authz",
+        "note": "short-lived, audience-bound tokens"
+      },
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "why-agents-break-assumptions",
+        "note": "the principal that can be talked into things"
+      }
     ]
   },
   {
@@ -232,6 +244,13 @@
         "correctIndex": 0,
         "explanation": "Priority resolves the overlap, and 10 beats 5. Deny does not win automatically — the deny rule needs the higher priority number to take effect."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "access-control-models",
+        "note": "deny-by-default, and why priority decides overlaps"
+      }
     ]
   },
   {
@@ -321,6 +340,13 @@
         "correctIndex": 0,
         "explanation": "Cedar requires Team or above; OPA requires Business or above. On lower tiers the endpoints return a tier error."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "access-control-models",
+        "note": "policy-as-code and the decision/enforcement split"
+      }
     ]
   },
   {
@@ -408,6 +434,13 @@
         ],
         "correctIndex": 1,
         "explanation": "Name-only enrollment creates a link-only pending enrollment and returns an approval_url for a signed-in human."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "zero-trust-and-least-privilege",
+        "note": "zero access until a human grants it"
       }
     ]
   },
@@ -498,6 +531,13 @@
         ],
         "correctIndex": 1,
         "explanation": "list_secrets returns metadata and never secret values; use get_secret for a value."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "memory-and-supply-chain",
+        "note": "why tool descriptions are untrusted input"
       }
     ]
   },
@@ -599,6 +639,18 @@
         "correctIndex": 0,
         "explanation": "It forces execution through the TEE and blocks direct secret reads by that agent, pushing it entirely onto bindings. It requires execution_intents_enabled to be on first."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "the-lethal-trifecta",
+        "note": "shrinking the private-data circle"
+      },
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "context-window-exfiltration",
+        "note": "keeping the credential out of context"
+      }
     ]
   },
   {
@@ -672,6 +724,13 @@
         ],
         "correctIndex": 0,
         "explanation": "Shares are pending until accepted. The recipient sees it in their Inbound tab and must accept before any access is granted."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "what-is-a-secret",
+        "note": "attribution: knowing who used what"
       }
     ]
   },
@@ -764,6 +823,13 @@
         "correctIndex": 0,
         "explanation": "In caller mode the delegate acts with its own credentials and its own scopes. target mode instead runs it with the target agent's config and tools."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "memory-and-supply-chain",
+        "note": "ASI07: insecure inter-agent communication"
+      }
     ]
   },
   {
@@ -848,6 +914,13 @@
         ],
         "correctIndex": 0,
         "explanation": "Discovery and authorization are separate. Finding an agent tells you it exists; a human-created delegation decides whether work can actually be handed to it."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "memory-and-supply-chain",
+        "note": "discovery is not authorization"
       }
     ]
   }

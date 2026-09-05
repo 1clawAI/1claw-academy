@@ -33,7 +33,7 @@ export function CodeBlock({
           </span>
           <button
             onClick={copy}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-[var(--muted)] transition hover:bg-white/5 hover:text-[var(--foreground)]"
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-[var(--muted)] transition hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
           >
             {copied ? (
               <>
@@ -47,7 +47,7 @@ export function CodeBlock({
           </button>
         </div>
         <pre className="overflow-x-auto px-4 py-4 text-[13px] leading-relaxed">
-          <code className="font-mono text-[#d5d8e6]">{code}</code>
+          <code className="font-mono text-[var(--code-fg)]">{code}</code>
         </pre>
       </div>
       {caption ? (

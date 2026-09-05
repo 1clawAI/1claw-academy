@@ -81,6 +81,18 @@
         "correctIndex": 1,
         "explanation": "Human personal API keys start with 1ck_; agent keys start with ocv_."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "what-is-a-secret",
+        "note": "the four ways credentials leak"
+      },
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "defense-architecture",
+        "note": "the control plane pattern this implements"
+      }
     ]
   },
   {
@@ -174,6 +186,13 @@
         ],
         "correctIndex": 2,
         "explanation": "Every write creates a new version; previous versions stay in history."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "envelope-encryption",
+        "note": "why vaults wrap a DEK with a KEK"
       }
     ]
   },
@@ -279,6 +298,18 @@
         ],
         "correctIndex": 1,
         "explanation": "Policy create/update/delete auto-revokes the agent's active JWTs, forcing a fresh exchange."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "authn-vs-authz",
+        "note": "identity versus permission"
+      },
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "why-agents-break-assumptions",
+        "note": "why an agent is not just another service account"
       }
     ]
   },
@@ -469,6 +500,13 @@
         ],
         "correctIndex": 1,
         "explanation": "The dashboard at 1claw.co is a web UI over the same endpoints."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "envelope-encryption",
+        "note": "what happens to the value at rest"
       }
     ]
   }

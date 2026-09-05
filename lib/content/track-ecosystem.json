@@ -92,6 +92,13 @@
         "correctIndex": 1,
         "explanation": "ocv_ keys are agent keys, while 1ck_ keys are user keys."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "authn-vs-authz",
+        "note": "the same token model from another language"
+      }
     ]
   },
   {
@@ -181,6 +188,13 @@
         ],
         "correctIndex": 1,
         "explanation": "Asking the client to list secrets triggers list_secrets and verifies the setup."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "memory-and-supply-chain",
+        "note": "ASI04: your tools are your attack surface"
       }
     ]
   },
@@ -272,6 +286,13 @@
         "correctIndex": 1,
         "explanation": "The MCP client script connects to mcp.1claw.co and gets all 27+ tools without defining them by hand."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "excessive-agency-confused-deputy",
+        "note": "tool scope is the security boundary"
+      }
     ]
   },
   {
@@ -361,6 +382,13 @@
         ],
         "correctIndex": 1,
         "explanation": "Credentials are fetched at runtime with a scoped agent identity, not baked into prompts or repos."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "memory-and-supply-chain",
+        "note": "multi-agent trust and cascading failure"
       }
     ]
   },
@@ -457,6 +485,13 @@
         "correctIndex": 1,
         "explanation": "Private signing keys never leave the HSM/TEE; the agent submits intents and 1Claw signs server-side."
       }
+    ],
+    "concepts": [
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "excessive-agency-confused-deputy",
+        "note": "what the plugin is allowed to reach"
+      }
     ]
   },
   {
@@ -546,6 +581,13 @@
         ],
         "correctIndex": 1,
         "explanation": "Scaffold-Agent wires HSM-backed secrets and Intents API signing into a Scaffold-ETH 2 scaffold."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "public-key-crypto",
+        "note": "the agent is signing with a real key"
       }
     ]
   },
@@ -644,6 +686,13 @@
         ],
         "correctIndex": 0,
         "explanation": "Token billing is the default and needs no provider key — you enable it for the org and Shroud routes through the Stripe AI Gateway."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "context-window-exfiltration",
+        "note": "why the container never holds the key"
       }
     ]
   }

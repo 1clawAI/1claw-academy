@@ -4,6 +4,7 @@ import "./globals.css";
 import { ProgressProvider } from "@/lib/progress";
 import { Nav } from "@/components/Nav";
 import { CommandPalette } from "@/components/CommandPalette";
+import { themeScript } from "@/components/ThemeToggle";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,13 +37,25 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${bakbak.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="flex min-h-full flex-col">
         <ProgressProvider>
           <Nav />
           <CommandPalette />
-          <main className="flex-1">{children}</main>
+          <a
+            href="#content"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-[var(--primary)] focus:px-4 focus:py-2 focus:text-sm focus:text-white"
+          >
+            Skip to content
+          </a>
+          <main id="content" className="flex-1">
+            {children}
+          </main>
           <footer className="border-t border-[var(--border)] px-5 py-8 text-center text-xs text-[var(--muted)]">
             <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
               {[
