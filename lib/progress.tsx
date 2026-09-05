@@ -4,8 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
-  useState,
+  useSyncExternalStore,
 } from "react";
 import { flatLessons, lessonKey, totalLessons } from "./curriculum";
 
@@ -35,28 +34,61 @@ const Ctx = createContext<ProgressCtx | null>(null);
 
 const empty: ProgressState = { completed: {}, scores: {} };
 
+/*
+ * Progress lives in localStorage, which is an external store. Reading it with
+ * useSyncExternalStore rather than hydrating through an effect avoids the extra
+ * render pass, and subscribing to `storage` keeps two open tabs in agreement.
+ *
+ * getSnapshot must be referentially stable between reads, so the parsed value is
+ * cached against the raw string it came from.
+ */
+let cache: ProgressState = empty;
+let cacheRaw: string | null = null;
+const listeners = new Set<() => void>();
+
+function readStore(): ProgressState {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw !== cacheRaw) {
+      cacheRaw = raw;
+      cache = raw ? { ...empty, ...JSON.parse(raw) } : empty;
+    }
+  } catch {
+    /* private mode or malformed JSON: fall back to whatever we last had */
+  }
+  return cache;
+}
+
+function writeStore(next: ProgressState) {
+  cache = next;
+  try {
+    cacheRaw = JSON.stringify(next);
+    localStorage.setItem(KEY, cacheRaw);
+  } catch {
+    /* ignore: progress just will not persist */
+  }
+  for (const l of listeners) l();
+}
+
+function subscribe(onChange: () => void) {
+  listeners.add(onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    listeners.delete(onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+// On the server there is no store; `ready` flips once the client has read it.
+const serverState = () => empty;
+const clientReady = () => true;
+const serverReady = () => false;
+
 export function ProgressProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<ProgressState>(empty);
-  const [ready, setReady] = useState(false);
+  const state = useSyncExternalStore(subscribe, readStore, serverState);
+  const ready = useSyncExternalStore(subscribe, clientReady, serverReady);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setState({ ...empty, ...JSON.parse(raw) });
-    } catch {
-      /* ignore */
-    }
-    setReady(true);
-  }, []);
-
-  const persist = useCallback((next: ProgressState) => {
-    setState(next);
-    try {
-      localStorage.setItem(KEY, JSON.stringify(next));
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  const persist = useCallback((next: ProgressState) => writeStore(next), []);
 
   const isDone = useCallback(
     (t: string, l: string) => !!state.completed[lessonKey(t, l)],

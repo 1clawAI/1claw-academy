@@ -167,8 +167,8 @@
             "lang": "bash"
           },
           {
-            "text": "Rotate an agent's key. This invalidates the old credential.",
-            "code": "1claw agent rotate-key $AGENT_ID",
+            "text": "Rotate an agent's API key, which invalidates the old credential. There is no CLI subcommand for this one: `1claw agent keys rotate` rotates a per-chain signing key, which is a different thing. Use the API or the SDK.",
+            "code": "# The CLI rotates signing keys, not the agent API key.\n# Rotate the API key through the API or SDK:\ncurl -s -X POST https://api.1claw.co/v1/agents/$AGENT_ID/rotate-key \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\"\n\n# SDK equivalent:\n#   await client.agents.rotateKey(agentId);",
             "lang": "bash"
           },
           {

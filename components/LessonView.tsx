@@ -31,7 +31,15 @@ export function LessonView({
   position: { current: number; total: number };
 }) {
   const { recordScore, markDone, isDone, ready } = useProgress();
-  const [done, setDone] = useState(false);
+  // `done` is derived from stored progress, with a local override so finishing
+  // the quiz reflects immediately without waiting for a store round trip.
+  const [justCompleted, setJustCompleted] = useState(false);
+  const [lastLesson, setLastLesson] = useState(lesson.id);
+  if (lesson.id !== lastLesson) {
+    setLastLesson(lesson.id);
+    setJustCompleted(false);
+  }
+  const done = justCompleted || (ready && isDone(trackId, lesson.id));
   const router = useRouter();
 
   const minutes = useMemo(() => readingMinutes(lesson.blocks), [lesson.blocks]);
@@ -63,10 +71,6 @@ export function LessonView({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [goto, prev, next]);
-
-  useEffect(() => {
-    if (ready) setDone(isDone(trackId, lesson.id));
-  }, [ready, isDone, trackId, lesson.id]);
 
   return (
     <div className="mx-auto flex max-w-6xl gap-10 px-5">
@@ -128,7 +132,7 @@ export function LessonView({
           questions={lesson.quiz}
           onComplete={(correct, total) => {
             recordScore(trackId, lesson.id, correct, total);
-            setDone(true);
+            setJustCompleted(true);
           }}
         />
       </section>

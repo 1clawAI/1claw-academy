@@ -578,8 +578,8 @@
             "lang": "bash"
           },
           {
-            "text": "Test the binding before an agent depends on it.",
-            "code": "1claw agent binding test stripe-api",
+            "text": "Test the binding before an agent depends on it. The binding subcommands take the agent id and the binding id as positional arguments, so list them first to get the id.",
+            "code": "1claw agent binding list $AGENT_ID\n1claw agent binding test $AGENT_ID $BINDING_ID",
             "lang": "bash"
           },
           {
@@ -777,8 +777,8 @@
             "lang": "bash"
           },
           {
-            "text": "Revoke it. Human-only, and it takes effect immediately.",
-            "code": "1claw agent delegation revoke <delegation-id>",
+            "text": "Revoke it. Human-only, effective immediately, and it takes both the delegating agent's id and the delegation id.",
+            "code": "1claw agent delegation revoke $AGENT_A $DELEGATION_ID",
             "lang": "bash"
           }
         ]

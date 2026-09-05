@@ -38,7 +38,7 @@ Lessons live as JSON in `lib/content/track-<id>.json`, one file per track. Track
 
 Each lesson is `{ id, title, summary, blocks[], quiz[] }`. A `block` is one of `prose`, `steps`, `code`, `callout`, or `points`. To add a lesson, append an object to the right track file. Routing, static params, navigation, progress, and the index all update automatically.
 
-The JSON was generated from the source docs and then run through `scripts/build-content.js`, which decodes HTML entities and asserts no em or en dashes slipped in. Re-run it with `node scripts/build-content.js` if you regenerate the raw inputs under `scripts/raw/`.
+Lesson content lives in `lib/content/track-*.json` and is edited directly. `pnpm verify` checks it against the things it makes claims about: the live OpenAPI spec for every `/v1/` path, and a 1claw checkout (`ONECLAW_SRC`, default `~/1claw`) for CLI signatures, SDK methods and MCP tool names. Tiers that cannot run report as skipped rather than passing.
 
 ---
 

@@ -1,0 +1,36 @@
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The CLI/SDK/MCP tier needs the 1claw source. Without it those checks
+      # report as skipped rather than silently passing.
+      - name: Check out 1claw source
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          repository: 1clawAI/1claw
+          path: .1claw-src
+          token: ${{ secrets.ONECLAW_SRC_TOKEN }}
+
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify
+        env:
+          ONECLAW_SRC: ${{ github.workspace }}/.1claw-src
+      - run: pnpm lint
+      - run: pnpm build
