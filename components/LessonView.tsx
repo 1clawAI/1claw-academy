@@ -110,7 +110,7 @@ export function LessonView({
           <Link
             href="/learn"
             onClick={() => markDone(trackId, lesson.id)}
-            className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--primary-2)]"
+            className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--signature)]"
           >
             Finish → Back to curriculum
           </Link>

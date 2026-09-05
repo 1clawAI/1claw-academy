@@ -41,20 +41,27 @@ export default function RootLayout({
           <Nav />
           <main className="flex-1">{children}</main>
           <footer className="border-t border-[var(--border)] px-5 py-8 text-center text-xs text-[var(--muted)]">
-            1Claw Academy · An unofficial interactive course ·{" "}
-            <a
-              href="https://1claw.xyz"
-              className="underline hover:text-[var(--foreground)]"
-            >
-              1claw.xyz
-            </a>{" "}
-            ·{" "}
-            <a
-              href="https://docs.1claw.xyz"
-              className="underline hover:text-[var(--foreground)]"
-            >
-              docs
-            </a>
+            <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+              {[
+                ["1claw.co", "https://1claw.co"],
+                ["Docs", "https://docs.1claw.co"],
+                ["For AI", "https://1claw.co/for-ai"],
+                ["Brand kit", "https://1claw.co/brand-kit"],
+                ["llms.txt", "https://1claw.co/llms.txt"],
+              ].map(([label, href]) => (
+                <a
+                  key={label}
+                  href={href}
+                  className="transition hover:text-[var(--foreground)]"
+                >
+                  {label}
+                </a>
+              ))}
+            </nav>
+            <p className="mt-4">
+              1Claw Academy · An unofficial interactive course · 1Claw is
+              HSM-backed secret management for AI agents.
+            </p>
           </footer>
         </ProgressProvider>
       </body>

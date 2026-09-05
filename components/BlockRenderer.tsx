@@ -6,7 +6,7 @@ const calloutStyle: Record<
   "info" | "tip" | "warn",
   { border: string; icon: IconName; label: string }
 > = {
-  info: { border: "var(--primary)", icon: "info", label: "Concept" },
+  info: { border: "var(--signature)", icon: "info", label: "Concept" },
   tip: { border: "var(--success)", icon: "tip", label: "Tip" },
   warn: { border: "var(--warn)", icon: "warn", label: "Watch out" },
 };
@@ -27,7 +27,7 @@ export function BlockRenderer({ blocks }: { blocks: Block[] }) {
             <ul key={i} className="space-y-3">
               {b.items.map((it, j) => (
                 <li key={j} className="flex gap-3">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--primary)]" />
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--signature)]" />
                   <span className="leading-relaxed text-[#d6d3d6]">
                     {renderInline(it)}
                   </span>
@@ -45,7 +45,7 @@ export function BlockRenderer({ blocks }: { blocks: Block[] }) {
                   {j < b.steps.length - 1 ? (
                     <span className="absolute left-[15px] top-8 bottom-0 w-px bg-[var(--border)]" />
                   ) : null}
-                  <span className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--primary)]/40 bg-[var(--surface)] font-mono text-sm font-semibold text-[var(--primary-2)]">
+                  <span className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--signature)]/40 bg-[var(--surface)] font-mono text-sm font-semibold text-[var(--primary-2)]">
                     {j + 1}
                   </span>
                   <div className="min-w-0 flex-1 pt-1">

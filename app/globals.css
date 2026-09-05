@@ -1,43 +1,109 @@
 @import "tailwindcss";
 
 /*
- * 1Claw brand palette: matte black, metallic grays, signature red.
- * Tokens mirror the official brand kit (1claw.xyz/brand-kit).
+ * 1Claw brand system — matte black, metallic grays, one signature red.
+ *
+ * Token names and values mirror the official brand kit at 1claw.co/brand-kit
+ * and the shipped token set on 1claw.co. Dark is the default surface, which is
+ * how the product and marketing pages render.
+ *
+ *   Signature Red  #DF171A   the logo mark, focus rings, accents
+ *   Primary        #b80030   buttons and filled CTAs (dark mode)
+ *   Matte Black    #050505   the logo's black claw
+ *   Gradient       linear-gradient(135deg, #DF171A, #c4123a, #990029)
+ *
+ * The red is the only loud thing in the system — everything else stays quiet.
  */
 :root {
+  /* --- Official dark-mode tokens (1claw.co `.dark`) --- */
   --background: #030304;
-  --surface: #0a090b;
-  --surface-2: #141012;
-  --border: #322e30;
-  --border-soft: #1e1c1d;
   --foreground: #ffffff;
-  --muted: #6b6b73;
+  --card: #0a090b;
+  --card-foreground: #ffffff;
+  --primary: #b80030;
+  --primary-foreground: #ffffff;
+  --secondary: #141012;
+  --secondary-foreground: #e8e6e8;
+  --muted-surface: #0f0e10;
+  --muted-foreground: #6b6b73;
+  --accent: #1c1418;
+  --accent-foreground: #ffffff;
+  --destructive: #c4123a;
+  --popover: #0a090b;
+  --popover-foreground: #ffffff;
+  --border: #322e30;
+  --input: #1e1c1d;
+  --ring: #df171a;
+  --sidebar: #060506;
+  --sidebar-foreground: #a1a1aa;
+  --radius: 0.625rem;
 
-  /* Signature red + gradient stops */
-  --primary: #df171a;
-  --primary-2: #ff5a5c;
-  --primary-deep: #990029;
-  --crimson: #c4123a;
+  /* --- Brand constants (identical in every mode) --- */
+  --signature: #df171a; /* Signature Red — the one loud color */
+  --signature-soft: #ff5a5c; /* lifted tint for icons and hover text */
+  --matte-black: #050505;
+  --crimson: #c4123a; /* gradient midpoint */
+  --primary-deep: #990029; /* gradient end / light-mode primary */
 
-  /* Functional semantic colors */
-  --success: #1fb97a;
-  --danger: #c4123a;
-  --warn: #e0a13a;
+  /* --- Academy aliases kept for existing component markup --- */
+  --surface: var(--card);
+  --surface-2: var(--secondary);
+  --border-soft: var(--input);
+  --muted: var(--muted-foreground);
+  --primary-2: var(--signature-soft);
+  --danger: var(--destructive);
+
+  /* --- Functional semantics (not part of the brand palette) --- */
+  --success: #00c758;
+  --warn: #f99c00;
+}
+
+/*
+ * Official light-mode tokens, documented in the brand kit. The Academy renders
+ * dark by default; opt a subtree in with data-theme="light".
+ */
+[data-theme="light"] {
+  --background: #fafafa;
+  --foreground: #0a0a0c;
+  --card: #ffffff;
+  --card-foreground: #0a0a0c;
+  --primary: #990029;
+  --primary-foreground: #ffffff;
+  --secondary: #fff0f3;
+  --secondary-foreground: #4a1520;
+  --muted-surface: #f5f0f2;
+  --muted-foreground: #71717a;
+  --accent: #ffe8ec;
+  --accent-foreground: #0a0a0c;
+  --destructive: #b71c1c;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0c;
+  --border: #e8d4d8;
+  --input: #e8d4d8;
+  --ring: #990029;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-secondary: var(--secondary);
   --color-border: var(--border);
-  --color-foreground: var(--foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
   --color-muted: var(--muted);
+  --color-accent: var(--accent);
   --color-primary: var(--primary);
   --color-primary-2: var(--primary-2);
+  --color-signature: var(--signature);
   --color-crimson: var(--crimson);
+  --color-destructive: var(--destructive);
   --color-success: var(--success);
-  --color-danger: var(--danger);
   --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --radius-lg: var(--radius);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --font-logo: var(--font-bakbak), var(--font-geist-sans), sans-serif;
@@ -66,10 +132,19 @@ body {
   background: rgba(223, 23, 26, 0.35);
 }
 
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
 ::-webkit-scrollbar-thumb:hover { background: #3f3a3c; }
 
+/*
+ * Bakbak One is reserved for the "1Claw" wordmark alone — brand kit rule.
+ * Never apply .brand-wordmark to headings or body copy.
+ */
 .brand-wordmark {
   font-family: var(--font-logo);
   font-weight: 400;
@@ -87,21 +162,59 @@ body {
   color: transparent;
 }
 
+/*
+ * Section eyebrow — the bracketed, letterspaced label 1claw.co puts above
+ * every section heading, e.g. "[01]  THE PROBLEM".
+ */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.eyebrow::before {
+  content: "[" attr(data-index) "]";
+  color: var(--signature);
+}
+
+/* Section heading pairing used across 1claw.co: statement, then a quiet subhead. */
+.section-title {
+  font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+.section-sub {
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+
 .card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)), var(--surface);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)), var(--card);
   border: 1px solid var(--border);
   border-radius: 16px;
 }
 
 .prose-body p { line-height: 1.7; color: #d6d3d6; }
-.prose-body code {
-  background: var(--surface-2);
+
+/*
+ * Inline code only. Scoped away from `pre > code` so fenced blocks keep their
+ * own neutral color — red is an accent for a short token in a sentence, not a
+ * whole code listing.
+ */
+.prose-body :not(pre) > code {
+  background: var(--secondary);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 1px 6px;
   font-family: var(--font-mono);
   font-size: 0.85em;
-  color: var(--primary-2);
+  color: var(--signature-soft);
 }
 
 @keyframes fadeup {
@@ -109,6 +222,11 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 .fadeup { animation: fadeup 0.5s ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .fadeup { animation: none; }
+}
 
 .grid-bg {
   background-image:

@@ -63,14 +63,14 @@ export function Quiz({
                 const isChosen = chosen === oi;
                 const isCorrect = q.correctIndex === oi;
                 let cls =
-                  "border-[var(--border)] hover:border-[var(--primary)]/50 hover:bg-white/[0.02]";
+                  "border-[var(--border)] hover:border-[var(--signature)]/50 hover:bg-white/[0.02]";
                 if (isSub && isCorrect)
                   cls =
                     "border-[var(--success)] bg-[var(--success)]/10 text-[var(--foreground)]";
                 else if (isSub && isChosen && !isCorrect)
                   cls = "border-[var(--danger)] bg-[var(--danger)]/10";
                 else if (!isSub && isChosen)
-                  cls = "border-[var(--primary)] bg-[var(--primary)]/10";
+                  cls = "border-[var(--signature)] bg-[var(--signature)]/10";
                 return (
                   <button
                     key={oi}
@@ -98,7 +98,7 @@ export function Quiz({
               <button
                 onClick={() => check(qi)}
                 disabled={chosen === undefined}
-                className="mt-3 rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white transition enabled:hover:bg-[var(--primary-2)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="mt-3 rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white transition enabled:hover:bg-[var(--signature)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Check answer
               </button>
@@ -121,7 +121,7 @@ export function Quiz({
       })}
 
       {finished ? (
-        <div className="card border-[var(--primary)]/40 bg-[var(--primary)]/5 p-5 text-center fadeup">
+        <div className="card border-[var(--signature)]/40 bg-[var(--signature)]/5 p-5 text-center fadeup">
           <p className="text-lg font-semibold">
             You scored {correctCount} / {questions.length}
           </p>

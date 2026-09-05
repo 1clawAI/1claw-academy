@@ -11,7 +11,7 @@
       {
         "type": "callout",
         "variant": "info",
-        "text": "You need Python 3.9+ and a 1Claw API key from 1claw.xyz/settings/api-keys. A 1ck_ key is a user key, an ocv_ key is an agent key. Both work here."
+        "text": "You need Python 3.9+ and a 1Claw API key from 1claw.co/settings/api-keys. A 1ck_ key is a user key, an ocv_ key is an agent key. Both work here."
       },
       {
         "type": "steps",
@@ -101,7 +101,7 @@
     "blocks": [
       {
         "type": "prose",
-        "text": "The 1Claw MCP server gives an AI client tools to list, get, and manage vault secrets. You can use the hosted server at mcp.1claw.xyz or run a local stdio process."
+        "text": "The 1Claw MCP server gives an AI client tools to list, get, and manage vault secrets. You can use the hosted server at mcp.1claw.co or run a local stdio process."
       },
       {
         "type": "callout",
@@ -118,12 +118,12 @@
           },
           {
             "text": "Option B: Hosted server. First get a JWT by calling the agent-token endpoint. Replace the placeholders with your real agent_id and ocv_ key from agent creation.",
-            "code": "export AGENT_ID=\"paste-your-agent-uuid-here\"\nexport AGENT_KEY=\"ocv_paste_your_agent_key_here\"\n\nTOKEN=$(curl -s -X POST https://api.1claw.xyz/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"agent_id\\\":\\\"$AGENT_ID\\\",\\\"api_key\\\":\\\"$AGENT_KEY\\\"}\" | jq -r '.access_token')\n\nexport VAULT_ID=\"paste-your-vault-uuid-here\"",
+            "code": "export AGENT_ID=\"paste-your-agent-uuid-here\"\nexport AGENT_KEY=\"ocv_paste_your_agent_key_here\"\n\nTOKEN=$(curl -s -X POST https://api.1claw.co/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"agent_id\\\":\\\"$AGENT_ID\\\",\\\"api_key\\\":\\\"$AGENT_KEY\\\"}\" | jq -r '.access_token')\n\nexport VAULT_ID=\"paste-your-vault-uuid-here\"",
             "lang": "bash"
           },
           {
             "text": "Use that token in a hosted MCP config. Claude Desktop, Cursor, and Claude Code all use this same shape. Replace $TOKEN and $VAULT_ID with the values from the previous step.",
-            "code": "{\n  \"mcpServers\": {\n    \"1claw\": {\n      \"url\": \"https://mcp.1claw.xyz/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer $TOKEN\",\n        \"X-Vault-ID\": \"$VAULT_ID\"\n      }\n    }\n  }\n}",
+            "code": "{\n  \"mcpServers\": {\n    \"1claw\": {\n      \"url\": \"https://mcp.1claw.co/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer $TOKEN\",\n        \"X-Vault-ID\": \"$VAULT_ID\"\n      }\n    }\n  }\n}",
             "lang": "json"
           },
           {
@@ -218,7 +218,7 @@
           },
           {
             "text": "Note the tool pattern: a DynamicStructuredTool wraps the SDK client so the agent can list secrets. BASE_URL, API_KEY, and VAULT_ID are defined from environment variables at the top of the file.",
-            "code": "import { DynamicStructuredTool } from \"@langchain/core/tools\";\nimport { createClient } from \"@1claw/sdk\";\nimport { z } from \"zod\";\n\nconst BASE_URL = process.env.ONECLAW_BASE_URL || \"https://api.1claw.xyz\";\nconst API_KEY = process.env.ONECLAW_API_KEY!;\nconst VAULT_ID = process.env.ONECLAW_VAULT_ID!;\n\nconst client = createClient({ baseUrl: BASE_URL, apiKey: API_KEY });\n\nconst listSecretsTool = new DynamicStructuredTool({\n  name: \"list_vault_secrets\",\n  description: \"List all secrets in the vault (metadata only, never values).\",\n  schema: z.object({}),\n  func: async () => {\n    const res = await client.secrets.list(VAULT_ID);\n    return res.data.secrets.map(s => `${s.path} (${s.type})`).join(\"\\n\");\n  },\n});",
+            "code": "import { DynamicStructuredTool } from \"@langchain/core/tools\";\nimport { createClient } from \"@1claw/sdk\";\nimport { z } from \"zod\";\n\nconst BASE_URL = process.env.ONECLAW_BASE_URL || \"https://api.1claw.co\";\nconst API_KEY = process.env.ONECLAW_API_KEY!;\nconst VAULT_ID = process.env.ONECLAW_VAULT_ID!;\n\nconst client = createClient({ baseUrl: BASE_URL, apiKey: API_KEY });\n\nconst listSecretsTool = new DynamicStructuredTool({\n  name: \"list_vault_secrets\",\n  description: \"List all secrets in the vault (metadata only, never values).\",\n  schema: z.object({}),\n  func: async () => {\n    const res = await client.secrets.list(VAULT_ID);\n    return res.data.secrets.map(s => `${s.path} (${s.type})`).join(\"\\n\");\n  },\n});",
             "lang": "typescript"
           },
           {
@@ -270,7 +270,7 @@
           "It skips authentication"
         ],
         "correctIndex": 1,
-        "explanation": "The MCP client script connects to mcp.1claw.xyz and gets all 27+ tools without defining them by hand."
+        "explanation": "The MCP client script connects to mcp.1claw.co and gets all 27+ tools without defining them by hand."
       }
     ]
   },

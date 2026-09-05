@@ -31,7 +31,7 @@
           },
           {
             "text": "Register an agent. The plaintext ocv_ key is returned once in this response and never again. Use the vault UUID from Foundations (`1claw vault list`) and export it: `export VAULT_ID=...`",
-            "code": "export VAULT_ID=\"your-vault-uuid-here\"\n\nAGENT_RESPONSE=$(curl -s -X POST https://api.1claw.xyz/v1/agents \\\n  -H \"Authorization: Bearer $ONECLAW_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"web-backend\",\"token_ttl_seconds\":900,\"vault_ids\":[\"'$VAULT_ID'\"]}')\n\necho \"$AGENT_RESPONSE\"",
+            "code": "export VAULT_ID=\"your-vault-uuid-here\"\n\nAGENT_RESPONSE=$(curl -s -X POST https://api.1claw.co/v1/agents \\\n  -H \"Authorization: Bearer $ONECLAW_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"web-backend\",\"token_ttl_seconds\":900,\"vault_ids\":[\"'$VAULT_ID'\"]}')\n\necho \"$AGENT_RESPONSE\"",
             "lang": "bash"
           },
           {
@@ -41,12 +41,12 @@
           },
           {
             "text": "Exchange the agent credentials for a short-lived JWT. This endpoint needs no bearer token; the credentials in the body are the auth.",
-            "code": "TOKEN=$(curl -s -X POST https://api.1claw.xyz/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"agent_id\":\"'$ONECLAW_AGENT_ID'\",\"api_key\":\"'$ONECLAW_AGENT_KEY'\"}' | jq -r .access_token)",
+            "code": "TOKEN=$(curl -s -X POST https://api.1claw.co/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"agent_id\":\"'$ONECLAW_AGENT_ID'\",\"api_key\":\"'$ONECLAW_AGENT_KEY'\"}' | jq -r .access_token)",
             "lang": "bash"
           },
           {
             "text": "Confirm the token works by fetching the agent's own profile. You should see the ssh_public_key and ecdh_public_key fields.",
-            "code": "curl -s https://api.1claw.xyz/v1/agents/me -H \"Authorization: Bearer $TOKEN\"",
+            "code": "curl -s https://api.1claw.co/v1/agents/me -H \"Authorization: Bearer $TOKEN\"",
             "lang": "bash"
           }
         ]
@@ -125,17 +125,17 @@
           },
           {
             "text": "Create a policy that lets the agent read only api-keys/openai. The pattern is a single path, so the agent cannot reach anything else in the vault.",
-            "code": "curl -s -X POST https://api.1claw.xyz/v1/vaults/$VAULT_ID/policies \\\n  -H \"Authorization: Bearer $ONECLAW_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"principal_type\":\"agent\",\"principal_id\":\"'$AGENT_ID'\",\"permissions\":[\"read\"],\"secret_path_pattern\":\"api-keys/openai\"}'",
+            "code": "curl -s -X POST https://api.1claw.co/v1/vaults/$VAULT_ID/policies \\\n  -H \"Authorization: Bearer $ONECLAW_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"principal_type\":\"agent\",\"principal_id\":\"'$AGENT_ID'\",\"permissions\":[\"read\"],\"secret_path_pattern\":\"api-keys/openai\"}'",
             "lang": "bash"
           },
           {
             "text": "Re-exchange the agent key for a fresh JWT. The old token was revoked by the policy change.",
-            "code": "TOKEN=$(curl -s -X POST https://api.1claw.xyz/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"agent_id\":\"'$ONECLAW_AGENT_ID'\",\"api_key\":\"'$ONECLAW_AGENT_KEY'\"}' | jq -r .access_token)",
+            "code": "TOKEN=$(curl -s -X POST https://api.1claw.co/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"agent_id\":\"'$ONECLAW_AGENT_ID'\",\"api_key\":\"'$ONECLAW_AGENT_KEY'\"}' | jq -r .access_token)",
             "lang": "bash"
           },
           {
             "text": "Read the allowed path (works), then try a different path. Both 403 (forbidden) and 404 (not found) confirm the agent cannot access that path.",
-            "code": "curl -s https://api.1claw.xyz/v1/vaults/$VAULT_ID/secrets/api-keys/openai \\\n  -H \"Authorization: Bearer $TOKEN\"\ncurl -s https://api.1claw.xyz/v1/vaults/$VAULT_ID/secrets/api-keys/stripe \\\n  -H \"Authorization: Bearer $TOKEN\"",
+            "code": "curl -s https://api.1claw.co/v1/vaults/$VAULT_ID/secrets/api-keys/openai \\\n  -H \"Authorization: Bearer $TOKEN\"\ncurl -s https://api.1claw.co/v1/vaults/$VAULT_ID/secrets/api-keys/stripe \\\n  -H \"Authorization: Bearer $TOKEN\"",
             "lang": "bash"
           }
         ]
@@ -205,12 +205,12 @@
         "steps": [
           {
             "text": "Option A: Submit an enrollment with a name and a human_email. Allow and Deny links are sent to that address. No credentials are required.",
-            "code": "curl -s -X POST https://api.1claw.xyz/v1/agents/enroll \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"deploy-bot\",\"human_email\":\"alice@example.com\",\"description\":\"CI pipeline agent\"}'",
+            "code": "curl -s -X POST https://api.1claw.co/v1/agents/enroll \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"deploy-bot\",\"human_email\":\"alice@example.com\",\"description\":\"CI pipeline agent\"}'",
             "lang": "bash"
           },
           {
-            "text": "Option B: Send name only. The response includes an enrollment_id and an approval_url the human opens while signed in. No email needed. Sample response: {\"enrollment_id\":\"enr_abc123\",\"approval_url\":\"https://app.1claw.xyz/approve/enr_abc123\",\"status\":\"pending\"}",
-            "code": "curl -s -X POST https://api.1claw.xyz/v1/agents/enroll \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"deploy-bot\"}'",
+            "text": "Option B: Send name only. The response includes an enrollment_id and an approval_url the human opens while signed in. No email needed. Sample response: {\"enrollment_id\":\"enr_abc123\",\"approval_url\":\"https://1claw.co/approve/enr_abc123\",\"status\":\"pending\"}",
+            "code": "curl -s -X POST https://api.1claw.co/v1/agents/enroll \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"deploy-bot\"}'",
             "lang": "bash"
           },
           {
@@ -281,7 +281,7 @@
     "blocks": [
       {
         "type": "prose",
-        "text": "The 1Claw MCP server gives an AI client just-in-time access to vault secrets over the Model Context Protocol. The hosted server runs at https://mcp.1claw.xyz/mcp and authenticates per connection with a Bearer JWT and an X-Vault-ID header. The MCP server itself enforces nothing: every call is checked against the agent's policies by the vault API."
+        "text": "The 1Claw MCP server gives an AI client just-in-time access to vault secrets over the Model Context Protocol. It exposes 141 tools (vault, Intents signing, Execution Intents bindings, treasury, approvals, automations, runtimes, memory, chat, channels, Cedar/OPA policy backends, and Safe agent accounts). The canonical setup is local stdio — `npx @1claw/mcp` with a single ONECLAW_AGENT_API_KEY env var; the server exchanges it for a JWT, refreshes before expiry, and auto-discovers the agent and vault. The MCP server itself enforces nothing: every call is checked against the agent's policies by the vault API."
       },
       {
         "type": "callout",
@@ -292,18 +292,18 @@
         "type": "steps",
         "steps": [
           {
-            "text": "Mint an agent JWT. Use env vars from Lesson 1 or paste your agent_id and ocv_ key directly.",
-            "code": "export ONECLAW_AGENT_ID=\"your-agent-uuid\"\nexport ONECLAW_AGENT_KEY=\"ocv_your_agent_api_key\"\nexport VAULT_ID=\"your-vault-uuid\"\n\nTOKEN=$(curl -s -X POST https://api.1claw.xyz/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"agent_id\":\"'$ONECLAW_AGENT_ID'\",\"api_key\":\"'$ONECLAW_AGENT_KEY'\"}' | jq -r .access_token)",
-            "lang": "bash"
-          },
-          {
-            "text": "Option A: Hosted server. Add to your client config (e.g. Claude Desktop claude_desktop_config.json). Paste your $TOKEN and $VAULT_ID values into the headers. Note: Hosted JWTs expire (typically 15–60 min). The local stdio server auto-refreshes; prefer it for long sessions.",
-            "code": "{\n  \"mcpServers\": {\n    \"1claw\": {\n      \"url\": \"https://mcp.1claw.xyz/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer <paste your $TOKEN here>\",\n        \"X-Vault-ID\": \"<paste your $VAULT_ID here>\"\n      }\n    }\n  }\n}",
+            "text": "Recommended: local stdio. Run the server as a process and pass only the agent API key. It exchanges the key for a JWT, auto-refreshes it, and auto-discovers the agent and vault — no agent_id, no vault ID, no manual token minting. Paste this into .cursor/mcp.json, claude_desktop_config.json, or any MCP client that supports stdio.",
+            "code": "{\n  \"mcpServers\": {\n    \"1claw\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@1claw/mcp\"],\n      \"env\": { \"ONECLAW_AGENT_API_KEY\": \"ocv_your_agent_api_key\" }\n    }\n  }\n}",
             "lang": "json"
           },
           {
-            "text": "Option B: Local stdio (recommended). Run the server as a process and pass only the API key. It exchanges the key for a JWT, auto-refreshes, and auto-discovers the vault.",
-            "code": "{\n  \"mcpServers\": {\n    \"1claw\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@1claw/mcp\"],\n      \"env\": { \"ONECLAW_AGENT_API_KEY\": \"ocv_your_agent_api_key\" }\n    }\n  }\n}",
+            "text": "Mint an agent JWT. Use env vars from Lesson 1 or paste your agent_id and ocv_ key directly.",
+            "code": "export ONECLAW_AGENT_ID=\"your-agent-uuid\"\nexport ONECLAW_AGENT_KEY=\"ocv_your_agent_api_key\"\nexport VAULT_ID=\"your-vault-uuid\"\n\nTOKEN=$(curl -s -X POST https://api.1claw.co/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"agent_id\":\"'$ONECLAW_AGENT_ID'\",\"api_key\":\"'$ONECLAW_AGENT_KEY'\"}' | jq -r .access_token)",
+            "lang": "bash"
+          },
+          {
+            "text": "Alternative: hosted server. Only for non-IDE callers that can mint a fresh JWT per connection (the token from the previous step). Paste your $TOKEN and $VAULT_ID into the headers.",
+            "code": "{\n  \"mcpServers\": {\n    \"1claw\": {\n      \"url\": \"https://mcp.1claw.co/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer <paste your $TOKEN here>\",\n        \"X-Vault-ID\": \"<paste your $VAULT_ID here>\"\n      }\n    }\n  }\n}",
             "lang": "json"
           },
           {
@@ -312,6 +312,11 @@
             "lang": "text"
           }
         ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Do not point an IDE at the hosted https://mcp.1claw.co/mcp URL with a static Bearer token. Agent JWTs expire in about 15 minutes by default, so the connection dies mid-session and the client will not re-mint it. Use the stdio server for Cursor, Claude Desktop, VS Code, and Claude Code — it refreshes the token for you."
       },
       {
         "type": "callout",

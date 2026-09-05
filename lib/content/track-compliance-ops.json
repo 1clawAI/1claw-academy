@@ -32,7 +32,7 @@
           },
           {
             "text": "Query recent secret reads.",
-            "code": "curl \"https://api.1claw.xyz/v1/audit/events?action=secret.read&limit=25\" \\\n  -H \"Authorization: Bearer $TOKEN\"",
+            "code": "curl \"https://api.1claw.co/v1/audit/events?action=secret.read&limit=25\" \\\n  -H \"Authorization: Bearer $TOKEN\"",
             "lang": "bash"
           },
           {
@@ -47,7 +47,7 @@
           },
           {
             "text": "Filter by a single actor to review one agent's activity.",
-            "code": "curl \"https://api.1claw.xyz/v1/audit/events?actor_id=$AGENT_ID&limit=50\" \\\n  -H \"Authorization: Bearer $TOKEN\"",
+            "code": "curl \"https://api.1claw.co/v1/audit/events?actor_id=$AGENT_ID&limit=50\" \\\n  -H \"Authorization: Bearer $TOKEN\"",
             "lang": "bash"
           },
           {
@@ -245,12 +245,12 @@
         "steps": [
           {
             "text": "Exchange your API key for a user JWT. Replace 1ck_your_key_here with your real key.",
-            "code": "export ONECLAW_API_KEY=\"1ck_your_key_here\"\nexport USER_JWT=$(curl -s -X POST https://api.1claw.xyz/v1/auth/api-key-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"api_key\\\":\\\"$ONECLAW_API_KEY\\\"}\" | jq -r .access_token)",
+            "code": "export ONECLAW_API_KEY=\"1ck_your_key_here\"\nexport USER_JWT=$(curl -s -X POST https://api.1claw.co/v1/auth/api-key-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"api_key\\\":\\\"$ONECLAW_API_KEY\\\"}\" | jq -r .access_token)",
             "lang": "bash"
           },
           {
             "text": "Register a platform app with your user JWT. Silent auth skips the interactive consent screen; use 'interactive' if your platform requires explicit user approval.",
-            "code": "curl -X POST \"https://api.1claw.xyz/v1/platform/apps\" \\\n  -H \"Authorization: Bearer $USER_JWT\" -H \"Content-Type: application/json\" \\\n  -d '{ \"name\": \"My DeFi Platform\", \"slug\": \"my-defi\", \"auth_mode\": \"silent\" }'",
+            "code": "curl -X POST \"https://api.1claw.co/v1/platform/apps\" \\\n  -H \"Authorization: Bearer $USER_JWT\" -H \"Content-Type: application/json\" \\\n  -d '{ \"name\": \"My DeFi Platform\", \"slug\": \"my-defi\", \"auth_mode\": \"silent\" }'",
             "lang": "bash"
           },
           {
@@ -260,7 +260,7 @@
           },
           {
             "text": "Create a bootstrap template. Note intents is a nested object here.",
-            "code": "curl -X POST \"https://api.1claw.xyz/v1/platform/apps/$APP_ID/templates\" \\\n  -H \"Authorization: Bearer $PLT_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{\n    \"name\": \"default-template\",\n    \"spec\": {\n      \"vault\": { \"name\": \"user-vault\" },\n      \"agents\": [{ \"name\": \"defi-bot\", \"intents\": { \"enabled\": true } }],\n      \"signing_keys\": [{ \"chain\": \"ethereum\" }],\n      \"policies\": [{ \"principal_ref\": \"agents.primary\", \"vault_ref\": \"vault\", \"paths\": [\"keys/*\"] }]\n    }\n  }'",
+            "code": "curl -X POST \"https://api.1claw.co/v1/platform/apps/$APP_ID/templates\" \\\n  -H \"Authorization: Bearer $PLT_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{\n    \"name\": \"default-template\",\n    \"spec\": {\n      \"vault\": { \"name\": \"user-vault\" },\n      \"agents\": [{ \"name\": \"defi-bot\", \"intents\": { \"enabled\": true } }],\n      \"signing_keys\": [{ \"chain\": \"ethereum\" }],\n      \"policies\": [{ \"principal_ref\": \"agents.primary\", \"vault_ref\": \"vault\", \"paths\": [\"keys/*\"] }]\n    }\n  }'",
             "lang": "bash"
           },
           {
@@ -270,7 +270,7 @@
           },
           {
             "text": "Upsert a user.",
-            "code": "curl -X POST \"https://api.1claw.xyz/v1/platform/users/upsert\" \\\n  -H \"Authorization: Bearer $PLT_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{ \"email\": \"user@example.com\", \"external_subject\": \"telegram:123456789\" }'",
+            "code": "curl -X POST \"https://api.1claw.co/v1/platform/users/upsert\" \\\n  -H \"Authorization: Bearer $PLT_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{ \"email\": \"user@example.com\", \"external_subject\": \"telegram:123456789\" }'",
             "lang": "bash"
           },
           {
@@ -280,12 +280,12 @@
           },
           {
             "text": "Bootstrap the user from the template. The response has claim_url and a one-time summary.agent_api_key.",
-            "code": "BOOTSTRAP_RESPONSE=$(curl -s -X POST \"https://api.1claw.xyz/v1/platform/connections/$CONNECTION_ID/bootstrap\" \\\n  -H \"Authorization: Bearer $PLT_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{ \"template_id\": \"'$TEMPLATE_ID'\" }')",
+            "code": "BOOTSTRAP_RESPONSE=$(curl -s -X POST \"https://api.1claw.co/v1/platform/connections/$CONNECTION_ID/bootstrap\" \\\n  -H \"Authorization: Bearer $PLT_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{ \"template_id\": \"'$TEMPLATE_ID'\" }')",
             "lang": "bash"
           },
           {
             "text": "Share the claim_url with the user. It expires in 10 minutes; reissue with the reissue-claim endpoint if it lapses.",
-            "code": "echo \"Claim URL: $(echo $BOOTSTRAP_RESPONSE | jq -r .claim_url)\"\n# Format: https://1claw.xyz/connect/{slug}/claim/{token}",
+            "code": "echo \"Claim URL: $(echo $BOOTSTRAP_RESPONSE | jq -r .claim_url)\"\n# Format: https://1claw.co/connect/{slug}/claim/{token}",
             "lang": "bash"
           }
         ]

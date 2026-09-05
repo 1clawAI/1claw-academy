@@ -13,9 +13,9 @@
 #   ONECLAW_API_KEY=1ck_... bash scripts/smoke-api.sh   # Part A + Part B
 
 set -uo pipefail
-BASE="${ONECLAW_BASE_URL:-https://api.1claw.xyz}"
-SHROUD="${ONECLAW_SHROUD_URL:-https://shroud.1claw.xyz}"
-MCP="${ONECLAW_MCP_URL:-https://mcp.1claw.xyz}"
+BASE="${ONECLAW_BASE_URL:-https://api.1claw.co}"
+SHROUD="${ONECLAW_SHROUD_URL:-https://shroud.1claw.co}"
+MCP="${ONECLAW_MCP_URL:-https://mcp.1claw.co}"
 pass=0; fail=0
 
 hr() { printf '%s\n' "------------------------------------------------------------"; }

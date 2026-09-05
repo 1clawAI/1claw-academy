@@ -11,9 +11,9 @@ export function Nav() {
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-5 py-3">
         <Link href="/" className="flex items-center gap-2.5">
           <Logo size={26} />
-          <span className="brand-wordmark text-lg">
-            1Claw{" "}
-            <span className="text-[var(--muted)] font-normal">Academy</span>
+          <span className="text-lg">
+            <span className="brand-wordmark">1Claw</span>{" "}
+            <span className="font-normal text-[var(--muted)]">Academy</span>
           </span>
         </Link>
         <nav className="ml-auto flex items-center gap-1 text-sm">
@@ -24,18 +24,26 @@ export function Nav() {
             Curriculum
           </Link>
           <a
-            href="https://docs.1claw.xyz"
+            href="https://docs.1claw.co"
             target="_blank"
             rel="noreferrer"
             className="rounded-lg px-3 py-1.5 text-[var(--muted)] transition hover:bg-white/5 hover:text-[var(--foreground)]"
           >
             Docs ↗
           </a>
+          <a
+            href="https://1claw.co/for-ai"
+            target="_blank"
+            rel="noreferrer"
+            className="hidden rounded-lg px-3 py-1.5 text-[var(--muted)] transition hover:bg-white/5 hover:text-[var(--foreground)] sm:block"
+          >
+            For AI ↗
+          </a>
           {ready && completedCount > 0 ? (
             <div className="ml-2 hidden items-center gap-2 sm:flex">
               <div className="h-1.5 w-24 overflow-hidden rounded-full bg-[var(--surface-2)]">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-[var(--primary-2)] to-[var(--primary)] transition-all"
+                  className="h-full rounded-full bg-gradient-to-r from-[var(--signature-soft)] to-[var(--signature)] transition-all"
                   style={{ width: `${percent}%` }}
                 />
               </div>

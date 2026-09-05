@@ -14,7 +14,7 @@
           "HSM-backed: each vault's key encryption key lives in a hardware security module",
           "Zero-trust: an agent gets zero secrets until a human writes a policy",
           "Two principals: humans own secrets, agents fetch them at runtime",
-          "Same API for both at https://api.1claw.xyz"
+          "Same API for both at https://api.1claw.co"
         ]
       },
       {
@@ -27,7 +27,7 @@
         "steps": [
           {
             "text": "Sign up for a free account at the dashboard. The free tier gives you 1,000 requests/month, 3 vaults, and 2 agents.",
-            "code": "https://1claw.xyz",
+            "code": "https://1claw.co",
             "lang": "text"
           },
           {
@@ -37,7 +37,7 @@
           },
           {
             "text": "Verify the key works by exchanging it for an access token against the real API. You'll get back an access_token you can use as a Bearer token.",
-            "code": "curl -s -X POST https://api.1claw.xyz/v1/auth/api-key-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"api_key\\\":\\\"$ONECLAW_API_KEY\\\"}\"",
+            "code": "curl -s -X POST https://api.1claw.co/v1/auth/api-key-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"api_key\\\":\\\"$ONECLAW_API_KEY\\\"}\"",
             "lang": "bash"
           }
         ]
@@ -116,22 +116,22 @@
           },
           {
             "text": "Get an access token and save it as TOKEN.",
-            "code": "export TOKEN=$(curl -s -X POST https://api.1claw.xyz/v1/auth/api-key-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"api_key\\\":\\\"$ONECLAW_API_KEY\\\"}\" | jq -r .access_token)",
+            "code": "export TOKEN=$(curl -s -X POST https://api.1claw.co/v1/auth/api-key-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"api_key\\\":\\\"$ONECLAW_API_KEY\\\"}\" | jq -r .access_token)",
             "lang": "bash"
           },
           {
             "text": "Create a vault and auto-extract the vault ID. Requires jq (brew install jq or apt install jq).",
-            "code": "export VAULT_ID=$(curl -s -X POST https://api.1claw.xyz/v1/vaults \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"My Vault\",\"description\":\"Secrets for my app\"}' | jq -r .id)\necho \"VAULT_ID=$VAULT_ID\"",
+            "code": "export VAULT_ID=$(curl -s -X POST https://api.1claw.co/v1/vaults \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"My Vault\",\"description\":\"Secrets for my app\"}' | jq -r .id)\necho \"VAULT_ID=$VAULT_ID\"",
             "lang": "bash"
           },
           {
             "text": "Store a secret at a path inside that vault.",
-            "code": "curl -s -X PUT \"https://api.1claw.xyz/v1/vaults/$VAULT_ID/secrets/api-keys/openai\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"type\":\"api_key\",\"value\":\"sk-proj-demo\"}'",
+            "code": "curl -s -X PUT \"https://api.1claw.co/v1/vaults/$VAULT_ID/secrets/api-keys/openai\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"type\":\"api_key\",\"value\":\"sk-proj-demo\"}'",
             "lang": "bash"
           },
           {
             "text": "Read it back. The response includes the decrypted value plus metadata like version.",
-            "code": "curl -s \"https://api.1claw.xyz/v1/vaults/$VAULT_ID/secrets/api-keys/openai\" \\\n  -H \"Authorization: Bearer $TOKEN\"",
+            "code": "curl -s \"https://api.1claw.co/v1/vaults/$VAULT_ID/secrets/api-keys/openai\" \\\n  -H \"Authorization: Bearer $TOKEN\"",
             "lang": "bash"
           }
         ]
@@ -206,17 +206,17 @@
         "steps": [
           {
             "text": "Human path. Your 1ck_ key is already a Bearer token, so you can call the API with no exchange step.",
-            "code": "export ONECLAW_API_KEY=\"1ck_your_user_key\"\ncurl -s https://api.1claw.xyz/v1/vaults -H \"Authorization: Bearer $ONECLAW_API_KEY\"",
+            "code": "export ONECLAW_API_KEY=\"1ck_your_user_key\"\ncurl -s https://api.1claw.co/v1/vaults -H \"Authorization: Bearer $ONECLAW_API_KEY\"",
             "lang": "bash"
           },
           {
             "text": "Prefer a short-lived JWT for the human key? Exchange it at the api-key-token endpoint. This is a different endpoint from the agent one.",
-            "code": "curl -s -X POST https://api.1claw.xyz/v1/auth/api-key-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"api_key\\\":\\\"$ONECLAW_API_KEY\\\"}\"",
+            "code": "curl -s -X POST https://api.1claw.co/v1/auth/api-key-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"api_key\\\":\\\"$ONECLAW_API_KEY\\\"}\"",
             "lang": "bash"
           },
           {
             "text": "Agent path. First, create an agent using your human 1ck_ key. Use the VAULT_ID from Lesson 2, or copy a vault id from the Step 1 response. Export it if not already set. The response contains the agent_id and a plaintext api_key (starts with ocv_). Save both — the ocv_ key is shown only once.",
-            "code": "# Make sure VAULT_ID is set (from Lesson 2 or Step 1 above)\nexport VAULT_ID=\"your-vault-uuid-here\"\n\nAGENT_RESPONSE=$(curl -s -X POST https://api.1claw.xyz/v1/agents \\\n  -H \"Authorization: Bearer $ONECLAW_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"name\\\":\\\"my-first-agent\\\",\\\"token_ttl_seconds\\\":3600,\\\"vault_ids\\\":[\\\"$VAULT_ID\\\"]}\")\necho \"$AGENT_RESPONSE\"",
+            "code": "# Make sure VAULT_ID is set (from Lesson 2 or Step 1 above)\nexport VAULT_ID=\"your-vault-uuid-here\"\n\nAGENT_RESPONSE=$(curl -s -X POST https://api.1claw.co/v1/agents \\\n  -H \"Authorization: Bearer $ONECLAW_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"name\\\":\\\"my-first-agent\\\",\\\"token_ttl_seconds\\\":3600,\\\"vault_ids\\\":[\\\"$VAULT_ID\\\"]}\")\necho \"$AGENT_RESPONSE\"",
             "lang": "bash"
           },
           {
@@ -226,12 +226,12 @@
           },
           {
             "text": "Exchange the agent credentials for a short-lived JWT. Send agent_id AND api_key. Both are required. Capture the token for the next step.",
-            "code": "export AGENT_TOKEN=$(curl -s -X POST https://api.1claw.xyz/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"agent_id\\\":\\\"$ONECLAW_AGENT_ID\\\",\\\"api_key\\\":\\\"$ONECLAW_AGENT_KEY\\\"}\" | jq -r .access_token)\necho \"AGENT_TOKEN=$AGENT_TOKEN\"",
+            "code": "export AGENT_TOKEN=$(curl -s -X POST https://api.1claw.co/v1/auth/agent-token \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\\\"agent_id\\\":\\\"$ONECLAW_AGENT_ID\\\",\\\"api_key\\\":\\\"$ONECLAW_AGENT_KEY\\\"}\" | jq -r .access_token)\necho \"AGENT_TOKEN=$AGENT_TOKEN\"",
             "lang": "bash"
           },
           {
             "text": "Verify the token works by calling the agents/me endpoint. You should see the agent's metadata.",
-            "code": "curl -s https://api.1claw.xyz/v1/agents/me \\\n  -H \"Authorization: Bearer $AGENT_TOKEN\"",
+            "code": "curl -s https://api.1claw.co/v1/agents/me \\\n  -H \"Authorization: Bearer $AGENT_TOKEN\"",
             "lang": "bash"
           },
           {
@@ -297,15 +297,25 @@
         "text": "Prerequisite: Node 20+ if you install via npm. Homebrew works on macOS and Linux and needs nothing else."
       },
       {
+        "type": "callout",
+        "variant": "tip",
+        "text": "What `1claw setup` does under the hood: it calls POST /v1/onboarding/provision, which creates the welcome bundle (a `default` vault, `examples/hello`, an MCP agent, and a `**` read/write policy) and returns a one-time `ocv_` agent key plus a ready-to-paste `mcp_stdio_config`. Track progress any time with GET /v1/org/onboarding/status. The manual steps below are the same thing, done by hand."
+      },
+      {
         "type": "steps",
         "steps": [
+          {
+            "text": "Fastest path — one command. `1claw setup` provisions a `default` vault, an `examples/hello` secret, an MCP agent, and a read/write policy, then writes MCP config for Cursor, Claude Desktop, and VS Code. Run it and skip to the last step.",
+            "code": "npx @1claw/cli setup",
+            "lang": "bash"
+          },
           {
             "text": "Install the CLI with npm (needs Node 20+) or Homebrew.",
             "code": "npm install -g @1claw/cli\n# or\nbrew install 1clawAI/tap/oneclaw",
             "lang": "bash"
           },
           {
-            "text": "Log in. This opens your browser to 1claw.xyz, you approve, and the CLI polls until you confirm. No password typed in the terminal.",
+            "text": "Log in. This opens your browser to 1claw.co, you approve, and the CLI polls until you confirm. No password typed in the terminal.",
             "code": "1claw login",
             "lang": "bash"
           },
@@ -419,7 +429,7 @@
       {
         "type": "callout",
         "variant": "tip",
-        "text": "Prefer clicking? In the dashboard at 1claw.xyz, go to Vaults then Create vault, then Secrets then Add secret at a path like api-keys/openai. It hits the same endpoints as the CLI."
+        "text": "Prefer clicking? In the dashboard at 1claw.co, go to Vaults then Create vault, then Secrets then Add secret at a path like api-keys/openai. It hits the same endpoints as the CLI."
       },
       {
         "type": "prose",
@@ -458,7 +468,7 @@
           "A replacement for HSMs"
         ],
         "correctIndex": 1,
-        "explanation": "The dashboard at 1claw.xyz is a web UI over the same endpoints."
+        "explanation": "The dashboard at 1claw.co is a web UI over the same endpoints."
       }
     ]
   }

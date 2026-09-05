@@ -1,12 +1,12 @@
 # 1Claw Academy
 
-An interactive, beginner-to-advanced teaching application for **[1Claw](https://1claw.xyz)** — HSM-backed secret management for AI agents and humans.
+An interactive, beginner-to-advanced teaching application for **[1Claw](https://1claw.co)** — HSM-backed secret management for AI agents and humans.
 
 Built on the pedagogy of Matt Pocock's [`/teach` skill](https://www.aihero.dev/learn-anything-with-my-teach-skill): every lesson is a step-by-step walkthrough that takes you from zero to a working result, followed by an instant-feedback quiz. Progress persists so you can resume where you left off.
 
 ## What's inside
 
-**7 tracks · 31 lessons · 93 quiz questions**, all grounded in the real 1Claw docs, example apps, and package READMEs (`docs.1claw.xyz`, `llms.txt`, `github.com/1clawAI`):
+**7 tracks · 31 lessons · 93 quiz questions**, all grounded in the real 1Claw docs, example apps, and package READMEs (`docs.1claw.co`, `llms.txt`, `github.com/1clawAI`):
 
 1. **Foundations** (Beginner): what 1Claw is, vaults/secrets/envelope encryption, humans vs agents, installing the CLI, your first vault and secret.
 2. **Working with Secrets** (Intermediate): the CLI in CI/CD, the TypeScript SDK, versioning and rotation, environment bundles.
@@ -16,7 +16,7 @@ Built on the pedagogy of Matt Pocock's [`/teach` skill](https://www.aihero.dev/l
 6. **Compliance & Operations** (Advanced): tamper-evident audit, fleet management, the multi-tenant Platform API.
 7. **Integrations & Ecosystem** (Intermediate): the Python SDK, MCP client setup, LangChain, CrewAI, elizaOS, AgentKit on Base.
 
-Each lesson has numbered steps with real `curl` / CLI / SDK / MCP snippets, plus a graded quiz with per-question explanations. The interface follows the official [1Claw brand kit](https://1claw.xyz/brand-kit): signature red, matte black, the dual-claw mark, and the Bakbak One wordmark.
+Each lesson has numbered steps with real `curl` / CLI / SDK / MCP snippets, plus a graded quiz with per-question explanations. The interface follows the official [1Claw brand kit](https://1claw.co/brand-kit): signature red, matte black, the dual-claw mark, and the Bakbak One wordmark.
 
 ## Tech
 
@@ -42,4 +42,4 @@ The JSON was generated from the source docs and then run through `scripts/build-
 
 ---
 
-_Unofficial educational project. For the real product, see [1claw.xyz](https://1claw.xyz) and [docs.1claw.xyz](https://docs.1claw.xyz)._
+_Unofficial educational project. For the real product, see [1claw.co](https://1claw.co) and [docs.1claw.co](https://docs.1claw.co)._
