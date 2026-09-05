@@ -47,6 +47,7 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  const [lastQuery, setLastQuery] = useState(query);
   const router = useRouter();
   const { isDone, ready } = useProgress();
   const listRef = useRef<HTMLDivElement>(null);
@@ -87,8 +88,12 @@ export function CommandPalette() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Reset highlight when the result set changes under it.
-  useEffect(() => setActive(0), [query]);
+  // Reset the highlight when the result set changes under it. Adjusting during
+  // render is the supported pattern here — an effect would cascade a render.
+  if (query !== lastQuery) {
+    setLastQuery(query);
+    setActive(0);
+  }
 
   // Keep the highlighted row in view.
   useEffect(() => {
