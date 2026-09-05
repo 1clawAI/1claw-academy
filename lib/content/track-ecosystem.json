@@ -227,7 +227,7 @@
           },
           {
             "text": "If your vault is empty, add a test secret with the CLI.",
-            "code": "1claw secret put demo/hello-world --vault $ONECLAW_VAULT_ID --value \"Hello from 1Claw!\" --type note",
+            "code": "1claw secret set demo/hello-world --vault $ONECLAW_VAULT_ID --value \"Hello from 1Claw!\" --type generic",
             "lang": "bash"
           },
           {
@@ -245,7 +245,7 @@
       {
         "type": "callout",
         "variant": "tip",
-        "text": "Run `npm run mcp` instead to connect LangChain to the hosted 1Claw MCP server, which loads all 27+ vault tools with zero manual tool definitions. That path needs ONECLAW_AGENT_API_KEY and OPENAI_API_KEY."
+        "text": "Run `npm run mcp` instead to connect LangChain to the hosted 1Claw MCP server, which loads all 141 tools with zero manual tool definitions. That path needs ONECLAW_AGENT_API_KEY and OPENAI_API_KEY."
       },
       {
         "type": "prose",

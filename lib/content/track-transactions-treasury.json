@@ -377,8 +377,8 @@
             "lang": "bash"
           },
           {
-            "text": "Create a platform app from the dashboard or via API (see Compliance & Ops track), then use its ID.",
-            "code": "export ONECLAW_APP_ID=\"your-app-id\"",
+            "text": "Create a platform app from the dashboard or via API (see Compliance & Operations), then note its slug — that is what both the SDK and the widget identify the app by.",
+            "code": "export ONECLAW_APP_ID=\"your-platform-slug\"",
             "lang": "bash"
           },
           {
@@ -392,8 +392,8 @@
             "lang": "typescript"
           },
           {
-            "text": "Verify the 6-digit code and auto-provision an Ethereum wallet. You get back a token and wallet_address. Enter the 6-digit code from the verification email (not this example).",
-            "code": "const { token, wallet_address } = await client.auth.verifyEmailOtp({\n  email: \"user@example.com\",\n  code: \"123456\",\n  auto_provision_chains: [\"ethereum\"],\n});",
+            "text": "Verify the 6-digit code and auto-provision an Ethereum wallet. Every SDK call resolves to { data, error, meta }, so read the fields off data.",
+            "code": "const { data, error } = await client.auth.verifyEmailOtp({\n  email: \"user@example.com\",\n  code: \"123456\",\n  auto_provision_chains: [\"ethereum\"],\n});\nif (error) throw new Error(error.message);\n// data.token is the JWT; data.wallet_address is set when an EVM chain was provisioned\nconst { token, wallet_address } = data!;",
             "lang": "typescript"
           },
           {
@@ -402,8 +402,8 @@
             "lang": "typescript"
           },
           {
-            "text": "Drop the provider and widget into your app. Replace plt_... with your platform app key from the dashboard. This key is shown only once at app creation.",
-            "code": "import { OneclawWalletProvider, OneclawEmbeddedWallet } from \"@1claw/wallet-react\";\n\nfunction App() {\n  return (\n    <OneclawWalletProvider apiKey=\"plt_...\" chains={[\"ethereum\", \"base\"]}>\n      <OneclawEmbeddedWallet\n        features={[\"send\", \"swap\", \"receive\", \"buy\"]}\n        socialProviders={[\"google\", \"apple\", \"email\"]}\n      />\n    </OneclawWalletProvider>\n  );\n}",
+            "text": "Drop the widget into your app. appId is the platform app slug and is required. features is an object of toggles, not an array, and socialProviders accepts google, apple, or discord — email login goes through the OTP flow above.",
+            "code": "import { OneclawEmbeddedWallet } from \"@1claw/wallet-react\";\n\nfunction App() {\n  return (\n    <OneclawEmbeddedWallet\n      appId=\"your-platform-slug\"\n      chains={[\"ethereum\", \"base\"]}\n      features={{ send: true, swap: true, receive: true, buy: true }}\n      socialProviders={[\"google\", \"apple\"]}\n      onLogin={(user) => console.log(user.walletAddress)}\n    />\n  );\n}",
             "lang": "typescript"
           }
         ]
@@ -421,6 +421,11 @@
       {
         "type": "prose",
         "text": "You now render a working embedded wallet widget backed by email OTP login and a spend policy."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "OneclawEmbeddedWallet is standalone and needs no provider. Reach for OneclawWalletProvider plus the useOneclawWallet hook only when you are building custom wallet UI — it takes apiKey and appId and gives you wallets, balances, send, swap and loginWithEmailOtp to wire up yourself."
       }
     ],
     "quiz": [
@@ -894,7 +899,7 @@
         "steps": [
           {
             "text": "List the accounts an agent currently has, per chain.",
-            "code": "curl -s https://api.1claw.co/v1/agents/$AGENT_ID/accounts \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\"\n# or: 1claw agent accounts list",
+            "code": "curl -s https://api.1claw.co/v1/agents/$AGENT_ID/accounts \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\"\n# or: 1claw agent accounts list $AGENT_ID",
             "lang": "bash"
           },
           {
@@ -909,12 +914,12 @@
           },
           {
             "text": "Migrate the agent from its EOA to the Safe.",
-            "code": "1claw agent accounts migrate --agent $AGENT_ID --chain base",
+            "code": "1claw agent accounts migrate $AGENT_ID --chain base",
             "lang": "bash"
           },
           {
             "text": "Once nothing depends on the old EOA, deprecate it so it can no longer be used.",
-            "code": "1claw agent accounts deprecate-eoa --agent $AGENT_ID --chain base",
+            "code": "1claw agent accounts deprecate-eoa $AGENT_ID base",
             "lang": "bash"
           }
         ]

@@ -139,7 +139,7 @@
           },
           {
             "text": "Save the code below as `cmek-demo.ts`. It generates a 256-bit key, encrypts a secret, stores it, reads it back, and decrypts it. Store the key safely because you need it for every read and write.",
-            "code": "import { createClient, generateCmekKey, cmekEncrypt, cmekDecrypt, cmekFingerprint, toBase64 } from \"@1claw/sdk\";\n\nconst client = createClient({\n  baseUrl: \"https://api.1claw.co\",\n  apiKey: process.env.ONECLAW_API_KEY!,\n});\n\nconst vaultId = process.env.ONECLAW_VAULT_ID!;\n\nasync function main() {\n  const key = await generateCmekKey();\n  console.log(\"fingerprint:\", cmekFingerprint(key));\n\n  const blob = cmekEncrypt(key, \"sk-live-secret-value\");\n  await client.secrets.put(vaultId, \"api-keys/stripe\", {\n    type: \"api_key\",\n    value: toBase64(blob),\n  });\n\n  const res = await client.secrets.get(vaultId, \"api-keys/stripe\");\n  if (res.data) {\n    const plaintext = cmekDecrypt(key, res.data.value);\n    console.log(\"decrypted:\", plaintext);\n  }\n}\nmain();",
+            "code": "import {\n  createClient,\n  generateCmekKey,\n  cmekFingerprint,\n  cmekEncrypt,\n  cmekDecrypt,\n  toBase64,\n  fromBase64,\n} from \"@1claw/sdk\";\n\nconst client = createClient({\n  baseUrl: \"https://api.1claw.co\",\n  apiKey: process.env.ONECLAW_API_KEY!,\n});\n\nconst vaultId = process.env.ONECLAW_VAULT_ID!;\n\nasync function main() {\n  // Every CMEK helper is async and works on bytes.\n  const key = await generateCmekKey();\n  console.log(\"fingerprint:\", await cmekFingerprint(key));\n\n  // cmekEncrypt takes (plaintext, key) — plaintext first.\n  const plaintext = new TextEncoder().encode(\"sk-live-secret-value\");\n  const blob = await cmekEncrypt(plaintext, key);\n\n  // secrets.set takes the value as a positional argument.\n  await client.secrets.set(vaultId, \"api-keys/stripe\", toBase64(blob), {\n    type: \"api_key\",\n  });\n\n  const res = await client.secrets.get(vaultId, \"api-keys/stripe\");\n  if (res.data) {\n    const decrypted = await cmekDecrypt(fromBase64(res.data.value), key);\n    console.log(new TextDecoder().decode(decrypted));\n  }\n}\n\nmain();",
             "lang": "typescript"
           },
           {
@@ -157,6 +157,11 @@
       {
         "type": "prose",
         "text": "The vault now requires your key for every value, and 1Claw cannot decrypt your secrets unilaterally."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Two easy mistakes here. generateCmekKey, cmekFingerprint, cmekEncrypt and cmekDecrypt all return promises, so every one needs await. And cmekEncrypt takes (plaintext, key) in that order, both as Uint8Array — swapping them produces a blob that will never decrypt."
       }
     ],
     "quiz": [
