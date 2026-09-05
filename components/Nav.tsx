@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useProgress } from "@/lib/progress";
 import { Logo } from "./Logo";
+import { Search } from "lucide-react";
 
 export function Nav() {
   const { percent, ready, completedCount } = useProgress();
@@ -17,6 +18,21 @@ export function Nav() {
           </span>
         </Link>
         <nav className="ml-auto flex items-center gap-1 text-sm">
+          <button
+            onClick={() =>
+              window.dispatchEvent(
+                new KeyboardEvent("keydown", { key: "k", metaKey: true }),
+              )
+            }
+            aria-label="Search lessons"
+            className="mr-1 flex items-center gap-2 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[var(--muted)] transition hover:border-[var(--signature)]/50 hover:text-[var(--foreground)]"
+          >
+            <Search size={14} />
+            <span className="hidden sm:inline">Search</span>
+            <kbd className="hidden font-mono text-[10px] opacity-70 sm:inline">
+              ⌘K
+            </kbd>
+          </button>
           <Link
             href="/learn"
             className="rounded-lg px-3 py-1.5 text-[var(--muted)] transition hover:bg-white/5 hover:text-[var(--foreground)]"

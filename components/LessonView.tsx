@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { Check } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Check, Clock } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { LessonSidebar } from "./LessonSidebar";
 import type { Lesson, LessonRef } from "@/lib/types";
 import { BlockRenderer } from "./BlockRenderer";
 import { Quiz } from "./Quiz";
@@ -27,13 +29,65 @@ export function LessonView({
 }) {
   const { recordScore, markDone, isDone, ready } = useProgress();
   const [done, setDone] = useState(false);
+  const router = useRouter();
+
+  // Rough reading time: prose at 200 wpm, plus 12s per code block to skim/run.
+  const minutes = useMemo(() => {
+    let words = 0;
+    let code = 0;
+    for (const b of lesson.blocks) {
+      if (b.type === "prose") words += b.text.split(/\s+/).length;
+      else if (b.type === "callout") words += b.text.split(/\s+/).length;
+      else if (b.type === "points")
+        words += b.items.join(" ").split(/\s+/).length;
+      else if (b.type === "steps") {
+        for (const st of b.steps) {
+          words += st.text.split(/\s+/).length;
+          if (st.code) code += 1;
+        }
+      } else if (b.type === "code") code += 1;
+    }
+    return Math.max(2, Math.round(words / 200 + (code * 12) / 60));
+  }, [lesson.blocks]);
+
+  const goto = useCallback(
+    (ref?: LessonRef) => {
+      if (ref) router.push(`/learn/${ref.trackId}/${ref.lessonId}`);
+    },
+    [router],
+  );
+
+  // Left/right arrows move between lessons, unless the user is typing.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        (el &&
+          (el.tagName === "INPUT" ||
+            el.tagName === "TEXTAREA" ||
+            el.isContentEditable))
+      )
+        return;
+      if (e.key === "ArrowLeft") goto(prev);
+      else if (e.key === "ArrowRight") goto(next);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [goto, prev, next]);
 
   useEffect(() => {
     if (ready) setDone(isDone(trackId, lesson.id));
   }, [ready, isDone, trackId, lesson.id]);
 
   return (
-    <article className="mx-auto max-w-3xl px-5 py-10 fadeup">
+    <div className="mx-auto flex max-w-6xl gap-10 px-5">
+      <aside className="hidden w-60 shrink-0 py-10 lg:block">
+        <LessonSidebar trackId={trackId} lessonId={lesson.id} />
+      </aside>
+      <article className="min-w-0 max-w-3xl flex-1 py-10 fadeup">
       <div className="mb-6 flex flex-wrap items-center gap-2 text-xs">
         <Link
           href="/learn"
@@ -43,7 +97,11 @@ export function LessonView({
         </Link>
         <span className="text-[var(--muted)]">/</span>
         <span className="text-[var(--muted)]">{trackTitle}</span>
-        <span className="ml-auto rounded-full border border-[var(--border)] px-2.5 py-0.5 font-mono text-[var(--muted)]">
+        <span className="ml-auto flex items-center gap-1.5 text-[var(--muted)]">
+          <Clock size={12} />
+          <span className="font-mono">{minutes} min</span>
+        </span>
+        <span className="rounded-full border border-[var(--border)] px-2.5 py-0.5 font-mono text-[var(--muted)]">
           {level} · Lesson {position.current} of {position.total}
         </span>
       </div>
@@ -116,6 +174,23 @@ export function LessonView({
           </Link>
         )}
       </nav>
-    </article>
+
+      <p className="mt-6 hidden text-center text-xs text-[var(--muted)] lg:block">
+        Tip: press{" "}
+        <kbd className="rounded border border-[var(--border)] px-1 font-mono">
+          ←
+        </kbd>{" "}
+        and{" "}
+        <kbd className="rounded border border-[var(--border)] px-1 font-mono">
+          →
+        </kbd>{" "}
+        to move between lessons, or{" "}
+        <kbd className="rounded border border-[var(--border)] px-1 font-mono">
+          ⌘K
+        </kbd>{" "}
+        to search.
+      </p>
+      </article>
+    </div>
   );
 }

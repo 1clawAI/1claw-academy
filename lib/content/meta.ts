@@ -14,6 +14,24 @@ export type TrackMeta = {
 // per-track JSON files in curriculum.ts.
 export const trackMeta: TrackMeta[] = [
   {
+    id: "security-foundations",
+    title: "Security Foundations",
+    tagline:
+      "The cryptography and access-control ideas everything else rests on. No 1Claw yet.",
+    level: "Beginner",
+    icon: "security-foundations",
+    accent: "#9aa7b5",
+  },
+  {
+    id: "agent-threat-model",
+    title: "The AI Agent Threat Model",
+    tagline:
+      "What actually breaks when an LLM can act: injection, the lethal trifecta, and OWASP ASI01-10.",
+    level: "Beginner",
+    icon: "agent-threat-model",
+    accent: "#ff5a5c",
+  },
+  {
     id: "foundations",
     title: "Foundations",
     tagline: "Get the core ideas, install the CLI, and store your first secret.",

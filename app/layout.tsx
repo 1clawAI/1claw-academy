@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Bakbak_One } from "next/font/google";
 import "./globals.css";
 import { ProgressProvider } from "@/lib/progress";
 import { Nav } from "@/components/Nav";
+import { CommandPalette } from "@/components/CommandPalette";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,9 +22,10 @@ const bakbak = Bakbak_One({
 });
 
 export const metadata: Metadata = {
-  title: "1Claw Academy: Learn HSM-backed secrets for AI agents",
+  title: "1Claw Academy: A course on AI security",
   description:
-    "An interactive, beginner-to-advanced course on 1Claw: vaults, agents, access control, HSM encryption, Shroud TEE, on-chain signing, and more.",
+    "An interactive course on securing AI agents: cryptography and access-control foundations, the agent threat model (prompt injection, the lethal trifecta, OWASP ASI01-10), then hands-on defences built with 1Claw.",
+  metadataBase: new URL("https://academy.1claw.co"),
 };
 
 export default function RootLayout({
@@ -39,6 +41,7 @@ export default function RootLayout({
       <body className="flex min-h-full flex-col">
         <ProgressProvider>
           <Nav />
+          <CommandPalette />
           <main className="flex-1">{children}</main>
           <footer className="border-t border-[var(--border)] px-5 py-8 text-center text-xs text-[var(--muted)]">
             <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">

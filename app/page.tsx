@@ -21,15 +21,15 @@ export default function Home() {
             questions
           </div>
           <h1 className="mx-auto max-w-4xl text-4xl font-bold tracking-tight sm:text-6xl">
-            Master{" "}
-            <span className="brand-wordmark brand-gradient-text">1Claw</span>,
-            from your first vault to TEE-signed transactions
+            Learn <span className="brand-gradient-text">AI security</span>, from
+            first principles to production
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[var(--muted)]">
-            1Claw is HSM-backed secret management built for AI agents and humans.
-            This hands-on course takes you from the core ideas to advanced
-            security, on-chain signing, and multi-tenant platforms. Every step
-            is a hands-on walkthrough that ends with an instant-feedback quiz.
+            Start with the cryptography and access-control concepts everything
+            rests on. Then the agent threat model — prompt injection, the lethal
+            trifecta, OWASP ASI01–10. Then build the defences for real with{" "}
+            <span className="brand-wordmark">1Claw</span>. Every lesson is a
+            hands-on walkthrough that ends with an instant-feedback quiz.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <Link
@@ -50,13 +50,13 @@ export default function Home() {
           {/* What the course covers — mirrors the capability strip on 1claw.co */}
           <ul className="mx-auto mt-10 flex max-w-3xl flex-wrap items-center justify-center gap-x-3 gap-y-2 font-mono text-[11px] uppercase tracking-wider text-[var(--muted)]">
             {[
-              "HSM-backed secrets",
+              "Prompt injection",
+              "The lethal trifecta",
+              "OWASP ASI01–10",
+              "Envelope encryption",
+              "HSM & TEE",
               "MPC key splitting",
-              "TEE-protected proxy",
-              "141 MCP tools",
               "Zero secrets in context",
-              "Short-lived JWTs",
-              "Full audit trail",
             ].map((f, i) => (
               <li key={f} className="flex items-center gap-3">
                 {i > 0 ? (
@@ -86,18 +86,18 @@ export default function Home() {
           {[
             {
               icon: "target" as IconName,
-              title: "Beginner to advanced",
-              body: "Seven tracks build on each other: foundations, secrets, agents, security, on-chain, operations, and integrations.",
+              title: "Concepts before products",
+              body: "Two full tracks on cryptography, access control, and the agent threat model come first — no vendor required. You learn why before how.",
             },
             {
               icon: "flask" as IconName,
-              title: "Learn by doing",
-              body: "Every lesson is a step-by-step walkthrough from zero to a working result, then a graded quiz.",
+              title: "Grounded in real frameworks",
+              body: "OWASP ASI01–10, the OWASP LLM Top 10, and the lethal trifecta — cited, not paraphrased, then mapped to controls you can actually deploy.",
             },
             {
               icon: "trend" as IconName,
-              title: "Progress that sticks",
-              body: "Your completion and scores are saved locally so you can resume exactly where you left off.",
+              title: "Learn by doing",
+              body: "Every step is a runnable command verified against the live API, then a graded quiz. Progress saves locally so you can resume anywhere.",
             },
           ].map((f) => (
             <div key={f.title} className="card p-5">

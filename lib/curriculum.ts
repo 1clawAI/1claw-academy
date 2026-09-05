@@ -1,6 +1,8 @@
 import type { Track, LessonRef, Lesson } from "./types";
 import { trackMeta } from "./content/meta";
 
+import securityFoundations from "./content/track-security-foundations.json";
+import agentThreatModel from "./content/track-agent-threat-model.json";
 import foundations from "./content/track-foundations.json";
 import workingWithSecrets from "./content/track-working-with-secrets.json";
 import agentsAccess from "./content/track-agents-access.json";
@@ -10,6 +12,8 @@ import complianceOps from "./content/track-compliance-ops.json";
 import ecosystem from "./content/track-ecosystem.json";
 
 const lessonsById: Record<string, Lesson[]> = {
+  "security-foundations": securityFoundations as unknown as Lesson[],
+  "agent-threat-model": agentThreatModel as unknown as Lesson[],
   foundations: foundations as unknown as Lesson[],
   "working-with-secrets": workingWithSecrets as unknown as Lesson[],
   "agents-access": agentsAccess as unknown as Lesson[],

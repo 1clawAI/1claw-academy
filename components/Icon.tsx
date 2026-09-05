@@ -14,11 +14,15 @@ import {
   TrendingUp,
   Terminal,
   Check,
+  Lock,
+  Crosshair,
   type LucideProps,
 } from "lucide-react";
 
 const registry = {
   // Track icons
+  "security-foundations": Lock,
+  "agent-threat-model": Crosshair,
   foundations: BookOpen,
   "working-with-secrets": KeyRound,
   "agents-access": Bot,
