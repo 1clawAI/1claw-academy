@@ -38,6 +38,7 @@ export type Track = {
   id: string;
   title: string;
   tagline: string;
+  outcome: string;
   level: Level;
   icon: string; // emoji
   accent: string; // css color var name

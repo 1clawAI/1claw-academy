@@ -11,6 +11,7 @@ import type { Lesson, LessonRef } from "@/lib/types";
 import { BlockRenderer } from "./BlockRenderer";
 import { Quiz } from "./Quiz";
 import { useProgress } from "@/lib/progress";
+import { readingMinutes } from "@/lib/reading";
 
 export function LessonView({
   lesson,
@@ -33,24 +34,7 @@ export function LessonView({
   const [done, setDone] = useState(false);
   const router = useRouter();
 
-  // Rough reading time: prose at 200 wpm, plus 12s per code block to skim/run.
-  const minutes = useMemo(() => {
-    let words = 0;
-    let code = 0;
-    for (const b of lesson.blocks) {
-      if (b.type === "prose") words += b.text.split(/\s+/).length;
-      else if (b.type === "callout") words += b.text.split(/\s+/).length;
-      else if (b.type === "points")
-        words += b.items.join(" ").split(/\s+/).length;
-      else if (b.type === "steps") {
-        for (const st of b.steps) {
-          words += st.text.split(/\s+/).length;
-          if (st.code) code += 1;
-        }
-      } else if (b.type === "code") code += 1;
-    }
-    return Math.max(2, Math.round(words / 200 + (code * 12) / 60));
-  }, [lesson.blocks]);
+  const minutes = useMemo(() => readingMinutes(lesson.blocks), [lesson.blocks]);
 
   const goto = useCallback(
     (ref?: LessonRef) => {
@@ -99,7 +83,12 @@ export function LessonView({
           Curriculum
         </Link>
         <span className="text-[var(--muted)]">/</span>
-        <span className="text-[var(--muted)]">{trackTitle}</span>
+        <Link
+          href={`/learn/${trackId}`}
+          className="text-[var(--muted)] transition hover:text-[var(--foreground)]"
+        >
+          {trackTitle}
+        </Link>
         <span className="ml-auto flex items-center gap-1.5 text-[var(--muted)]">
           <Clock size={12} />
           <span className="font-mono">{minutes} min</span>

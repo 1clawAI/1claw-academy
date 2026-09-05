@@ -58,7 +58,12 @@ export function CurriculumView() {
                       <span className="font-mono text-sm text-[var(--muted)]">
                         {String(ti + 1).padStart(2, "0")}.
                       </span>{" "}
-                      {t.title}
+                      <Link
+                        href={`/learn/${t.id}`}
+                        className="transition hover:text-[var(--signature-soft)]"
+                      >
+                        {t.title}
+                      </Link>
                     </h2>
                     <span
                       className="rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide"
@@ -71,6 +76,12 @@ export function CurriculumView() {
                     </span>
                   </div>
                   <p className="text-sm text-[var(--muted)]">{t.tagline}</p>
+                  <p className="mt-1 text-sm text-[var(--prose-fg)]">
+                    <span className="text-[var(--muted)]">
+                      By the end you&rsquo;ll be able to
+                    </span>{" "}
+                    {t.outcome}
+                  </p>
                 </div>
                 {ready && tp > 0 ? (
                   <span className="font-mono text-xs text-[var(--muted)]">
