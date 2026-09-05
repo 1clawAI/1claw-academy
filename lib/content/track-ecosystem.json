@@ -27,7 +27,7 @@
             "lang": "bash"
           },
           {
-            "text": "Export your API key and the vault ID that holds a secret. Replace `1ck_your_user_key` with your 1ck_ key from Settings \u2192 API Keys. Use your vault UUID from `1claw vault list` or the Foundations track.",
+            "text": "Export your API key and the vault ID that holds a secret. Replace `1ck_your_user_key` with your 1ck_ key from Settings → API Keys. Use your vault UUID from `1claw vault list` or the Foundations track.",
             "code": "export ONECLAW_API_KEY=1ck_your_user_key\nexport ONECLAW_VAULT_ID=your-vault-uuid",
             "lang": "bash"
           },
@@ -136,7 +136,7 @@
       {
         "type": "callout",
         "variant": "tip",
-        "text": "Config file locations \u2014 Claude Desktop: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS). Cursor: Settings \u2192 MCP Servers. VS Code: .vscode/mcp.json."
+        "text": "Config file locations — Claude Desktop: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS). Cursor: Settings → MCP Servers. VS Code: .vscode/mcp.json."
       },
       {
         "type": "callout",
@@ -492,7 +492,7 @@
             "lang": "bash"
           },
           {
-            "text": "Path B: Library API. Resolve secrets and build a Base wallet provider, then send a TEE-signed transaction. Use the agent credentials from the `npm run setup` wizard. Value is in ETH (0.001 ETH \u2248 a few dollars).",
+            "text": "Path B: Library API. Resolve secrets and build a Base wallet provider, then send a TEE-signed transaction. Use the agent credentials from the `npm run setup` wizard. Value is in ETH (0.001 ETH ≈ a few dollars).",
             "code": "import { createBaseMainnetProvider } from \"@1claw/agentkit\";\n\nconst wallet = createBaseMainnetProvider({\n  agentApiKey: process.env.ONECLAW_AGENT_API_KEY!,\n  agentId: process.env.ONECLAW_AGENT_ID!,\n});\n\nconst result = await wallet.sendTransaction({\n  to: \"0xRecipient\",\n  value: \"0.001\",\n});\n\nconsole.log(`TX: ${result.txHash} (${result.status})`);",
             "lang": "typescript"
           },
@@ -546,6 +546,104 @@
         ],
         "correctIndex": 1,
         "explanation": "Scaffold-Agent wires HSM-backed secrets and Intents API signing into a Scaffold-ETH 2 scaffold."
+      }
+    ]
+  },
+  {
+    "id": "containerized-agents",
+    "title": "Containerized agents with 1claw init --docker",
+    "summary": "Spin up a sandboxed agent container that runs MCP and a chat UI but never receives the agent key or any LLM provider key.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "1claw init --docker provisions a complete agent runtime inside a Docker container in one command. The important property is what the container does not get: it never receives the agent API key or any LLM provider key. The host daemon injects credentials over a Unix-socket mount, which is the same trust boundary as local daemon mode."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Cloud mode is the default. It provisions an agent with Shroud and the Intents API enabled, a vault, and read policies on secrets/* and providers/*, then wires the chat UI to an LLM through Shroud.",
+            "code": "1claw init --docker",
+            "lang": "bash"
+          },
+          {
+            "text": "Run fully offline instead. No cloud account, no LLM — only the /help, /secrets, /info, and /proxy slash commands.",
+            "code": "1claw init --docker --local",
+            "lang": "bash"
+          },
+          {
+            "text": "Compose extensions from the bundled module catalog.",
+            "code": "1claw init --docker --list-modules\n1claw init --docker --module=langchain,onchain",
+            "lang": "bash"
+          },
+          {
+            "text": "Manage the containers you have created.",
+            "code": "1claw containers list\n1claw containers logs <name>\n1claw containers stop <name>",
+            "lang": "bash"
+          },
+          {
+            "text": "Eject to a plain Dockerfile and docker-compose when you want to own the build.",
+            "code": "1claw eject",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "The chat UI reaches an LLM through Shroud, and Shroud resolves the provider key from one of three sources in order — the container never holds it:"
+      },
+      {
+        "type": "points",
+        "items": [
+          "1Claw LLM token billing (default, no key at all) — Shroud routes via the Stripe AI Gateway.",
+          "The 1Claw cloud vault — pass --llm-api-key and it is stored at providers/<provider>/api-key for Shroud to fetch.",
+          "A local CLI vault, for BYOK — the daemon injects it as the X-Shroud-Api-Key header."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Pick a model with --llm-provider (default openai) and --llm-model (default gpt-4o-mini). For framework-specific containers — LangChain, CrewAI, the OpenAI Agents SDK — use 1claw spawn with a template instead."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Ejecting hands you a Dockerfile and docker-compose you own outright. From that point the credential-injection wiring is yours to maintain, so re-check it before shipping to production."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "How does the container get credentials if it never receives the agent key?",
+        "options": [
+          "The host daemon injects them over a Unix-socket mount",
+          "They are baked into the image at build time",
+          "They are passed as environment variables",
+          "The container fetches them from the vault directly"
+        ],
+        "correctIndex": 0,
+        "explanation": "Credential injection happens over a Unix-socket mount from the host daemon — the same trust boundary as local daemon mode — so nothing sensitive is ever inside the image or its environment."
+      },
+      {
+        "question": "What does --local mode give up?",
+        "options": [
+          "The cloud account and the LLM, leaving only a few local slash commands",
+          "Only the chat UI",
+          "Only the MCP server",
+          "Nothing — it is identical to cloud mode"
+        ],
+        "correctIndex": 0,
+        "explanation": "--local is fully offline: no cloud account and no LLM, with just /help, /secrets, /info and /proxy available."
+      },
+      {
+        "question": "Which provider-key source requires no key at all?",
+        "options": [
+          "1Claw LLM token billing via the Stripe AI Gateway",
+          "The cloud vault option",
+          "The local CLI vault option",
+          "All three require a key"
+        ],
+        "correctIndex": 0,
+        "explanation": "Token billing is the default and needs no provider key — you enable it for the org and Shroud routes through the Stripe AI Gateway."
       }
     ]
   }

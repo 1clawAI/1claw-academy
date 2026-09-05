@@ -397,7 +397,7 @@
       {
         "type": "callout",
         "variant": "info",
-        "text": "Steps 3\u20135 show the SDK auth flow (useful for backend or headless apps). Step 7 shows the React widget, which handles auth standalone via social providers. Choose the path that fits your use case."
+        "text": "Steps 3–5 show the SDK auth flow (useful for backend or headless apps). Step 7 shows the React widget, which handles auth standalone via social providers. Choose the path that fits your use case."
       },
       {
         "type": "callout",
@@ -442,6 +442,480 @@
         ],
         "correctIndex": 1,
         "explanation": "OneclawWalletProvider wraps the OneclawEmbeddedWallet component."
+      }
+    ]
+  },
+  {
+    "id": "guardrail-governance-and-hitl",
+    "title": "Guardrail governance and graduated HITL",
+    "summary": "Measure a guardrail in shadow mode before enforcing it, and route risky transactions to a human instead of denying them outright.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Hard guardrails answer yes or no. Real operations need a middle setting: route this to a human. Graduated HITL (v0.54–0.55) adds approval policies that return 202 awaiting_approval instead of a refusal."
+      },
+      {
+        "type": "points",
+        "items": [
+          "tx_approval_policy — matching transactions wait for a human decision.",
+          "typed_data_policy — escalates EIP-712 signing.",
+          "simulation_failure_policy — escalates when a simulation fails rather than blindly proceeding.",
+          "raw_signing_policy — escalates or denies raw digest signing, which bypasses other guardrails."
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Separately, guardrail governance (v0.56) lets you measure a rule before it ever blocks anything. Set enforcement to log and the rule runs in shadow mode: it records what it would have denied, and denies nothing."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Put a new rule in shadow mode. It will record decisions without affecting traffic.",
+            "code": "curl -s -X PATCH https://api.1claw.co/v1/agents/$AGENT_ID \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"execution_guardrails\": {\n      \"enforcement\": \"log\",\n      \"allowed_hosts\": [\"api.stripe.com\"]\n    }\n  }'",
+            "lang": "bash"
+          },
+          {
+            "text": "After it has seen real traffic, read the shadow report to find out what it would have blocked.",
+            "code": "curl -s https://api.1claw.co/v1/org/guardrail-shadow-report \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\"\n# or: 1claw guardrails shadow-report",
+            "lang": "bash"
+          },
+          {
+            "text": "Replay the rule against recent transactions as a dry run, before you commit to it.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/agents/$AGENT_ID/guardrails/replay \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\"\n# or: 1claw guardrails replay",
+            "lang": "bash"
+          },
+          {
+            "text": "Happy with it? Flip enforcement to enforce.",
+            "code": "1claw agent update $AGENT_ID --execution-guardrails '{\"enforcement\":\"enforce\",\"allowed_hosts\":[\"api.stripe.com\"]}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Add an approval policy so large transfers reach a human rather than failing.",
+            "code": "curl -s -X PATCH https://api.1claw.co/v1/agents/$AGENT_ID \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{ \"tx_approval_policy\": { \"min_value_usd\": 100, \"action\": \"approve\" } }'",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Widening a guardrail does not take effect immediately. Since v0.56.2 a widening edit queues behind a policy_change approval with step-up re-auth, and the PATCH returns 202 with a pending_approval_id. Narrowing edits apply straight away."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Audit the shadow decisions with the guardrail_shadow.would_deny event, and review history through GET /v1/org/guardrail-revisions."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What does enforcement \"log\" do?",
+        "options": [
+          "Runs the rule in shadow mode, recording what it would deny without denying it",
+          "Logs every request to the audit trail",
+          "Disables the guardrail entirely",
+          "Denies and logs the reason"
+        ],
+        "correctIndex": 0,
+        "explanation": "Shadow mode measures a rule against real traffic before it can break anything, and the shadow report tells you what would have been blocked."
+      },
+      {
+        "question": "You widen an agent's guardrail with a PATCH and get back a 202 with a pending_approval_id. Why?",
+        "options": [
+          "Widening edits queue behind a policy_change approval with step-up re-auth",
+          "The API is rate limiting you",
+          "The agent is suspended",
+          "The guardrail JSON was invalid"
+        ],
+        "correctIndex": 0,
+        "explanation": "Since v0.56.2 widening access is itself a privileged change: it waits for an approval. Narrowing edits still apply immediately, because they only reduce access."
+      },
+      {
+        "question": "How does tx_approval_policy differ from a hard spending cap?",
+        "options": [
+          "A matching transaction returns 202 awaiting_approval instead of being refused",
+          "It applies only to non-EVM chains",
+          "It raises the cap automatically",
+          "It disables the daily limit"
+        ],
+        "correctIndex": 0,
+        "explanation": "A hard cap refuses. An approval policy routes the transaction to a human, so legitimate large transfers can proceed with oversight rather than simply failing."
+      }
+    ]
+  },
+  {
+    "id": "payment-cards-x402",
+    "title": "Payment cards over x402",
+    "summary": "Have an agent order a prepaid card, paid with an on-chain x402 payment, without ever seeing the card number.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "An agent can order prepaid and gift cards through 1Claw and never see the PAN or CVV. The purchase is paid with an outbound x402 payment that the Vault constructs and signs using the agent's own Ethereum signing key, which must hold USDC on Base."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "PCI posture matters here. For Laso cards only the card_id and an encrypted refresh token are stored; the PAN and CVV are fetched just-in-time at reveal and never persisted."
+      },
+      {
+        "type": "points",
+        "items": [
+          "cards_enabled — the master switch.",
+          "card_max_order_usd and card_daily_limit_usd — enforced atomically over a rolling 24-hour window.",
+          "card_payto_allowlist — which x402 recipients are acceptable.",
+          "card_require_approval — defaults to true, so orders wait for a human."
+        ]
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Set the ordering guardrails on the agent. These bound the purchase, not how the card is later spent.",
+            "code": "curl -s -X PATCH https://api.1claw.co/v1/agents/$AGENT_ID \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"cards_enabled\": true,\n    \"card_max_order_usd\": 25,\n    \"card_daily_limit_usd\": 25,\n    \"card_require_approval\": true\n  }'",
+            "lang": "bash"
+          },
+          {
+            "text": "As the agent, order a card. Idempotency-Key is required.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/agents/$AGENT_ID/cards/order \\\n  -H \"Authorization: Bearer $AGENT_TOKEN\" \\\n  -H \"Idempotency-Key: $(uuidgen)\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{ \"kind\": \"prepaid\", \"amount_usd\": 25, \"country\": \"US\" }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Because approval is required you get a 202 with status awaiting_approval, and no payment has been made yet.",
+            "code": "{ \"status\": \"awaiting_approval\", \"card_id\": \"...\", \"approval_id\": \"...\" }",
+            "lang": "json"
+          },
+          {
+            "text": "A human approves — in the dashboard, the mobile app, or by one-click email link. Only then does the x402 payment run.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/approvals/$APPROVAL_ID/decide \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -d '{\"decision\":\"approved\"}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Check status. The card monitor polls the provider and fills in last4, expiry, and balance.",
+            "code": "1claw card list\n1claw card get <card-id>   # always masked to last4",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Before signing the EIP-3009 authorization the Vault validates the 402 challenge: payTo must be allowlisted, the network must be Base (eip155:8453), the amount must match, and the asset must equal the pinned Base USDC contract. That validation is the security boundary."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Revealing a card is human-only by default. Agents get a 403 unless a human enabled a per-card reveal_policy. Reveal is deliberately absent from the MCP tool set, so a PAN can never land in a model's context window."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "With card_require_approval true, when does the x402 payment actually happen?",
+        "options": [
+          "Only after a human approves the pending approval",
+          "Immediately, and it is refunded if rejected",
+          "When the card monitor next runs",
+          "At the end of the billing period"
+        ],
+        "correctIndex": 0,
+        "explanation": "The order returns 202 awaiting_approval and creates a card row in that state. No payment is made until a human approves — rejecting simply marks the card rejected."
+      },
+      {
+        "question": "Why is the reveal operation deliberately missing from the MCP tool set?",
+        "options": [
+          "So a card number can never be written into a model's context window",
+          "Because MCP does not support it technically",
+          "Because reveal is deprecated",
+          "To reduce the tool count"
+        ],
+        "correctIndex": 0,
+        "explanation": "order_card, list_cards and get_card_status are exposed, but reveal is omitted on purpose to keep PANs out of agent context. Humans reveal through re-authenticated paths."
+      },
+      {
+        "question": "What does the Vault validate before signing the x402 payment authorization?",
+        "options": [
+          "payTo allowlist, Base network, exact amount, and the pinned USDC contract",
+          "Only the amount",
+          "Only that the agent has cards_enabled",
+          "Nothing — the provider validates it"
+        ],
+        "correctIndex": 0,
+        "explanation": "That four-part check on the 402 challenge is the payment security boundary, and it is why a malicious challenge cannot redirect funds elsewhere."
+      }
+    ]
+  },
+  {
+    "id": "portfolio-and-treasury-ops",
+    "title": "Portfolio and treasury operations",
+    "summary": "Read balances across every wallet type from one endpoint, then send, swap, and import keys safely.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "An org accumulates wallets in three different shapes: treasury wallets, agent signing keys, and imported smart accounts. The Portfolio API aggregates all of them behind a single call."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Get the whole portfolio, with token balances and USD estimates.",
+            "code": "curl -s \"https://api.1claw.co/v1/portfolio?chains=ethereum,solana&include_tokens=true\" \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\"\n# or: 1claw portfolio",
+            "lang": "bash"
+          },
+          {
+            "text": "Generate native treasury wallets. Six chains are supported: Ethereum, Bitcoin, Solana, XRP, Cardano, Tron.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/treasury/wallets/generate \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"chains\":[\"ethereum\",\"solana\"]}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Send from a treasury wallet. Non-EVM chains take chain-specific fields — a destination_tag for XRP, a fee rate for Bitcoin, a memo for Solana.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/treasury/wallets/ethereum/send \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -H \"X-Auth-Confirm: $REAUTH_TOKEN\" \\\n  -d '{\"to\":\"0xabc...\",\"amount\":\"0.01\"}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Send gaslessly by wrapping it as an ERC-4337 UserOperation with paymaster sponsorship.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/treasury/wallets/ethereum/send \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -H \"X-Auth-Confirm: $REAUTH_TOKEN\" \\\n  -d '{\"to\":\"0xabc...\",\"amount\":\"0.01\",\"gasless\":true}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Bring your own key. Import is human-only and requires password re-auth.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/treasury/wallets/ethereum/import \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -H \"X-Auth-Confirm: $REAUTH_TOKEN\" \\\n  -d '{\"private_key\":\"0x...\",\"format\":\"hex\"}'",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Treasury private keys live in a per-org __treasury-keys vault with MPC custody set automatically by tier: XOR 2-of-2 on Pro and Team, Shamir 2-of-3 across multiple HSMs on Business and Enterprise."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Direct API reads of __treasury-keys and __agent-keys are blocked with a 403. Private keys only ever come out through the designated export endpoints, which require password re-authentication and are audit-logged."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Treasury wallets are human-only — agents get a 403. Swap remains EVM-only, while send now covers all six chains."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What does GET /v1/portfolio aggregate?",
+        "options": [
+          "Treasury wallets, agent signing keys, and smart accounts",
+          "Only treasury wallets",
+          "Only EVM chains",
+          "Only wallets with a non-zero balance"
+        ],
+        "correctIndex": 0,
+        "explanation": "It is a unified aggregator across all three wallet types, with optional token balances and USD estimates."
+      },
+      {
+        "question": "Why does reading __treasury-keys directly return 403?",
+        "options": [
+          "Private keys may only leave through the audited export endpoints",
+          "The vault does not exist yet",
+          "Only agents may read it",
+          "It requires a Business tier plan"
+        ],
+        "correctIndex": 0,
+        "explanation": "Blocking direct reads means there is exactly one path to a private key: the export endpoint, which demands password re-auth and writes an audit record."
+      },
+      {
+        "question": "Which MPC custody mode applies to a Business-tier org's treasury keys?",
+        "options": [
+          "Shamir 2-of-3 across multiple HSMs",
+          "XOR 2-of-2",
+          "No MPC",
+          "Client-custody 2-of-2"
+        ],
+        "correctIndex": 0,
+        "explanation": "Custody is set automatically by tier: XOR 2-of-2 for Pro and Team, Shamir 2-of-3 multi-HSM for Business and Enterprise."
+      }
+    ]
+  },
+  {
+    "id": "bankr-key-vending",
+    "title": "Bankr dynamic key vending",
+    "summary": "Lease short-lived partner API keys instead of storing a static one, and keep the key out of agent output entirely.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Some partner credentials should never sit in a vault as a static secret. Bankr key vending is a secret engine: you store one partner key server-side, and 1Claw mints scoped, TTL-bound user keys on demand."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The partner key (bk_ptr_) is held server-side as BANKR_PARTNER_KEY.",
+          "The Vault issues short-lived bk_usr_ keys scoped to a single agent.",
+          "Recommended TTL is 5–15 minutes; the agent default is 15 minutes and the hard maximum is 24 hours.",
+          "This is preferred over storing a Bankr credential with put_secret."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Deny-by-default: an agent needs an explicit policy on agents/{id}/bankr/* inside the __agent-keys vault before it can lease anything."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Grant the agent leasing rights with a policy on its Bankr path.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/vaults/$AGENT_KEYS_VAULT/policies \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"principal_type\": \"agent\", \"principal_id\": \"'$AGENT_ID'\",\n    \"path_pattern\": \"agents/'$AGENT_ID'/bankr/*\",\n    \"permissions\": [\"read\"]\n  }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Lease a key with a short TTL.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/agents/$AGENT_ID/bankr-keys \\\n  -H \"Authorization: Bearer $AGENT_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"ttl_seconds\": 600}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Note what comes back to an agent caller: metadata, but no api_key field.",
+            "code": "{ \"lease_id\": \"...\", \"expires_at\": \"...\", \"scope\": \"bankr:wallet\" }",
+            "lang": "json"
+          },
+          {
+            "text": "List and revoke active leases.",
+            "code": "curl -s https://api.1claw.co/v1/agents/$AGENT_ID/bankr-keys \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\"",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Agent lease responses omit api_key on purpose, and the MCP lease_bankr_key tool never returns the key in its output. Shroud resolves the real key at request time, so it never enters the model's context."
+      },
+      {
+        "type": "prose",
+        "text": "The pattern generalises: when a credential can be minted on demand, leasing beats storing. There is nothing long-lived to leak, and expiry is the default rather than something you have to remember to do."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why does an agent's Bankr lease response omit the api_key field?",
+        "options": [
+          "So the key never enters the agent's context — Shroud resolves it at request time",
+          "Because the key is not generated yet",
+          "Because the agent lacks permission",
+          "To reduce response size"
+        ],
+        "correctIndex": 0,
+        "explanation": "The lease gives the agent metadata only. Shroud resolves the actual key when the request is made, so the credential never reaches the model's context window."
+      },
+      {
+        "question": "What must exist before an agent can lease a Bankr key?",
+        "options": [
+          "A policy on agents/{id}/bankr/* in the __agent-keys vault",
+          "A treasury wallet",
+          "A signing key on Base",
+          "Business tier billing"
+        ],
+        "correctIndex": 0,
+        "explanation": "Bankr vending is deny-by-default. Without an explicit policy on that path the lease is refused."
+      },
+      {
+        "question": "What is the recommended TTL for a leased Bankr key?",
+        "options": [
+          "5–15 minutes",
+          "24 hours",
+          "30 days",
+          "Until manually revoked"
+        ],
+        "correctIndex": 0,
+        "explanation": "5–15 minutes is recommended; the agent default is 15 minutes and 24 hours is the hard maximum, not a target."
+      }
+    ]
+  },
+  {
+    "id": "safe-agent-accounts",
+    "title": "Safe agent accounts",
+    "summary": "Give an agent a counterfactual Gnosis Safe instead of a bare EOA, and plan the migration off the EOA.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "An agent's default identity on an EVM chain is an externally owned account — one key, one signature, no policy on-chain. Safe agent accounts (v0.56.2) let an agent operate through a Gnosis Safe instead, so guardrails can eventually be enforced by the chain rather than only by the Vault."
+      },
+      {
+        "type": "prose",
+        "text": "Provisioning is counterfactual: the Safe address is derived and usable before any deployment transaction is sent, so you can fund and reference it without paying to deploy first."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "List the accounts an agent currently has, per chain.",
+            "code": "curl -s https://api.1claw.co/v1/agents/$AGENT_ID/accounts \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\"\n# or: 1claw agent accounts list",
+            "lang": "bash"
+          },
+          {
+            "text": "Provision a counterfactual Safe account for the agent.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/agents/$AGENT_ID/accounts \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"chain\":\"base\",\"account_type\":\"safe\"}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Inspect the pinned module registry for the chain — Safe v1.4.1 plus Zodiac. This endpoint is public.",
+            "code": "curl -s https://api.1claw.co/v1/safe/module-registry/base",
+            "lang": "bash"
+          },
+          {
+            "text": "Migrate the agent from its EOA to the Safe.",
+            "code": "1claw agent accounts migrate --agent $AGENT_ID --chain base",
+            "lang": "bash"
+          },
+          {
+            "text": "Once nothing depends on the old EOA, deprecate it so it can no longer be used.",
+            "code": "1claw agent accounts deprecate-eoa --agent $AGENT_ID --chain base",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "This is a foundation, not a finished feature. The on-chain deploy, cosign, passkey, timelock, and ERC-4337 endpoints deliberately return 501 pending a Guard audit. Provisioning, migration, and the registry work today."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "The dashboard has a guided migration wizard at /agents/[agentId]/migrate-safe, and org-wide allowance sync runs through POST /v1/org/safe/sync-allowances."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What does counterfactual provisioning mean here?",
+        "options": [
+          "The Safe address is derived and usable before any deployment transaction is sent",
+          "The Safe is deployed immediately on creation",
+          "The address changes after deployment",
+          "The Safe exists only in the database"
+        ],
+        "correctIndex": 0,
+        "explanation": "The address is computed deterministically up front, so you can fund and reference the account without paying deployment gas until it is actually needed."
+      },
+      {
+        "question": "Why do several Safe endpoints currently return 501?",
+        "options": [
+          "On-chain deploy, cosign, passkey, timelock and 4337 are pending a Guard audit",
+          "They are deprecated",
+          "They require Enterprise tier",
+          "They were removed in v0.56"
+        ],
+        "correctIndex": 0,
+        "explanation": "The provisioning and migration foundation ships now; the on-chain execution paths are held back behind 501 until the Guard audit completes."
+      },
+      {
+        "question": "What is the advantage of a Safe over a bare EOA for an agent?",
+        "options": [
+          "Guardrails can eventually be enforced on-chain rather than only by the Vault",
+          "It signs transactions faster",
+          "It removes the need for signing keys",
+          "It works on non-EVM chains"
+        ],
+        "correctIndex": 0,
+        "explanation": "An EOA is one key with no on-chain policy. A Safe with modules can enforce constraints at the chain level, so a compromised Vault path is not automatically a compromised wallet."
       }
     ]
   }

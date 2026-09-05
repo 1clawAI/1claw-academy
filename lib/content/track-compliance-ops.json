@@ -335,5 +335,89 @@
         "explanation": "Signing keys are provisioned server-side and the plt_ key cannot read them across the org boundary, keeping custody separated."
       }
     ]
+  },
+  {
+    "id": "sub-organizations",
+    "title": "Sub-organizations",
+    "summary": "Model departments, subsidiaries, or customers as isolated sub-orgs with delegated permissions and their own wallets.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "A single flat organization stops working once you have departments with genuinely separate budgets, or a parent company with subsidiaries. Sub-organizations (v0.47) give you a hierarchy with cryptographic isolation between branches."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Each sub-org can inherit billing from the parent or manage its own.",
+          "Permissions are granted and revoked explicitly per sub-org.",
+          "Sub-orgs can generate their own wallets.",
+          "Users are added per sub-org, so access does not leak sideways."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Do not confuse this with the Platform API. Sub-orgs partition your own organization; the Platform API provisions resources for other people's users. If you are building a product on 1Claw, you want the Platform API."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Create a sub-org.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/org/sub-orgs \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"Research\",\"inherit_billing\":true}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Grant it a scoped set of permissions.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/org/sub-orgs/$SUBORG_ID/permissions \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -d '{\"permissions\":[\"vaults:read\",\"agents:create\"]}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Add a user to it.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/org/sub-orgs/$SUBORG_ID/users \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -d '{\"email\":\"researcher@example.com\"}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Generate wallets scoped to the sub-org.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/org/sub-orgs/$SUBORG_ID/wallets/generate \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -d '{\"chains\":[\"ethereum\"]}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Manage the whole lifecycle from the CLI.",
+            "code": "1claw sub-org list\n1claw sub-org get $SUBORG_ID\n1claw sub-org archive $SUBORG_ID",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Deleting a sub-org archives it rather than destroying it, which keeps the audit trail intact for anything that happened inside it."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "When should you use sub-organizations rather than the Platform API?",
+        "options": [
+          "When partitioning your own org into departments or subsidiaries",
+          "When provisioning resources for your product's end users",
+          "When you need more API keys",
+          "When you want a second billing account only"
+        ],
+        "correctIndex": 0,
+        "explanation": "Sub-orgs partition your own organization. The Platform API is for provisioning on behalf of other people's users — a different problem with a different model."
+      },
+      {
+        "question": "What happens when you delete a sub-org?",
+        "options": [
+          "It is archived, preserving the audit trail",
+          "It is permanently destroyed with all records",
+          "Its users are deleted too",
+          "It is merged into the parent"
+        ],
+        "correctIndex": 0,
+        "explanation": "The DELETE endpoint archives the sub-org so historical activity stays auditable."
+      }
+    ]
   }
 ]

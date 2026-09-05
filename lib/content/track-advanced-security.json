@@ -473,5 +473,197 @@
         "explanation": "DPoP binds a JWT to a client keypair, so a stolen token is useless without the private key."
       }
     ]
+  },
+  {
+    "id": "human-factor-auth",
+    "title": "Human Factor Auth for treasury",
+    "summary": "Require a password or passkey from a real person before a treasury wallet can send, swap, or export.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Human Factor Auth (HFA, v0.56) puts a person in the loop on the operations that move money. Treasury wallet send, swap, and export can each require a password or a passkey before they proceed — regardless of what token the caller holds."
+      },
+      {
+        "type": "prose",
+        "text": "The policy resolves in a fixed order, most specific first:"
+      },
+      {
+        "type": "points",
+        "items": [
+          "The user's own human_factor_auth_policies.",
+          "Then human_factor_auth on the relevant wallet_spend_policies.",
+          "Then the system defaults."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "HFA is about proving a human is present. It is deliberately separate from the agent guardrails in the Transactions track, which bound what an agent may attempt in the first place."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Read the current policy.",
+            "code": "curl -s https://api.1claw.co/v1/auth/human-factor-auth \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\"",
+            "lang": "bash"
+          },
+          {
+            "text": "Require a passkey for sends and exports, and a password for swaps.",
+            "code": "curl -s -X PUT https://api.1claw.co/v1/auth/human-factor-auth \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"send\":   { \"method\": \"passkey\" },\n    \"swap\":   { \"method\": \"password\" },\n    \"export\": { \"method\": \"passkey\" }\n  }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Clients can prefetch the effective policy so they know which step-up to prompt for before the user hits send.",
+            "code": "curl -s https://api.1claw.co/v1/treasury/wallets/auth-policy \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\"",
+            "lang": "bash"
+          },
+          {
+            "text": "Satisfy the step-up. Mint a re-auth token, then present it on the protected call.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/auth/reauth/begin \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -d '{\"method\":\"passkey\"}'\n# complete the ceremony, then send the resulting rat_ token:\n#   -H \"X-Auth-Confirm: rat_...\"",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Two webhooks make HFA observable: human_factor_auth.satisfied and human_factor_auth.denied. A run of denials is a strong signal that something is trying to move funds without a human."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Social-login users may have no password. If you require the password method they cannot satisfy it — have them enrol a passkey or TOTP at /settings/security first."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "In what order does an HFA policy resolve?",
+        "options": [
+          "User policy, then wallet spend policy, then defaults",
+          "Defaults, then wallet policy, then user policy",
+          "Wallet policy only",
+          "Whichever was configured most recently"
+        ],
+        "correctIndex": 0,
+        "explanation": "Resolution runs most specific first: the user's human_factor_auth_policies, then human_factor_auth on the wallet spend policy, then system defaults."
+      },
+      {
+        "question": "Why prefetch GET /v1/treasury/wallets/auth-policy?",
+        "options": [
+          "So the client knows which step-up to prompt for before the user acts",
+          "To cache wallet balances",
+          "To rotate the wallet key",
+          "To list pending approvals"
+        ],
+        "correctIndex": 0,
+        "explanation": "Prefetching the effective policy lets the client show the right passkey or password prompt up front, instead of failing the send and retrying."
+      },
+      {
+        "question": "A social-login user has no password set. What breaks if the HFA policy requires the password method?",
+        "options": [
+          "They cannot satisfy the step-up until they enrol a passkey or TOTP",
+          "Nothing — a password is generated for them",
+          "The policy silently falls back to no step-up",
+          "Their account is locked"
+        ],
+        "correctIndex": 0,
+        "explanation": "Without a password there is nothing to verify. They need to enrol a passkey or TOTP at /settings/security, or the policy should require one of those methods instead."
+      }
+    ]
+  },
+  {
+    "id": "oidc-federation",
+    "title": "OIDC federation and Sign in with 1Claw",
+    "summary": "Let external systems verify 1Claw-issued JWTs directly, so you can drop static API keys at the boundary.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "1Claw publishes a standard OpenID Connect issuer at https://api.1claw.co. That means an external relying party — Anthropic Workload Identity Federation, GCP STS, AWS STS — can validate a 1Claw-issued token against public keys instead of holding a long-lived shared secret."
+      },
+      {
+        "type": "points",
+        "items": [
+          "GET /.well-known/openid-configuration — the issuer metadata.",
+          "GET /.well-known/jwks.json — the public signing keys.",
+          "Agent JWTs are signed EdDSA; federation tokens are RS256 from an HSM-backed RSA-2048 KMS key.",
+          "Each active key version publishes under a deterministic kid: eddsa-vN and rs256-vN."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Federation is deny-by-default. An agent has federation_enabled false until you turn it on, and federation_audiences is an allowlist where empty means deny everything."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Read the issuer metadata. No auth required — this is what the relying party fetches.",
+            "code": "curl -s https://api.1claw.co/.well-known/openid-configuration | jq\ncurl -s https://api.1claw.co/.well-known/jwks.json | jq '.keys[].kid'",
+            "lang": "bash"
+          },
+          {
+            "text": "Enable federation on the agent and allowlist exactly one audience.",
+            "code": "1claw agent update $AGENT_ID \\\n  --federation-enabled \\\n  --federation-audiences \"https://api.example.com\" \\\n  --federated-token-ttl 900",
+            "lang": "bash"
+          },
+          {
+            "text": "Exchange the agent credential for a federated token using RFC 8693 token exchange.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/auth/federated-token \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"grant_type\": \"urn:ietf:params:oauth:grant-type:token-exchange\",\n    \"subject_token\": \"'$ONECLAW_AGENT_KEY'\",\n    \"subject_token_type\": \"urn:ietf:params:oauth:token-type:access_token\",\n    \"audience\": \"https://api.example.com\"\n  }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Present the resulting RS256 JWT to the external service, which validates it against the JWKS.",
+            "code": "curl -s https://api.example.com/v1/data \\\n  -H \"Authorization: Bearer <federated-token>\"",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "TTL defaults to 900 seconds and is hard-capped at 3600. That cap is the point — a federated token is meant to be short-lived, unlike the static key it replaces."
+      },
+      {
+        "type": "prose",
+        "text": "Separately, 1Claw can act as an OAuth2 authorization server — \"Sign in with 1Claw\" — with PKCE-required authorize, token, and userinfo endpoints under /v1/oauth. That is for signing users into your app, whereas federation is for machine identity at a service boundary."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What does OIDC federation let you remove?",
+        "options": [
+          "Static long-lived API keys at the service boundary",
+          "The need for agent policies",
+          "TLS between services",
+          "The vault itself"
+        ],
+        "correctIndex": 0,
+        "explanation": "The relying party validates a short-lived 1Claw-issued JWT against published JWKS, so there is no long-lived shared secret to store or rotate."
+      },
+      {
+        "question": "An agent has federation_enabled true but federation_audiences empty. What happens?",
+        "options": [
+          "Every audience is denied",
+          "Every audience is allowed",
+          "Only the default audience is allowed",
+          "The agent cannot authenticate at all"
+        ],
+        "correctIndex": 0,
+        "explanation": "federation_audiences is an allowlist and empty means deny all. Federation is deny-by-default throughout."
+      },
+      {
+        "question": "Which algorithms sign agent JWTs and federation tokens?",
+        "options": [
+          "EdDSA for agent JWTs, RS256 for federation tokens",
+          "RS256 for both",
+          "HS256 for both",
+          "EdDSA for both"
+        ],
+        "correctIndex": 0,
+        "explanation": "Agent JWTs use the EC_SIGN_ED25519 key (EdDSA); federation tokens use an HSM-backed RSA-2048 key (RS256), because external relying parties overwhelmingly expect RSA."
+      }
+    ]
   }
 ]
