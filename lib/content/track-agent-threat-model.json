@@ -221,6 +221,82 @@
         "text": "The practical method: audit every tool the agent can call, classify each against the three capabilities, and ensure at least one circle is missing on every execution path. If you cannot remove one, that path needs a human in it."
       },
       {
+        "type": "audit",
+        "scenario": "A support agent triages incoming tickets. A human granted it exactly these four capabilities, and each was justified on its own terms.",
+        "tools": [
+          {
+            "name": "read_ticket",
+            "description": "Reads the body of an incoming support ticket, including attachments.",
+            "circles": [
+              "untrusted-content"
+            ],
+            "rationale": "A ticket is written by whoever opened it. That is attacker-controlled text arriving as data, which is the untrusted-content circle."
+          },
+          {
+            "name": "get_customer_record",
+            "description": "Looks up the customer's plan, billing status, and contact details.",
+            "circles": [
+              "private-data"
+            ],
+            "rationale": "Customer records are exactly the thing worth stealing. This is the private-data circle."
+          },
+          {
+            "name": "check_status_page",
+            "description": "Fetches https://status.example.com to see if there is an ongoing incident.",
+            "circles": [
+              "external-comms"
+            ],
+            "rationale": "It looks harmless because the destination is fixed and trusted. It is still an outbound request the agent can trigger, and data can be encoded into the path or query string. This is the external-comms circle."
+          },
+          {
+            "name": "format_reply",
+            "description": "Formats a draft reply as markdown. Runs locally, calls nothing.",
+            "circles": [],
+            "rationale": "No data access, no external input, no outbound request. It contributes no circle, which is what most capabilities should look like."
+          }
+        ],
+        "verdict": "All three circles are present, so a ticket containing hidden instructions can make the agent look up a customer record and encode it into a status-page request. Nothing here was misconfigured and no code has a bug. The fix is to remove a circle: fetch the status page out of band and pass the result in, so the agent itself never makes an outbound request."
+      },
+      {
+        "type": "audit",
+        "scenario": "The same team hardens the agent. They remove the status-page tool and add two others. Is it safe now?",
+        "tools": [
+          {
+            "name": "read_ticket",
+            "description": "Reads the body of an incoming support ticket.",
+            "circles": [
+              "untrusted-content"
+            ],
+            "rationale": "Unchanged. Ticket text is still attacker-controlled."
+          },
+          {
+            "name": "get_customer_record",
+            "description": "Looks up the customer's plan and billing status.",
+            "circles": [
+              "private-data"
+            ],
+            "rationale": "Unchanged. Still the data worth stealing."
+          },
+          {
+            "name": "post_reply",
+            "description": "Posts the drafted reply back onto the ticket thread, where the reporter reads it.",
+            "circles": [
+              "external-comms"
+            ],
+            "rationale": "This is the one people miss. The reporter is the attacker, and the ticket thread is a channel they can read. Writing to a place the attacker can see is exfiltration, even though it never leaves your systems."
+          },
+          {
+            "name": "search_kb",
+            "description": "Searches the internal knowledge base for relevant articles.",
+            "circles": [
+              "private-data"
+            ],
+            "rationale": "Internal articles can contain material you would not want republished. It is a smaller instance of the private-data circle, not a neutral capability."
+          }
+        ],
+        "verdict": "Still exploitable. Removing the outbound fetch did not remove the exfiltration channel, because the reply itself is one. Any surface the attacker can read counts, including the ticket they opened. Breaking this configuration means a human reviewing replies before they post, or the agent losing access to the customer record."
+      },
+      {
         "type": "prose",
         "text": "This is why brokered execution matters so much. If the agent never holds the credential — if it can only ask a control plane to perform a specific pre-approved call — then the private-data circle shrinks dramatically even when the other two remain."
       }
@@ -648,6 +724,43 @@
           "Enforcement lives outside the agent. A control the agent could disable by being convinced is not a control.",
           "Compromise is assumed. The question is never whether the agent can be manipulated, only what it yields when it is."
         ]
+      },
+      {
+        "type": "audit",
+        "scenario": "A deployment agent runs in CI. It has no vault credentials at all: every external call goes through an Execution Intents binding, so credentials are injected server-side and the agent never sees one. Does brokered execution close the trifecta on its own?",
+        "tools": [
+          {
+            "name": "read_pr_description",
+            "description": "Reads the pull request title and body to decide what to deploy.",
+            "circles": [
+              "untrusted-content"
+            ],
+            "rationale": "Anyone who can open a PR controls this text. On a public repository that is anyone at all."
+          },
+          {
+            "name": "execute:deploy-api",
+            "description": "Calls the deploy API through a binding. The credential is injected server-side and never enters the agent's context.",
+            "circles": [
+              "external-comms"
+            ],
+            "rationale": "The credential is safe, which is the whole point of brokering. But the agent can still cause an outbound request with parameters it chooses, so the channel is open even though the key is not exposed."
+          },
+          {
+            "name": "execute:fetch-config",
+            "description": "Reads deployment config through a binding scoped to one host and one path.",
+            "circles": [],
+            "rationale": "Host and path allowlists mean the agent cannot redirect this anywhere. Nothing sensitive comes back and nothing arbitrary goes out, so it closes no circle. This is what a well-scoped binding looks like."
+          },
+          {
+            "name": "read_build_logs",
+            "description": "Reads the CI build logs for the current run.",
+            "circles": [
+              "private-data"
+            ],
+            "rationale": "Build logs routinely contain more than people expect: environment names, internal hostnames, and sometimes credentials printed by a careless step. Treat them as private data."
+          }
+        ],
+        "verdict": "Exploitable, and this is the lesson's real point. Brokered execution removed the credential from the agent's context, which is a genuine and large win, but it did not remove the ability to make outbound calls with attacker-influenced parameters. Narrowing the deploy binding's allowed paths, or holding deploys for human approval, is what actually breaks the chain. A control plane shrinks circles; it does not automatically eliminate them."
       },
       {
         "type": "callout",

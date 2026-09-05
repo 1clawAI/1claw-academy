@@ -70,7 +70,19 @@ const codeOf = (l) => {
 };
 
 // ── tier 1: structural ──────────────────────────────────────────────────────
-const BLOCK_TYPES = new Set(["prose", "points", "steps", "code", "callout"]);
+const BLOCK_TYPES = new Set([
+  "prose",
+  "points",
+  "steps",
+  "code",
+  "callout",
+  "audit",
+]);
+const CIRCLES = new Set([
+  "private-data",
+  "untrusted-content",
+  "external-comms",
+]);
 const CALLOUT_VARIANTS = new Set(["info", "tip", "warn"]);
 
 for (const l of lessons) {
@@ -85,6 +97,19 @@ for (const l of lessons) {
       fail(ref(l), "steps block has no steps");
     if (b.type === "code" && !b.code?.trim())
       fail(ref(l), "empty code block");
+    if (b.type === "audit") {
+      if (!b.tools?.length) fail(ref(l), "audit block has no tools");
+      if (!b.verdict?.trim()) fail(ref(l), "audit block has no verdict");
+      for (const t of b.tools ?? []) {
+        if (!t.name || !t.description || !t.rationale)
+          fail(ref(l), `audit tool "${t.name ?? "?"}" is missing a field`);
+        for (const c of t.circles ?? [])
+          if (!CIRCLES.has(c))
+            fail(ref(l), `audit tool "${t.name}" has unknown circle "${c}"`);
+        if (new Set(t.circles ?? []).size !== (t.circles ?? []).length)
+          fail(ref(l), `audit tool "${t.name}" repeats a circle`);
+      }
+    }
   }
   for (const q of l.quiz ?? []) {
     if (!q.options?.length) fail(ref(l), `quiz question has no options`);
