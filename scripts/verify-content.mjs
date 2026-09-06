@@ -215,7 +215,7 @@ const norm = (p) =>
 // Paths that are deliberately not the 1Claw Vault API.
 const FOREIGN = [
   /^\/v1\/chat\/completions$/, // Shroud
-  /^\/v1\/(balance|charges|data)$/, // third-party examples (Stripe etc.)
+  /^\/v1\/(balance|charges|data|transfers|shipments)$/, // third-party examples (Stripe, carrier APIs)
   /^\/v1\/oauth$/, // prose reference to a group of endpoints
 ];
 

@@ -798,6 +798,99 @@
     ]
   },
   {
+    "id": "lab-build-a-credential-broker",
+    "title": "Lab: build a credential broker",
+    "summary": "Write both patterns side by side, dump each agent's context, and see the difference the broker makes.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Execution Intents is a small idea with a large consequence, and the fastest way to believe it is to implement both sides. Forty lines of Python, no network, no account. The question the lab answers is narrow and concrete: after the agent has done its job, is the credential in its context?"
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Write both agents. The first reads the credential the obvious way; the second sends an intent and lets a broker do the call.",
+            "code": "cat > /tmp/broker.py <<'EOF'\nVAULT = {\"stripe/key\": \"sk-live-9f2a\"}\nALLOWED = {(\"stripe\", \"GET\", \"/v1/balance\")}\n\nclass ReadingAgent:\n    def __init__(self): self.context = []\n    def run(self):\n        key = VAULT[\"stripe/key\"]              # the agent now holds it\n        self.context.append(f\"fetched credential: {key}\")\n        self.context.append(f\"calling stripe with {key}\")\n        return \"balance: 42.00\"\n\ndef brokered_call(binding, method, path):\n    if (binding, method, path) not in ALLOWED:\n        return f\"DENIED: {binding} {method} {path} is not an allowed intent\"\n    _key = VAULT[\"stripe/key\"]                 # resolved here, never returned\n    return \"balance: 42.00\"\n\nclass BrokeredAgent:\n    def __init__(self): self.context = []\n    def run(self):\n        self.context.append(\"intent: stripe GET /v1/balance\")\n        result = brokered_call(\"stripe\", \"GET\", \"/v1/balance\")\n        self.context.append(f\"result: {result}\")\n        return result\n\nfor Agent in (ReadingAgent, BrokeredAgent):\n    a = Agent(); a.run()\n    leaked = [line for line in a.context if \"sk-live\" in line]\n    print(f\"{Agent.__name__}:\")\n    for line in a.context:\n        print(f\"    {line}\")\n    print(f\"  -> credential in context: {'YES' if leaked else 'no'}\\n\")\n\nprint(\"an injected agent tries something else:\")\nprint(\"   \", brokered_call(\"stripe\", \"POST\", \"/v1/transfers\"))\nEOF\npython3 /tmp/broker.py",
+            "lang": "bash"
+          },
+          {
+            "text": "Read the two context dumps. They are the whole lesson.",
+            "code": "ReadingAgent:\n    fetched credential: sk-live-9f2a\n    calling stripe with sk-live-9f2a\n  -> credential in context: YES\n\nBrokeredAgent:\n    intent: stripe GET /v1/balance\n    result: balance: 42.00\n  -> credential in context: no\n\nan injected agent tries something else:\n    DENIED: stripe POST /v1/transfers is not an allowed intent",
+            "lang": "text"
+          },
+          {
+            "text": "Clean up.",
+            "code": "rm /tmp/broker.py",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Both agents got the same answer. Only one of them is a problem if it is later asked to repeat everything it knows."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The reading agent's context contains a live credential. A prompt injection at any later turn can ask for it, and any log, trace or provider request that captured the context has it too.",
+          "The brokered agent's context contains an intent and a result. There is nothing to exfiltrate because there was never anything to hold.",
+          "The last line is the second property, and it is easy to miss. The broker refused an intent it was not configured for, so a successfully injected agent still could not initiate a transfer."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Notice that the broker is trivial: an allowlist, a lookup, and a call. The security value is not in its sophistication, it is in where it sits. The check runs somewhere the agent's context cannot reach and cannot argue with."
+      },
+      {
+        "type": "prose",
+        "text": "This is the shape of Execution Intents. A binding is the allowlist plus the stored credential, credential_source with a vault_ref is the lookup resolved at execution time, and the agent sends the same kind of intent your BrokeredAgent sent. The production version adds host and path guardrails, credential rotation, per-binding limits and an audit trail, and the property it protects is the one you just demonstrated in forty lines."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "The broker still holds the credential, so this shrinks the private-data circle rather than removing it. An attacker who compromises the broker gets everything, which is why the real implementation keeps that material in an HSM and constrains what a binding may call."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "After both agents complete, what is the difference in their contexts?",
+        "options": [
+          "Both hold the credential, but the brokered one encrypts it",
+          "The reading agent holds a live credential; the brokered one holds only an intent and a result",
+          "The brokered agent holds a hashed credential",
+          "Neither holds anything sensitive"
+        ],
+        "correctIndex": 1,
+        "explanation": "That difference is the entire point. There is nothing to exfiltrate from the brokered agent because it never received the value."
+      },
+      {
+        "question": "What did the DENIED line demonstrate?",
+        "options": [
+          "The broker rate-limits requests",
+          "A successfully injected agent still cannot initiate an action the broker was not configured for",
+          "The credential had expired",
+          "POST requests are never allowed"
+        ],
+        "correctIndex": 1,
+        "explanation": "Brokering provides two properties, not one: the credential stays out of context, and the set of possible actions is bounded by the allowlist rather than by the agent's judgment."
+      },
+      {
+        "question": "What does brokering not solve?",
+        "options": [
+          "Credential rotation",
+          "The broker still holds the credential, so compromising it yields everything",
+          "Auditing which agent called what",
+          "Limiting request rates"
+        ],
+        "correctIndex": 1,
+        "explanation": "It shrinks the private-data circle rather than removing it, which is why production implementations keep the material in an HSM and constrain what each binding may reach."
+      }
+    ],
+    "kind": "lab"
+  },
+  {
     "id": "agent-to-human-sharing",
     "title": "Agent-to-human sharing",
     "summary": "Let an agent hand a credential it discovered or generated back to the human who created it, without knowing their email.",
