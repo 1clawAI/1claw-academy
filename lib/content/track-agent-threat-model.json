@@ -15,7 +15,7 @@
       {
         "type": "points",
         "items": [
-          "Code and data are separable — the program is fixed, and input is something it processes.",
+          "Code and data are separable: the program is fixed, and input is something it processes.",
           "Control flow is determined by the program, not by its input.",
           "A component's privileges are exercised only by its own logic.",
           "Behaviour is reproducible, so testing tells you what production will do."
@@ -24,7 +24,7 @@
       {
         "type": "callout",
         "variant": "warn",
-        "text": "A language model violates all four. Its instructions and its data arrive in the same channel — the context window — as undifferentiated text. Whatever is in that window can steer what happens next."
+        "text": "A language model violates all four. Its instructions and its data arrive in the same channel, the context window, as undifferentiated text. Whatever is in that window can steer what happens next."
       },
       {
         "type": "prose",
@@ -41,7 +41,7 @@
       {
         "type": "callout",
         "variant": "tip",
-        "text": "This is the load-bearing conclusion of the whole track: you cannot fix this at the model layer. Since you cannot make the model reliably ignore malicious instructions, you make it so that following them does not matter — by constraining what the agent is able to do."
+        "text": "This is the load-bearing conclusion of the whole track: you cannot fix this at the model layer. Since you cannot make the model reliably ignore malicious instructions, you make it so that following them does not matter: by constraining what the agent is able to do."
       },
       {
         "type": "prose",
@@ -69,7 +69,7 @@
           "That components are reproducible"
         ],
         "correctIndex": 0,
-        "explanation": "Instructions embedded in processed content can redirect what the agent does next, so input determines control flow — the inverse of the traditional assumption."
+        "explanation": "Instructions embedded in processed content can redirect what the agent does next, so input determines control flow: the inverse of the traditional assumption."
       },
       {
         "question": "Given that the model cannot be made reliably safe, where does the defence belong?",
@@ -95,7 +95,7 @@
       },
       {
         "type": "prose",
-        "text": "Direct injection comes from the person talking to the agent. They try to override the system prompt — 'ignore your previous instructions'. It matters mostly when the user is not supposed to be fully trusted, such as a public-facing bot."
+        "text": "Direct injection comes from the person talking to the agent. They try to override the system prompt: 'ignore your previous instructions'. It matters mostly when the user is not supposed to be fully trusted, such as a public-facing bot."
       },
       {
         "type": "prose",
@@ -108,7 +108,7 @@
           "An email or support ticket in an inbox it triages.",
           "A README or code comment in a repository it analyses.",
           "A PDF, a spreadsheet cell, or an image's alt text.",
-          "A tool's response — including another agent's output."
+          "A tool's response: including another agent's output."
         ]
       },
       {
@@ -120,7 +120,7 @@
       {
         "type": "callout",
         "variant": "warn",
-        "text": "The user's request was entirely benign. The attack arrived through data. This is why 'only let trusted users talk to the agent' is not a defence — the untrusted input is the content, not the person."
+        "text": "The user's request was entirely benign. The attack arrived through data. This is why 'only let trusted users talk to the agent' is not a defence: the untrusted input is the content, not the person."
       },
       {
         "type": "prose",
@@ -129,9 +129,9 @@
       {
         "type": "points",
         "items": [
-          "Provenance marking — track which parts of context came from untrusted sources, and lower their authority.",
-          "Output inspection — scan what the agent produces for secrets before it leaves.",
-          "Capability restriction — the only structural defence. Covered in the next lesson."
+          "Provenance marking: track which parts of context came from untrusted sources, and lower their authority.",
+          "Output inspection: scan what the agent produces for secrets before it leaves.",
+          "Capability restriction: the only structural defence. Covered in the next lesson."
         ]
       },
       {
@@ -144,7 +144,7 @@
       {
         "question": "What makes indirect prompt injection more dangerous than direct?",
         "options": [
-          "The attacker never interacts with the agent — the payload arrives inside content it reads",
+          "The attacker never interacts with the agent: the payload arrives inside content it reads",
           "It is harder to write",
           "It only affects open-source models",
           "It requires network access"
@@ -158,7 +158,7 @@
           "The untrusted input is the content the agent processes, not the person asking",
           "Trusted users are often malicious",
           "Authentication can be bypassed",
-          "It works — this is an effective defence"
+          "It works: this is an effective defence"
         ],
         "correctIndex": 0,
         "explanation": "A trusted user asking a benign question about a poisoned document still results in the agent reading attacker-controlled instructions."
@@ -188,9 +188,9 @@
       {
         "type": "points",
         "items": [
-          "Access to private data — the agent can read something worth stealing.",
-          "Exposure to untrusted content — the agent processes input an attacker can influence.",
-          "An ability to communicate externally — the agent can get data out."
+          "Access to private data: the agent can read something worth stealing.",
+          "Exposure to untrusted content: the agent processes input an attacker can influence.",
+          "An ability to communicate externally: the agent can get data out."
         ]
       },
       {
@@ -200,7 +200,7 @@
       },
       {
         "type": "prose",
-        "text": "Work through it. The agent reads a support ticket containing hidden instructions — that is untrusted content. It has vault access to answer questions about the customer — that is private data. It can fetch a URL to check a status page — that is the exfiltration channel. Nothing is broken. Every capability was deliberately granted and individually reasonable."
+        "text": "Work through it. The agent reads a support ticket containing hidden instructions; that is untrusted content. It has vault access to answer questions about the customer; that is private data. It can fetch a URL to check a status page; that is the exfiltration channel. Nothing is broken. Every capability was deliberately granted and individually reasonable."
       },
       {
         "type": "prose",
@@ -298,7 +298,7 @@
       },
       {
         "type": "prose",
-        "text": "This is why brokered execution matters so much. If the agent never holds the credential — if it can only ask a control plane to perform a specific pre-approved call — then the private-data circle shrinks dramatically even when the other two remain."
+        "text": "This is why brokered execution matters so much. If the agent never holds the credential, if it can only ask a control plane to perform a specific pre-approved call, then the private-data circle shrinks dramatically even when the other two remain."
       }
     ],
     "quiz": [
@@ -316,7 +316,7 @@
       {
         "question": "An agent reads untrusted email and can render markdown images, but has no access to private data. Is it exploitable for exfiltration?",
         "options": [
-          "Not for exfiltration — there is nothing sensitive to steal",
+          "Not for exfiltration: there is nothing sensitive to steal",
           "Yes, fully exploitable",
           "Only if it uses a weak model",
           "Yes, because image rendering is always unsafe"
@@ -349,22 +349,22 @@
       {
         "type": "points",
         "items": [
-          "ASI01 Agent Goal Hijack — attackers alter the agent's objectives through malicious content.",
-          "ASI02 Tool Misuse and Exploitation — the agent uses legitimate tools in unsafe ways.",
-          "ASI03 Identity and Privilege Abuse — the agent inherits or escalates high-privilege credentials.",
-          "ASI04 Agentic Supply Chain Vulnerabilities — compromised tools, plugins, or external components.",
-          "ASI05 Unexpected Code Execution — the agent generates or runs code and commands unsafely.",
-          "ASI06 Memory and Context Poisoning — attackers poison memory systems and RAG databases.",
-          "ASI07 Insecure Inter-Agent Communication — spoofing and tampering between agents.",
-          "ASI08 Cascading Failures — small errors propagate across planning and execution.",
-          "ASI09 Human Agent Trust Exploitation — users over-trust what the agent recommends.",
-          "ASI10 Rogue Agents — a compromised agent acts harmfully while appearing legitimate."
+          "ASI01 Agent Goal Hijack: attackers alter the agent's objectives through malicious content.",
+          "ASI02 Tool Misuse and Exploitation: the agent uses legitimate tools in unsafe ways.",
+          "ASI03 Identity and Privilege Abuse: the agent inherits or escalates high-privilege credentials.",
+          "ASI04 Agentic Supply Chain Vulnerabilities: compromised tools, plugins, or external components.",
+          "ASI05 Unexpected Code Execution: the agent generates or runs code and commands unsafely.",
+          "ASI06 Memory and Context Poisoning: attackers poison memory systems and RAG databases.",
+          "ASI07 Insecure Inter-Agent Communication: spoofing and tampering between agents.",
+          "ASI08 Cascading Failures: small errors propagate across planning and execution.",
+          "ASI09 Human Agent Trust Exploitation: users over-trust what the agent recommends.",
+          "ASI10 Rogue Agents: a compromised agent acts harmfully while appearing legitimate."
         ]
       },
       {
         "type": "callout",
         "variant": "tip",
-        "text": "Note how few of these are model problems. Most are architecture and authorization problems that happen to involve a model — which is good news, because those are problems the previous track already gave you tools for."
+        "text": "Note how few of these are model problems. Most are architecture and authorization problems that happen to involve a model, which is good news, because those are problems the previous track already gave you tools for."
       },
       {
         "type": "prose",
@@ -377,15 +377,15 @@
       {
         "type": "points",
         "items": [
-          "Excessive functionality — the agent can reach tools beyond what its task requires.",
-          "Excessive permissions — those tools run with broader privileges than needed.",
-          "Excessive autonomy — high-impact actions proceed with no human in the loop."
+          "Excessive functionality: the agent can reach tools beyond what its task requires.",
+          "Excessive permissions: those tools run with broader privileges than needed.",
+          "Excessive autonomy: high-impact actions proceed with no human in the loop."
         ]
       },
       {
         "type": "callout",
         "variant": "warn",
-        "text": "Use these as an audit checklist, not a reading list. For each category, ask what specifically in your system would stop it — and if the answer is 'the model would not do that', you do not have a control."
+        "text": "Use these as an audit checklist, not a reading list. For each category, ask what specifically in your system would stop it, and if the answer is 'the model would not do that', you do not have a control."
       }
     ],
     "quiz": [
@@ -420,7 +420,7 @@
           "An agent that exceeds its token budget"
         ],
         "correctIndex": 0,
-        "explanation": "The danger is that its traffic looks authorized, because it is — which is why attribution and audit matter as much as prevention."
+        "explanation": "The danger is that its traffic looks authorized, because it is, which is why attribution and audit matter as much as prevention."
       }
     ]
   },
@@ -459,15 +459,15 @@
       {
         "type": "points",
         "items": [
-          "Reference, do not paste — put a path or an identifier in context, and resolve it outside the model.",
-          "Broker the call — the agent asks a control plane to perform an action; the credential is injected server-side and the agent sees only the result.",
-          "Redact on the way out — scan outputs for known secret values and replace them before they reach the model or the user."
+          "Reference, do not paste: put a path or an identifier in context, and resolve it outside the model.",
+          "Broker the call: the agent asks a control plane to perform an action; the credential is injected server-side and the agent sees only the result.",
+          "Redact on the way out: scan outputs for known secret values and replace them before they reach the model or the user."
         ]
       },
       {
         "type": "callout",
         "variant": "tip",
-        "text": "Redaction is a backstop, not a primary control. It catches values you already know about; it cannot catch a credential it has never seen. Order these correctly — never rely on redaction to make an unsafe design safe."
+        "text": "Redaction is a backstop, not a primary control. It catches values you already know about; it cannot catch a credential it has never seen. Order these correctly: never rely on redaction to make an unsafe design safe."
       },
       {
         "type": "prose",
@@ -535,9 +535,9 @@
       {
         "type": "points",
         "items": [
-          "Excessive functionality — an agent that summarises documents does not need a delete tool. Remove it and a whole branch of attacks disappears.",
-          "Excessive permissions — if it needs to read one path, its credential should not reach the others. Scope the grant, not just the tool.",
-          "Excessive autonomy — some actions should not be one model decision away from happening, regardless of how confident it seems."
+          "Excessive functionality: an agent that summarises documents does not need a delete tool. Remove it and a whole branch of attacks disappears.",
+          "Excessive permissions: if it needs to read one path, its credential should not reach the others. Scope the grant, not just the tool.",
+          "Excessive autonomy: some actions should not be one model decision away from happening, regardless of how confident it seems."
         ]
       },
       {
@@ -549,14 +549,14 @@
         "items": [
           "Below a threshold, proceed and log.",
           "Above it, hold and ask a human, with enough context for a real decision.",
-          "Above a higher bar, require step-up authentication — a passkey or a second factor, not just a click.",
+          "Above a higher bar, require step-up authentication: a passkey or a second factor, not just a click.",
           "For a narrow set of actions, refuse outright and do not offer an override."
         ]
       },
       {
         "type": "callout",
         "variant": "warn",
-        "text": "An approval prompt that appears constantly gets approved reflexively. Tiering exists so the prompts that do appear carry real information — that is a security property, not just a usability nicety."
+        "text": "An approval prompt that appears constantly gets approved reflexively. Tiering exists so the prompts that do appear carry real information; that is a security property, not just a usability nicety."
       }
     ],
     "quiz": [
@@ -585,7 +585,7 @@
       {
         "question": "An agent is tricked into deleting records it had permission to delete. Which root cause is primarily at fault?",
         "options": [
-          "Excessive functionality — it should not have had the delete tool",
+          "Excessive functionality: it should not have had the delete tool",
           "Excessive autonomy only",
           "Insufficient logging",
           "Weak authentication"
@@ -606,7 +606,7 @@
       },
       {
         "type": "prose",
-        "text": "Memory poisoning (ASI06) is injection that outlives the conversation. If an agent writes to durable or semantic memory, an attacker who influences one session can plant content that is retrieved and acted on later — in a different session, possibly for a different user."
+        "text": "Memory poisoning (ASI06) is injection that outlives the conversation. If an agent writes to durable or semantic memory, an attacker who influences one session can plant content that is retrieved and acted on later: in a different session, possibly for a different user."
       },
       {
         "type": "points",
@@ -628,7 +628,7 @@
       {
         "type": "points",
         "items": [
-          "Authenticate agents to each other — identity, not just a network path.",
+          "Authenticate agents to each other: identity, not just a network path.",
           "Authorize delegation explicitly, and have a human define it rather than letting agents arrange it between themselves.",
           "Bound the depth, so A delegating to B delegating to C cannot recurse indefinitely.",
           "Treat another agent's output as untrusted content, because it may be carrying an injection from its own inputs."
@@ -669,7 +669,7 @@
           "As trusted, if the delegation is authorized"
         ],
         "correctIndex": 0,
-        "explanation": "Authorization says the sender is allowed to send. It says nothing about whether the content is safe — the sending agent may itself have been injected."
+        "explanation": "Authorization says the sender is allowed to send. It says nothing about whether the content is safe: the sending agent may itself have been injected."
       },
       {
         "question": "Why are tool descriptions from an MCP server a security concern?",
@@ -712,7 +712,7 @@
       },
       {
         "type": "prose",
-        "text": "Map it back to the lethal trifecta and the value becomes concrete. Brokered execution shrinks the private-data circle, because the agent holds no credential to steal. Host and path allowlists constrain the external-communication circle. Untrusted content remains — you cannot remove it and stay useful — but with the other two circles reduced, a successful injection has far less to work with."
+        "text": "Map it back to the lethal trifecta and the value becomes concrete. Brokered execution shrinks the private-data circle, because the agent holds no credential to steal. Host and path allowlists constrain the external-communication circle. Untrusted content remains, you cannot remove it and stay useful, but with the other two circles reduced, a successful injection has far less to work with."
       },
       {
         "type": "prose",
@@ -765,7 +765,7 @@
       {
         "type": "callout",
         "variant": "warn",
-        "text": "A system prompt saying 'never reveal secrets' is not a control. It is a preference expressed to a component that takes instructions from whatever is in its context — including the attacker's."
+        "text": "A system prompt saying 'never reveal secrets' is not a control. It is a preference expressed to a component that takes instructions from whatever is in its context: including the attacker's."
       },
       {
         "type": "prose",
@@ -787,7 +787,7 @@
       {
         "question": "Which circle of the lethal trifecta does brokered execution primarily shrink?",
         "options": [
-          "Private data access — the agent holds no credential to steal",
+          "Private data access: the agent holds no credential to steal",
           "Untrusted content",
           "External communication",
           "All three equally"

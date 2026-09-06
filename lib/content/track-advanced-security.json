@@ -139,7 +139,7 @@
           },
           {
             "text": "Save the code below as `cmek-demo.ts`. It generates a 256-bit key, encrypts a secret, stores it, reads it back, and decrypts it. Store the key safely because you need it for every read and write.",
-            "code": "import {\n  createClient,\n  generateCmekKey,\n  cmekFingerprint,\n  cmekEncrypt,\n  cmekDecrypt,\n  toBase64,\n  fromBase64,\n} from \"@1claw/sdk\";\n\nconst client = createClient({\n  baseUrl: \"https://api.1claw.co\",\n  apiKey: process.env.ONECLAW_API_KEY!,\n});\n\nconst vaultId = process.env.ONECLAW_VAULT_ID!;\n\nasync function main() {\n  // Every CMEK helper is async and works on bytes.\n  const key = await generateCmekKey();\n  console.log(\"fingerprint:\", await cmekFingerprint(key));\n\n  // cmekEncrypt takes (plaintext, key) — plaintext first.\n  const plaintext = new TextEncoder().encode(\"sk-live-secret-value\");\n  const blob = await cmekEncrypt(plaintext, key);\n\n  // secrets.set takes the value as a positional argument.\n  await client.secrets.set(vaultId, \"api-keys/stripe\", toBase64(blob), {\n    type: \"api_key\",\n  });\n\n  const res = await client.secrets.get(vaultId, \"api-keys/stripe\");\n  if (res.data) {\n    const decrypted = await cmekDecrypt(fromBase64(res.data.value), key);\n    console.log(new TextDecoder().decode(decrypted));\n  }\n}\n\nmain();",
+            "code": "import {\n  createClient,\n  generateCmekKey,\n  cmekFingerprint,\n  cmekEncrypt,\n  cmekDecrypt,\n  toBase64,\n  fromBase64,\n} from \"@1claw/sdk\";\n\nconst client = createClient({\n  baseUrl: \"https://api.1claw.co\",\n  apiKey: process.env.ONECLAW_API_KEY!,\n});\n\nconst vaultId = process.env.ONECLAW_VAULT_ID!;\n\nasync function main() {\n  // Every CMEK helper is async and works on bytes.\n  const key = await generateCmekKey();\n  console.log(\"fingerprint:\", await cmekFingerprint(key));\n\n  // cmekEncrypt takes (plaintext, key): plaintext first.\n  const plaintext = new TextEncoder().encode(\"sk-live-secret-value\");\n  const blob = await cmekEncrypt(plaintext, key);\n\n  // secrets.set takes the value as a positional argument.\n  await client.secrets.set(vaultId, \"api-keys/stripe\", toBase64(blob), {\n    type: \"api_key\",\n  });\n\n  const res = await client.secrets.get(vaultId, \"api-keys/stripe\");\n  if (res.data) {\n    const decrypted = await cmekDecrypt(fromBase64(res.data.value), key);\n    console.log(new TextDecoder().decode(decrypted));\n  }\n}\n\nmain();",
             "lang": "typescript"
           },
           {
@@ -161,7 +161,7 @@
       {
         "type": "callout",
         "variant": "warn",
-        "text": "Two easy mistakes here. generateCmekKey, cmekFingerprint, cmekEncrypt and cmekDecrypt all return promises, so every one needs await. And cmekEncrypt takes (plaintext, key) in that order, both as Uint8Array — swapping them produces a blob that will never decrypt."
+        "text": "Two easy mistakes here. generateCmekKey, cmekFingerprint, cmekEncrypt and cmekDecrypt all return promises, so every one needs await. And cmekEncrypt takes (plaintext, key) in that order, both as Uint8Array: swapping them produces a blob that will never decrypt."
       }
     ],
     "quiz": [
@@ -466,7 +466,7 @@
           },
           {
             "text": "Optional: read the honeytoken path and confirm the token is revoked on the next request.",
-            "code": "curl -s https://api.1claw.co/v1/vaults/$VAULT_ID/secrets/api-keys/production \\\n  -H \"Authorization: Bearer $TOKEN\"\n# Now try another request — it should fail with 401\ncurl -s https://api.1claw.co/v1/vaults/$VAULT_ID/secrets/api-keys/production \\\n  -H \"Authorization: Bearer $TOKEN\"",
+            "code": "curl -s https://api.1claw.co/v1/vaults/$VAULT_ID/secrets/api-keys/production \\\n  -H \"Authorization: Bearer $TOKEN\"\n# Now try another request; it should fail with 401\ncurl -s https://api.1claw.co/v1/vaults/$VAULT_ID/secrets/api-keys/production \\\n  -H \"Authorization: Bearer $TOKEN\"",
             "lang": "bash"
           }
         ]
@@ -531,7 +531,7 @@
     "blocks": [
       {
         "type": "prose",
-        "text": "Human Factor Auth (HFA, v0.56) puts a person in the loop on the operations that move money. Treasury wallet send, swap, and export can each require a password or a passkey before they proceed — regardless of what token the caller holds."
+        "text": "Human Factor Auth (HFA, v0.56) puts a person in the loop on the operations that move money. Treasury wallet send, swap, and export can each require a password or a passkey before they proceed: regardless of what token the caller holds."
       },
       {
         "type": "prose",
@@ -583,7 +583,7 @@
       {
         "type": "callout",
         "variant": "warn",
-        "text": "Social-login users may have no password. If you require the password method they cannot satisfy it — have them enrol a passkey or TOTP at /settings/security first."
+        "text": "Social-login users may have no password. If you require the password method they cannot satisfy it: have them enrol a passkey or TOTP at /settings/security first."
       }
     ],
     "quiz": [
@@ -613,7 +613,7 @@
         "question": "A social-login user has no password set. What breaks if the HFA policy requires the password method?",
         "options": [
           "They cannot satisfy the step-up until they enrol a passkey or TOTP",
-          "Nothing — a password is generated for them",
+          "Nothing: a password is generated for them",
           "The policy silently falls back to no step-up",
           "Their account is locked"
         ],
@@ -636,13 +636,13 @@
     "blocks": [
       {
         "type": "prose",
-        "text": "1Claw publishes a standard OpenID Connect issuer at https://api.1claw.co. That means an external relying party — Anthropic Workload Identity Federation, GCP STS, AWS STS — can validate a 1Claw-issued token against public keys instead of holding a long-lived shared secret."
+        "text": "1Claw publishes a standard OpenID Connect issuer at https://api.1claw.co. That means an external relying party (Anthropic Workload Identity Federation, GCP STS, AWS STS) can validate a 1Claw-issued token against public keys instead of holding a long-lived shared secret."
       },
       {
         "type": "points",
         "items": [
-          "GET /.well-known/openid-configuration — the issuer metadata.",
-          "GET /.well-known/jwks.json — the public signing keys.",
+          "GET /.well-known/openid-configuration: the issuer metadata.",
+          "GET /.well-known/jwks.json: the public signing keys.",
           "Agent JWTs are signed EdDSA; federation tokens are RS256 from an HSM-backed RSA-2048 KMS key.",
           "Each active key version publishes under a deterministic kid: eddsa-vN and rs256-vN."
         ]
@@ -656,7 +656,7 @@
         "type": "steps",
         "steps": [
           {
-            "text": "Read the issuer metadata. No auth required — this is what the relying party fetches.",
+            "text": "Read the issuer metadata. No auth required; this is what the relying party fetches.",
             "code": "curl -s https://api.1claw.co/.well-known/openid-configuration | jq\ncurl -s https://api.1claw.co/.well-known/jwks.json | jq '.keys[].kid'",
             "lang": "bash"
           },
@@ -680,11 +680,11 @@
       {
         "type": "callout",
         "variant": "tip",
-        "text": "TTL defaults to 900 seconds and is hard-capped at 3600. That cap is the point — a federated token is meant to be short-lived, unlike the static key it replaces."
+        "text": "TTL defaults to 900 seconds and is hard-capped at 3600. That cap is the point: a federated token is meant to be short-lived, unlike the static key it replaces."
       },
       {
         "type": "prose",
-        "text": "Separately, 1Claw can act as an OAuth2 authorization server — \"Sign in with 1Claw\" — with PKCE-required authorize, token, and userinfo endpoints under /v1/oauth. That is for signing users into your app, whereas federation is for machine identity at a service boundary."
+        "text": "Separately, 1Claw can act as an OAuth2 authorization server, \"Sign in with 1Claw\", with PKCE-required authorize, token, and userinfo endpoints under /v1/oauth. That is for signing users into your app, whereas federation is for machine identity at a service boundary."
       }
     ],
     "quiz": [

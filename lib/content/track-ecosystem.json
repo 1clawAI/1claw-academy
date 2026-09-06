@@ -143,7 +143,7 @@
       {
         "type": "callout",
         "variant": "tip",
-        "text": "Config file locations — Claude Desktop: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS). Cursor: Settings → MCP Servers. VS Code: .vscode/mcp.json."
+        "text": "Config file locations: Claude Desktop: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS). Cursor: Settings → MCP Servers. VS Code: .vscode/mcp.json."
       },
       {
         "type": "callout",
@@ -458,7 +458,7 @@
           "Runtime access for the character",
           "Setup only, to provision the vault, agent, and policy",
           "Signing transactions",
-          "Nothing, it is optional"
+          "Nothing: it is optional"
         ],
         "correctIndex": 1,
         "explanation": "The human key is used only during bootstrap and is never written to disk; the character runs on the agent ocv_ key."
@@ -609,7 +609,7 @@
             "lang": "bash"
           },
           {
-            "text": "Run fully offline instead. No cloud account, no LLM — only the /help, /secrets, /info, and /proxy slash commands.",
+            "text": "Run fully offline instead. No cloud account, no LLM: only the /help, /secrets, /info, and /proxy slash commands.",
             "code": "1claw init --docker --local",
             "lang": "bash"
           },
@@ -632,20 +632,20 @@
       },
       {
         "type": "prose",
-        "text": "The chat UI reaches an LLM through Shroud, and Shroud resolves the provider key from one of three sources in order — the container never holds it:"
+        "text": "The chat UI reaches an LLM through Shroud, and Shroud resolves the provider key from one of three sources in order: the container never holds it:"
       },
       {
         "type": "points",
         "items": [
-          "1Claw LLM token billing (default, no key at all) — Shroud routes via the Stripe AI Gateway.",
-          "The 1Claw cloud vault — pass --llm-api-key and it is stored at providers/<provider>/api-key for Shroud to fetch.",
-          "A local CLI vault, for BYOK — the daemon injects it as the X-Shroud-Api-Key header."
+          "1Claw LLM token billing (default, no key at all): Shroud routes via the Stripe AI Gateway.",
+          "The 1Claw cloud vault: pass --llm-api-key and it is stored at providers/<provider>/api-key for Shroud to fetch.",
+          "A local CLI vault, for BYOK: the daemon injects it as the X-Shroud-Api-Key header."
         ]
       },
       {
         "type": "callout",
         "variant": "tip",
-        "text": "Pick a model with --llm-provider (default openai) and --llm-model (default gpt-4o-mini). For framework-specific containers — LangChain, CrewAI, the OpenAI Agents SDK — use 1claw spawn with a template instead."
+        "text": "Pick a model with --llm-provider (default openai) and --llm-model (default gpt-4o-mini). For framework-specific containers (LangChain, CrewAI, the OpenAI Agents SDK), use 1claw spawn with a template instead."
       },
       {
         "type": "callout",
@@ -663,7 +663,7 @@
           "The container fetches them from the vault directly"
         ],
         "correctIndex": 0,
-        "explanation": "Credential injection happens over a Unix-socket mount from the host daemon — the same trust boundary as local daemon mode — so nothing sensitive is ever inside the image or its environment."
+        "explanation": "Credential injection happens over a Unix-socket mount from the host daemon, the same trust boundary as local daemon mode, so nothing sensitive is ever inside the image or its environment."
       },
       {
         "question": "What does --local mode give up?",
@@ -671,7 +671,7 @@
           "The cloud account and the LLM, leaving only a few local slash commands",
           "Only the chat UI",
           "Only the MCP server",
-          "Nothing — it is identical to cloud mode"
+          "Nothing: it is identical to cloud mode"
         ],
         "correctIndex": 0,
         "explanation": "--local is fully offline: no cloud account and no LLM, with just /help, /secrets, /info and /proxy available."
@@ -685,7 +685,7 @@
           "All three require a key"
         ],
         "correctIndex": 0,
-        "explanation": "Token billing is the default and needs no provider key — you enable it for the org and Shroud routes through the Stripe AI Gateway."
+        "explanation": "Token billing is the default and needs no provider key; you enable it for the org and Shroud routes through the Stripe AI Gateway."
       }
     ],
     "concepts": [

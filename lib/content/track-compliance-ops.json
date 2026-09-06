@@ -268,7 +268,7 @@
             "lang": "bash"
           },
           {
-            "text": "Save the plt_ key now — it is shown only once. Use $PLT_KEY as Bearer in later steps.",
+            "text": "Save the plt_ key now: it is shown only once. Use $PLT_KEY as Bearer in later steps.",
             "code": "# Save from the response:\nexport APP_ID=\"paste-app-id-from-response\"\nexport PLT_KEY=\"paste-plt-key-from-response\"",
             "lang": "bash"
           },
@@ -426,7 +426,7 @@
           "When you want a second billing account only"
         ],
         "correctIndex": 0,
-        "explanation": "Sub-orgs partition your own organization. The Platform API is for provisioning on behalf of other people's users — a different problem with a different model."
+        "explanation": "Sub-orgs partition your own organization. The Platform API is for provisioning on behalf of other people's users: a different problem with a different model."
       },
       {
         "question": "What happens when you delete a sub-org?",

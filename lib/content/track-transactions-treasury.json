@@ -30,12 +30,12 @@
             "lang": "bash"
           },
           {
-            "text": "Create an agent with intents_api_enabled and guardrails. Replace 0xRecipient with a real Ethereum address — use the same address in the transaction to field later.",
+            "text": "Create an agent with intents_api_enabled and guardrails. Replace 0xRecipient with a real Ethereum address: use the same address in the transaction to field later.",
             "code": "AGENT_RESPONSE=$(curl -s -X POST \"https://api.1claw.co/v1/agents\" \\\n  -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \\\n  -d '{\n    \"name\": \"DeFi Bot\",\n    \"intents_api_enabled\": true,\n    \"tx_allowed_chains\": [\"sepolia\", \"base\"],\n    \"tx_to_allowlist\": [\"0xRecipient\"],\n    \"tx_max_value_eth\": \"0.01\",\n    \"tx_daily_limit_eth\": \"0.05\"\n  }')\necho \"$AGENT_RESPONSE\"",
             "lang": "bash"
           },
           {
-            "text": "Extract the agent id and api_key from the creation response. The agent id is at .agent.id and the api_key is at the top level. The ocv_ key is shown only once — save it.",
+            "text": "Extract the agent id and api_key from the creation response. The agent id is at .agent.id and the api_key is at the top level. The ocv_ key is shown only once: save it.",
             "code": "export AGENT_ID=$(echo \"$AGENT_RESPONSE\" | jq -r .agent.id)\nexport AGENT_API_KEY=$(echo \"$AGENT_RESPONSE\" | jq -r .api_key)\necho \"AGENT_ID=$AGENT_ID\"\necho \"AGENT_API_KEY=$AGENT_API_KEY\"",
             "lang": "bash"
           },
@@ -377,8 +377,8 @@
             "lang": "bash"
           },
           {
-            "text": "Create a platform app from the dashboard or via API (see Compliance & Operations), then note its slug — that is what both the SDK and the widget identify the app by.",
-            "code": "export ONECLAW_APP_ID=\"your-platform-slug\"",
+            "text": "Create a platform app from the dashboard or via API (see Compliance & Operations), then note its slug; that is what both the SDK and the widget identify the app by.",
+            "code": "export PLATFORM_APP_SLUG=\"your-platform-slug\"",
             "lang": "bash"
           },
           {
@@ -398,11 +398,11 @@
           },
           {
             "text": "Set a spend policy so users cannot move more than you allow.",
-            "code": "const appId = process.env.ONECLAW_APP_ID!;\n\nawait client.platform.createSpendPolicy(appId, {\n  max_value_per_tx_eth: \"0.1\",\n  daily_limit_eth: \"1.0\",\n  allowed_chains: [\"ethereum\", \"base\"],\n});",
+            "code": "const appId = process.env.PLATFORM_APP_SLUG!;\n\nawait client.platform.createSpendPolicy(appId, {\n  max_value_per_tx_eth: \"0.1\",\n  daily_limit_eth: \"1.0\",\n  allowed_chains: [\"ethereum\", \"base\"],\n});",
             "lang": "typescript"
           },
           {
-            "text": "Drop the widget into your app. appId is the platform app slug and is required. features is an object of toggles, not an array, and socialProviders accepts google, apple, or discord — email login goes through the OTP flow above.",
+            "text": "Drop the widget into your app. appId is the platform app slug and is required. features is an object of toggles, not an array, and socialProviders accepts google, apple, or discord: email login goes through the OTP flow above.",
             "code": "import { OneclawEmbeddedWallet } from \"@1claw/wallet-react\";\n\nfunction App() {\n  return (\n    <OneclawEmbeddedWallet\n      appId=\"your-platform-slug\"\n      chains={[\"ethereum\", \"base\"]}\n      features={{ send: true, swap: true, receive: true, buy: true }}\n      socialProviders={[\"google\", \"apple\"]}\n      onLogin={(user) => console.log(user.walletAddress)}\n    />\n  );\n}",
             "lang": "typescript"
           }
@@ -411,7 +411,7 @@
       {
         "type": "callout",
         "variant": "info",
-        "text": "Steps 3–5 show the SDK auth flow (useful for backend or headless apps). Step 7 shows the React widget, which handles auth standalone via social providers. Choose the path that fits your use case."
+        "text": "Steps 3-5 show the SDK auth flow (useful for backend or headless apps). Step 7 shows the React widget, which handles auth standalone via social providers. Choose the path that fits your use case."
       },
       {
         "type": "callout",
@@ -425,7 +425,7 @@
       {
         "type": "callout",
         "variant": "tip",
-        "text": "OneclawEmbeddedWallet is standalone and needs no provider. Reach for OneclawWalletProvider plus the useOneclawWallet hook only when you are building custom wallet UI — it takes apiKey and appId and gives you wallets, balances, send, swap and loginWithEmailOtp to wire up yourself."
+        "text": "OneclawEmbeddedWallet is standalone and needs no provider. Reach for OneclawWalletProvider plus the useOneclawWallet hook only when you are building custom wallet UI; it takes apiKey and appId and gives you wallets, balances, send, swap and loginWithEmailOtp to wire up yourself."
       }
     ],
     "quiz": [
@@ -471,15 +471,15 @@
     "blocks": [
       {
         "type": "prose",
-        "text": "Hard guardrails answer yes or no. Real operations need a middle setting: route this to a human. Graduated HITL (v0.54–0.55) adds approval policies that return 202 awaiting_approval instead of a refusal."
+        "text": "Hard guardrails answer yes or no. Real operations need a middle setting: route this to a human. Graduated HITL (v0.54-0.55) adds approval policies that return 202 awaiting_approval instead of a refusal."
       },
       {
         "type": "points",
         "items": [
-          "tx_approval_policy — matching transactions wait for a human decision.",
-          "typed_data_policy — escalates EIP-712 signing.",
-          "simulation_failure_policy — escalates when a simulation fails rather than blindly proceeding.",
-          "raw_signing_policy — escalates or denies raw digest signing, which bypasses other guardrails."
+          "tx_approval_policy: matching transactions wait for a human decision.",
+          "typed_data_policy: escalates EIP-712 signing.",
+          "simulation_failure_policy: escalates when a simulation fails rather than blindly proceeding.",
+          "raw_signing_policy: escalates or denies raw digest signing, which bypasses other guardrails."
         ]
       },
       {
@@ -587,10 +587,10 @@
       {
         "type": "points",
         "items": [
-          "cards_enabled — the master switch.",
-          "card_max_order_usd and card_daily_limit_usd — enforced atomically over a rolling 24-hour window.",
-          "card_payto_allowlist — which x402 recipients are acceptable.",
-          "card_require_approval — defaults to true, so orders wait for a human."
+          "cards_enabled: the master switch.",
+          "card_max_order_usd and card_daily_limit_usd: enforced atomically over a rolling 24-hour window.",
+          "card_payto_allowlist: which x402 recipients are acceptable.",
+          "card_require_approval: defaults to true, so orders wait for a human."
         ]
       },
       {
@@ -612,7 +612,7 @@
             "lang": "json"
           },
           {
-            "text": "A human approves — in the dashboard, the mobile app, or by one-click email link. Only then does the x402 payment run.",
+            "text": "A human approves: in the dashboard, the mobile app, or by one-click email link. Only then does the x402 payment run.",
             "code": "curl -s -X POST https://api.1claw.co/v1/approvals/$APPROVAL_ID/decide \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -d '{\"decision\":\"approved\"}'",
             "lang": "bash"
           },
@@ -644,7 +644,7 @@
           "At the end of the billing period"
         ],
         "correctIndex": 0,
-        "explanation": "The order returns 202 awaiting_approval and creates a card row in that state. No payment is made until a human approves — rejecting simply marks the card rejected."
+        "explanation": "The order returns 202 awaiting_approval and creates a card row in that state. No payment is made until a human approves: rejecting simply marks the card rejected."
       },
       {
         "question": "Why is the reveal operation deliberately missing from the MCP tool set?",
@@ -663,7 +663,7 @@
           "payTo allowlist, Base network, exact amount, and the pinned USDC contract",
           "Only the amount",
           "Only that the agent has cards_enabled",
-          "Nothing — the provider validates it"
+          "Nothing: the provider validates it"
         ],
         "correctIndex": 0,
         "explanation": "That four-part check on the 402 challenge is the payment security boundary, and it is why a malicious challenge cannot redirect funds elsewhere."
@@ -705,7 +705,7 @@
             "lang": "bash"
           },
           {
-            "text": "Send from a treasury wallet. Non-EVM chains take chain-specific fields — a destination_tag for XRP, a fee rate for Bitcoin, a memo for Solana.",
+            "text": "Send from a treasury wallet. Non-EVM chains take chain-specific fields: a destination_tag for XRP, a fee rate for Bitcoin, a memo for Solana.",
             "code": "curl -s -X POST https://api.1claw.co/v1/treasury/wallets/ethereum/send \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -H \"X-Auth-Confirm: $REAUTH_TOKEN\" \\\n  -d '{\"to\":\"0xabc...\",\"amount\":\"0.01\"}'",
             "lang": "bash"
           },
@@ -734,7 +734,7 @@
       {
         "type": "callout",
         "variant": "tip",
-        "text": "Treasury wallets are human-only — agents get a 403. Swap remains EVM-only, while send now covers all six chains."
+        "text": "Treasury wallets are human-only: agents get a 403. Swap remains EVM-only, while send now covers all six chains."
       }
     ],
     "quiz": [
@@ -794,7 +794,7 @@
         "items": [
           "The partner key (bk_ptr_) is held server-side as BANKR_PARTNER_KEY.",
           "The Vault issues short-lived bk_usr_ keys scoped to a single agent.",
-          "Recommended TTL is 5–15 minutes; the agent default is 15 minutes and the hard maximum is 24 hours.",
+          "Recommended TTL is 5-15 minutes; the agent default is 15 minutes and the hard maximum is 24 hours.",
           "This is preferred over storing a Bankr credential with put_secret."
         ]
       },
@@ -842,7 +842,7 @@
       {
         "question": "Why does an agent's Bankr lease response omit the api_key field?",
         "options": [
-          "So the key never enters the agent's context — Shroud resolves it at request time",
+          "So the key never enters the agent's context: Shroud resolves it at request time",
           "Because the key is not generated yet",
           "Because the agent lacks permission",
           "To reduce response size"
@@ -864,13 +864,13 @@
       {
         "question": "What is the recommended TTL for a leased Bankr key?",
         "options": [
-          "5–15 minutes",
+          "5-15 minutes",
           "24 hours",
           "30 days",
           "Until manually revoked"
         ],
         "correctIndex": 0,
-        "explanation": "5–15 minutes is recommended; the agent default is 15 minutes and 24 hours is the hard maximum, not a target."
+        "explanation": "5-15 minutes is recommended; the agent default is 15 minutes and 24 hours is the hard maximum, not a target."
       }
     ],
     "concepts": [
@@ -888,7 +888,7 @@
     "blocks": [
       {
         "type": "prose",
-        "text": "An agent's default identity on an EVM chain is an externally owned account — one key, one signature, no policy on-chain. Safe agent accounts (v0.56.2) let an agent operate through a Gnosis Safe instead, so guardrails can eventually be enforced by the chain rather than only by the Vault."
+        "text": "An agent's default identity on an EVM chain is an externally owned account: one key, one signature, no policy on-chain. Safe agent accounts (v0.56.2) let an agent operate through a Gnosis Safe instead, so guardrails can eventually be enforced by the chain rather than only by the Vault."
       },
       {
         "type": "prose",
@@ -908,7 +908,7 @@
             "lang": "bash"
           },
           {
-            "text": "Inspect the pinned module registry for the chain — Safe v1.4.1 plus Zodiac. This endpoint is public.",
+            "text": "Inspect the pinned module registry for the chain: Safe v1.4.1 plus Zodiac. This endpoint is public.",
             "code": "curl -s https://api.1claw.co/v1/safe/module-registry/base",
             "lang": "bash"
           },

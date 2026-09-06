@@ -6,7 +6,7 @@
     "blocks": [
       {
         "type": "prose",
-        "text": "A secret is any value whose confidentiality is what makes it useful. An API key, a database password, a private key, a session token. The moment someone else knows it, it stops working as a control — and, crucially, it keeps working as a credential."
+        "text": "A secret is any value whose confidentiality is what makes it useful. An API key, a database password, a private key, a session token. The moment someone else knows it, it stops working as a control. Crucially, it keeps working as a credential."
       },
       {
         "type": "prose",
@@ -15,10 +15,10 @@
       {
         "type": "points",
         "items": [
-          "Confidentiality — only intended parties know the value.",
-          "Integrity — the value has not been altered in transit or at rest.",
-          "Freshness — the value is current, and old copies stop working.",
-          "Attribution — you can tell who used it, and when."
+          "Confidentiality: only intended parties know the value.",
+          "Integrity: the value has not been altered in transit or at rest.",
+          "Freshness: the value is current, and old copies stop working.",
+          "Attribution: you can tell who used it, and when."
         ]
       },
       {
@@ -33,10 +33,10 @@
       {
         "type": "points",
         "items": [
-          "Sprawl — the same key copied into a .env file, a CI variable, a Slack message, and someone's laptop. There is no single place to revoke it.",
-          "Persistence — a key with no expiry stays valid for years, so a copy taken in 2023 still works today.",
-          "Over-scope — a key that can do everything is used for one task, so any leak is a total loss rather than a partial one.",
-          "Observability gaps — nobody can answer 'which service used this key last Tuesday', so a compromise goes unnoticed."
+          "Sprawl: the same key copied into a .env file, a CI variable, a Slack message, and someone's laptop. There is no single place to revoke it.",
+          "Persistence: a key with no expiry stays valid for years, so a copy taken in 2023 still works today.",
+          "Over-scope: a key that can do everything is used for one task, so any leak is a total loss rather than a partial one.",
+          "Observability gaps: nobody can answer 'which service used this key last Tuesday', so a compromise goes unnoticed."
         ]
       },
       {
@@ -59,7 +59,7 @@
           "Leaked credentials trigger automatic alerts"
         ],
         "correctIndex": 0,
-        "explanation": "A leaked credential does not stop being valid — it stops being exclusive. Its use looks like normal authorized traffic, which is exactly why it is hard to detect."
+        "explanation": "A leaked credential does not stop being valid; it stops being exclusive. Its use looks like normal authorized traffic, which is exactly why it is hard to detect."
       },
       {
         "question": "Which of the four leak modes does encryption at rest actually address?",
@@ -75,7 +75,7 @@
       {
         "question": "A key is copied into a .env file, a CI secret, and a teammate's laptop. Which failure mode is this?",
         "options": [
-          "Sprawl — there is no single place to revoke it",
+          "Sprawl: there is no single place to revoke it",
           "Over-scope",
           "Observability gap",
           "Persistence"
@@ -92,7 +92,7 @@
     "blocks": [
       {
         "type": "prose",
-        "text": "Symmetric encryption uses one key to both encrypt and decrypt. It is fast and well understood. The hard part was never the algorithm — it is what you do with the key."
+        "text": "Symmetric encryption uses one key to both encrypt and decrypt. It is fast and well understood. The hard part was never the algorithm; it is what you do with the key."
       },
       {
         "type": "prose",
@@ -105,8 +105,8 @@
       {
         "type": "points",
         "items": [
-          "A data encryption key (DEK) — a fresh symmetric key generated per secret, used to encrypt just that value.",
-          "A key encryption key (KEK) — a long-lived key that encrypts (wraps) each DEK.",
+          "A data encryption key (DEK): a fresh symmetric key generated per secret, used to encrypt just that value.",
+          "A key encryption key (KEK): a long-lived key that encrypts (wraps) each DEK.",
           "Only the wrapped DEK is stored next to the ciphertext. The KEK never touches the data."
         ]
       },
@@ -124,9 +124,9 @@
         "type": "points",
         "items": [
           "Rotating the KEK means re-wrapping small DEKs, not re-encrypting terabytes of data.",
-          "The KEK can live somewhere the application cannot reach — the next lesson's HSM.",
+          "The KEK can live somewhere the application cannot reach: the next lesson's HSM.",
           "A leaked DEK exposes exactly one secret, because every secret has its own.",
-          "Deleting a wrapped DEK makes its ciphertext permanently unreadable — cryptographic erasure without touching the data."
+          "Deleting a wrapped DEK makes its ciphertext permanently unreadable: cryptographic erasure without touching the data."
         ]
       },
       {
@@ -137,7 +137,7 @@
       {
         "type": "callout",
         "variant": "warn",
-        "text": "Envelope encryption does not protect a secret from someone who can legitimately ask the system to decrypt it. It protects the data at rest. Authorization is a separate control — that is why access-control models get their own lesson."
+        "text": "Envelope encryption does not protect a secret from someone who can legitimately ask the system to decrypt it. It protects the data at rest. Authorization is a separate control; that is why access-control models get their own lesson."
       }
     ],
     "quiz": [
@@ -155,7 +155,7 @@
       {
         "question": "What is the effect of deleting a wrapped DEK while keeping the ciphertext?",
         "options": [
-          "The ciphertext becomes permanently unreadable — cryptographic erasure",
+          "The ciphertext becomes permanently unreadable: cryptographic erasure",
           "Nothing, the KEK can still decrypt it",
           "The ciphertext is automatically deleted too",
           "The DEK is regenerated on next read"
@@ -168,7 +168,7 @@
         "options": [
           "Exactly one secret, because each secret has its own DEK",
           "Every secret under the same KEK",
-          "Nothing — DEKs are not sensitive",
+          "Nothing: DEKs are not sensitive",
           "The KEK as well"
         ],
         "correctIndex": 0,
@@ -188,8 +188,8 @@
       {
         "type": "points",
         "items": [
-          "Encrypt with the public key, decrypt with the private key — that gives confidentiality to the holder.",
-          "Sign with the private key, verify with the public key — that gives authenticity and integrity to everyone."
+          "Encrypt with the public key, decrypt with the private key; that gives confidentiality to the holder.",
+          "Sign with the private key, verify with the public key; that gives authenticity and integrity to everyone."
         ]
       },
       {
@@ -204,9 +204,9 @@
       {
         "type": "points",
         "items": [
-          "secp256k1 (ECDSA) — the curve used by Ethereum and Bitcoin.",
-          "Ed25519 (EdDSA) — faster, with fewer implementation traps; used by Solana, XRP, Cardano, and SSH.",
-          "RSA — older and larger, still ubiquitous in enterprise and OIDC because everything can verify it."
+          "secp256k1 (ECDSA): the curve used by Ethereum and Bitcoin.",
+          "Ed25519 (EdDSA): faster, with fewer implementation traps; used by Solana, XRP, Cardano, and SSH.",
+          "RSA: older and larger, still ubiquitous in enterprise and OIDC because everything can verify it."
         ]
       },
       {
@@ -216,7 +216,7 @@
       },
       {
         "type": "prose",
-        "text": "Two properties follow that matter enormously later. Non-repudiation: a valid signature means the private key was used, so the holder cannot plausibly deny it. And verification needs no secret at all — anyone with the public key can check, which is what makes federated trust possible without shared credentials."
+        "text": "Two properties follow that matter enormously later. Non-repudiation: a valid signature means the private key was used, so the holder cannot plausibly deny it. And verification needs no secret at all: anyone with the public key can check, which is what makes federated trust possible without shared credentials."
       }
     ],
     "quiz": [
@@ -229,7 +229,7 @@
           "Protection against replay"
         ],
         "correctIndex": 0,
-        "explanation": "Signatures give authenticity and integrity. They deliberately do not hide the message — encryption is the separate tool for confidentiality."
+        "explanation": "Signatures give authenticity and integrity. They deliberately do not hide the message; encryption is the separate tool for confidentiality."
       },
       {
         "question": "Why is a signature computed over a hash rather than the whole message?",
@@ -271,20 +271,20 @@
       {
         "type": "callout",
         "variant": "tip",
-        "text": "This changes what an attacker gets. Compromise an application server holding a key file and they take the key — permanently, silently, and they can use it anywhere. Compromise a server that can call an HSM and they can use the key while they hold that access, but they cannot take it with them, and every use is logged."
+        "text": "This changes what an attacker gets. Compromise an application server holding a key file and they take the key: permanently, silently, and they can use it anywhere. Compromise a server that can call an HSM and they can use the key while they hold that access, but they cannot take it with them, and every use is logged."
       },
       {
         "type": "points",
         "items": [
-          "Generation — the key is created inside the boundary and never exists outside it.",
-          "Use — sign, verify, wrap, unwrap are performed on the device.",
-          "Attestation — the device can prove a key was generated in hardware.",
-          "Audit — every operation is recorded, so use is observable even when authorized."
+          "Generation: the key is created inside the boundary and never exists outside it.",
+          "Use: sign, verify, wrap, unwrap are performed on the device.",
+          "Attestation: the device can prove a key was generated in hardware.",
+          "Audit: every operation is recorded, so use is observable even when authorized."
         ]
       },
       {
         "type": "prose",
-        "text": "A KMS is the managed service wrapper around this: an API for creating keys, defining who may use them for what, and rotating them, with the private material staying inside a hardware boundary. Key versions matter — rotating creates a new version while old versions remain available for decrypting old data."
+        "text": "A KMS is the managed service wrapper around this: an API for creating keys, defining who may use them for what, and rotating them, with the private material staying inside a hardware boundary. Key versions matter: rotating creates a new version while old versions remain available for decrypting old data."
       },
       {
         "type": "callout",
@@ -325,7 +325,7 @@
           "The KEK",
           "The DEK",
           "Both, equally",
-          "Neither — the HSM holds ciphertext"
+          "Neither: the HSM holds ciphertext"
         ],
         "correctIndex": 0,
         "explanation": "The KEK is the long-lived root that never leaves hardware. DEKs are generated per secret and stored wrapped by it."
@@ -343,24 +343,24 @@
       },
       {
         "type": "prose",
-        "text": "A JSON Web Token is a signed, base64-encoded set of claims. Signed, not encrypted — anyone holding it can read the payload. That single fact is the source of a lot of accidental disclosure."
+        "text": "A JSON Web Token is a signed, base64-encoded set of claims. Signed, not encrypted: anyone holding it can read the payload. That single fact is the source of a lot of accidental disclosure."
       },
       {
         "type": "code",
         "code": "{\n  \"iss\": \"https://issuer.example.com\",  // who minted this\n  \"sub\": \"agent_01H...\",                // who it is about\n  \"aud\": \"https://api.example.com\",     // who it is FOR\n  \"exp\": 1767225600,                    // when it dies\n  \"iat\": 1767224700,\n  \"scope\": \"secrets:read\"               // what it permits\n}",
         "lang": "json",
-        "caption": "A JWT payload. Readable by anyone holding the token — never put a secret in one."
+        "caption": "A JWT payload. Readable by anyone holding the token: never put a secret in one."
       },
       {
         "type": "callout",
         "variant": "warn",
-        "text": "Always validate iss, aud, and exp. A token that is cryptographically valid but was minted for a different audience is a confused-deputy attack waiting to happen — and it will pass a naive signature check."
+        "text": "Always validate iss, aud, and exp. A token that is cryptographically valid but was minted for a different audience is a confused-deputy attack waiting to happen, and it will pass a naive signature check."
       },
       {
         "type": "points",
         "items": [
-          "OAuth2 is an authorization framework — it issues access tokens that say what a bearer may do.",
-          "OIDC is a thin identity layer on top of OAuth2 — it adds an id_token that says who the user is.",
+          "OAuth2 is an authorization framework: it issues access tokens that say what a bearer may do.",
+          "OIDC is a thin identity layer on top of OAuth2; it adds an id_token that says who the user is.",
           "A bearer token means exactly what it sounds like: whoever holds it can use it. There is no binding to the holder unless you add one."
         ]
       },
@@ -371,14 +371,14 @@
       {
         "type": "callout",
         "variant": "tip",
-        "text": "JWKS — a published set of public keys — lets any party verify a token without holding a shared secret. Each key has a kid so the verifier knows which one to use, and keys can rotate without coordinating with every consumer."
+        "text": "JWKS, a published set of public keys, lets any party verify a token without holding a shared secret. Each key has a kid so the verifier knows which one to use, and keys can rotate without coordinating with every consumer."
       }
     ],
     "quiz": [
       {
         "question": "Is the payload of a signed JWT confidential?",
         "options": [
-          "No — it is base64-encoded and readable by anyone holding the token",
+          "No: it is base64-encoded and readable by anyone holding the token",
           "Yes, the signature encrypts it",
           "Only the claims marked private",
           "Yes, if the algorithm is RS256"
@@ -422,9 +422,9 @@
       {
         "type": "points",
         "items": [
-          "ACL — a list attached to a resource saying who may touch it. Simple, and it sprawls badly.",
-          "RBAC — permissions attach to roles, identities get roles. Scales with people; struggles with context.",
-          "ABAC — decisions consider attributes of the principal, the resource, the action, and the environment. Expressive enough for 'only during business hours, from this network, on non-production data'."
+          "ACL: a list attached to a resource saying who may touch it. Simple, and it sprawls badly.",
+          "RBAC: permissions attach to roles, identities get roles. Scales with people; struggles with context.",
+          "ABAC: decisions consider attributes of the principal, the resource, the action, and the environment. Expressive enough for 'only during business hours, from this network, on non-production data'."
         ]
       },
       {
@@ -434,7 +434,7 @@
       {
         "type": "callout",
         "variant": "warn",
-        "text": "Deny-by-default is the single most important choice in this lesson. An allowlist fails closed — a rule you forgot means access is refused. A denylist fails open — a case you did not anticipate means access is granted. Only one of those failure modes is survivable."
+        "text": "Deny-by-default is the single most important choice in this lesson. An allowlist fails closed: a rule you forgot means access is refused. A denylist fails open: a case you did not anticipate means access is granted. Only one of those failure modes is survivable."
       },
       {
         "type": "prose",
@@ -443,8 +443,8 @@
       {
         "type": "points",
         "items": [
-          "Deny always wins — simple and predictable, but you cannot carve an exception out of a deny.",
-          "Explicit priority — each rule carries a number and the highest wins, which is more flexible and demands more care."
+          "Deny always wins: simple and predictable, but you cannot carve an exception out of a deny.",
+          "Explicit priority: each rule carries a number and the highest wins, which is more flexible and demands more care."
         ]
       },
       {
@@ -489,14 +489,14 @@
           "It allows denylists to be used safely"
         ],
         "correctIndex": 0,
-        "explanation": "Separating them lets you evaluate policies against real or historical inputs without those decisions affecting live traffic — which is exactly what shadow mode does."
+        "explanation": "Separating them lets you evaluate policies against real or historical inputs without those decisions affecting live traffic, which is exactly what shadow mode does."
       }
     ]
   },
   {
     "id": "threshold-cryptography",
     "title": "Threshold cryptography: Shamir and MPC",
-    "summary": "Split trust so that no single party — including your own provider — ever holds a complete key.",
+    "summary": "Split trust so that no single party, including your own provider, ever holds a complete key.",
     "blocks": [
       {
         "type": "prose",
@@ -504,20 +504,20 @@
       },
       {
         "type": "prose",
-        "text": "Shamir's Secret Sharing splits a secret into n shares such that any t of them reconstruct it, and any t-1 reveal nothing at all. Not 'less information' — mathematically nothing."
+        "text": "Shamir's Secret Sharing splits a secret into n shares such that any t of them reconstruct it, and any t-1 reveal nothing at all. Not 'less information': mathematically nothing."
       },
       {
         "type": "points",
         "items": [
-          "2-of-2 — both shares required. Maximum control, no fault tolerance.",
-          "2-of-3 — any two of three. Survives losing one share, still tolerates one compromise.",
+          "2-of-2: both shares required. Maximum control, no fault tolerance.",
+          "2-of-3: any two of three. Survives losing one share, still tolerates one compromise.",
           "The threshold t is the real security parameter; n only buys availability."
         ]
       },
       {
         "type": "callout",
         "variant": "tip",
-        "text": "A t-1 set of Shamir shares leaks nothing. This is information-theoretic, not computational — it does not weaken as computers get faster."
+        "text": "A t-1 set of Shamir shares leaks nothing. This is information-theoretic, not computational; it does not weaken as computers get faster."
       },
       {
         "type": "prose",
@@ -530,8 +530,8 @@
       {
         "type": "points",
         "items": [
-          "Split across providers — shares held by different HSM vendors, so no single vendor can act alone.",
-          "Client custody — one share held by you, so the provider mathematically cannot act without you."
+          "Split across providers: shares held by different HSM vendors, so no single vendor can act alone.",
+          "Client custody: one share held by you, so the provider mathematically cannot act without you."
         ]
       },
       {
@@ -544,7 +544,7 @@
       {
         "question": "What do t-1 Shamir shares reveal about the secret?",
         "options": [
-          "Nothing at all — the guarantee is information-theoretic",
+          "Nothing at all: the guarantee is information-theoretic",
           "A partial reconstruction",
           "The length of the secret",
           "Enough to brute force it"
@@ -566,7 +566,7 @@
       {
         "question": "In a 2-of-3 split, what does n = 3 buy you?",
         "options": [
-          "Availability — you can lose one share and still operate",
+          "Availability: you can lose one share and still operate",
           "Higher security than 2-of-2",
           "A lower threshold",
           "Faster reconstruction"
@@ -583,11 +583,11 @@
     "blocks": [
       {
         "type": "prose",
-        "text": "Encryption at rest protects stored data. TLS protects data in transit. Both leave a gap: while a program runs, its data sits in memory in the clear, readable by anyone with sufficient privilege on that machine — including the operator."
+        "text": "Encryption at rest protects stored data. TLS protects data in transit. Both leave a gap: while a program runs, its data sits in memory in the clear, readable by anyone with sufficient privilege on that machine: including the operator."
       },
       {
         "type": "prose",
-        "text": "A Trusted Execution Environment closes that gap with hardware. Memory is encrypted by the CPU, and code outside the enclave — the host OS, the hypervisor, the cloud provider's administrators — cannot read it."
+        "text": "A Trusted Execution Environment closes that gap with hardware. Memory is encrypted by the CPU, and code outside the enclave (the host OS, the hypervisor, the cloud provider's administrators) cannot read it."
       },
       {
         "type": "points",
@@ -604,7 +604,7 @@
       {
         "type": "callout",
         "variant": "warn",
-        "text": "Attestation proves which code is running. It does not prove that code is correct. A faithfully attested enclave running a flawed program is exactly as flawed — measured, verified, and wrong."
+        "text": "Attestation proves which code is running. It does not prove that code is correct. A faithfully attested enclave running a flawed program is exactly as flawed: measured, verified, and wrong."
       },
       {
         "type": "prose",
@@ -613,14 +613,14 @@
       {
         "type": "callout",
         "variant": "tip",
-        "text": "TEEs have a real research literature of side-channel attacks — timing, cache, speculative execution. They raise the bar substantially rather than being unconditionally impenetrable. Treat them as a strong layer, not a guarantee."
+        "text": "TEEs have a real research literature of side-channel attacks: timing, cache, speculative execution. They raise the bar substantially rather than being unconditionally impenetrable. Treat them as a strong layer, not a guarantee."
       }
     ],
     "quiz": [
       {
         "question": "Which gap does a TEE close that encryption at rest and TLS do not?",
         "options": [
-          "Data in use — while it sits in memory during execution",
+          "Data in use: while it sits in memory during execution",
           "Data at rest on disk",
           "Data in transit over the network",
           "Data in backups"
@@ -637,7 +637,7 @@
           "That the operator is trustworthy"
         ],
         "correctIndex": 0,
-        "explanation": "Attestation is a hardware-signed measurement of what was loaded. It says nothing about whether that code is correct — a faithfully attested buggy program is still buggy."
+        "explanation": "Attestation is a hardware-signed measurement of what was loaded. It says nothing about whether that code is correct: a faithfully attested buggy program is still buggy."
       },
       {
         "question": "Why is a TEE a good location for a traffic inspection proxy?",
@@ -659,7 +659,7 @@
     "blocks": [
       {
         "type": "prose",
-        "text": "The perimeter model assumed a trusted inside and a hostile outside. It fails because it grants broad implicit trust to anything that gets in — and something always gets in."
+        "text": "The perimeter model assumed a trusted inside and a hostile outside. It fails because it grants broad implicit trust to anything that gets in, and something always gets in."
       },
       {
         "type": "prose",
@@ -668,9 +668,9 @@
       {
         "type": "points",
         "items": [
-          "Never trust, always verify — every request is authenticated and authorized on its own merits, regardless of origin.",
-          "Assume breach — design so that a compromised component yields as little as possible.",
-          "Least privilege — every principal gets the narrowest grant that lets it do its job, for the shortest time."
+          "Never trust, always verify: every request is authenticated and authorized on its own merits, regardless of origin.",
+          "Assume breach: design so that a compromised component yields as little as possible.",
+          "Least privilege: every principal gets the narrowest grant that lets it do its job, for the shortest time."
         ]
       },
       {
@@ -680,15 +680,15 @@
       {
         "type": "points",
         "items": [
-          "Scope — which resources, expressed as narrowly as the system allows.",
-          "Permission — read versus write; most principals need far less write access than they are given.",
-          "Time — how long the grant lasts. A permanent grant is a standing invitation."
+          "Scope: which resources, expressed as narrowly as the system allows.",
+          "Permission: read versus write; most principals need far less write access than they are given.",
+          "Time: how long the grant lasts. A permanent grant is a standing invitation."
         ]
       },
       {
         "type": "callout",
         "variant": "tip",
-        "text": "Blast radius is the question to keep asking. Not 'can this be compromised' — assume it can — but 'what exactly does the attacker get when it is'. If the honest answer is 'everything', the design is wrong regardless of how good the controls are."
+        "text": "Blast radius is the question to keep asking. Not 'can this be compromised' (assume it can) but 'what exactly does the attacker get when it is'. If the honest answer is 'everything', the design is wrong regardless of how good the controls are."
       },
       {
         "type": "prose",
@@ -697,7 +697,7 @@
       {
         "type": "callout",
         "variant": "warn",
-        "text": "That architecture was designed for services and humans. The next track examines what happens when the principal is a language model that can be talked into things — and which of these assumptions survive contact with that."
+        "text": "That architecture was designed for services and humans. The next track examines what happens when the principal is a language model that can be talked into things, and which of these assumptions survive contact with that."
       }
     ],
     "quiz": [
@@ -715,7 +715,7 @@
       {
         "question": "Which dimension of least privilege is most often overlooked?",
         "options": [
-          "Time — grants that never expire",
+          "Time: grants that never expire",
           "Scope",
           "Permission",
           "Identity"

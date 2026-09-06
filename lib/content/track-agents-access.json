@@ -168,9 +168,9 @@
       {
         "type": "points",
         "items": [
-          "effect — \"allow\" or \"deny\". A deny rule lets you punch a hole in a broad allow.",
-          "priority — an integer; higher wins when two policies both match the same path.",
-          "attribute_conditions — JSONB for fine-grained matching beyond path, IP, and time."
+          "effect: \"allow\" or \"deny\". A deny rule lets you punch a hole in a broad allow.",
+          "priority: an integer; higher wins when two policies both match the same path.",
+          "attribute_conditions: JSONB for fine-grained matching beyond path, IP, and time."
         ]
       },
       {
@@ -196,7 +196,7 @@
       {
         "type": "callout",
         "variant": "warn",
-        "text": "Priority decides overlaps, not effect. A deny rule does not automatically beat an allow — give it the higher priority, or the broad allow may win."
+        "text": "Priority decides overlaps, not effect. A deny rule does not automatically beat an allow: give it the higher priority, or the broad allow may win."
       }
     ],
     "quiz": [
@@ -217,7 +217,7 @@
           "Exactly one segment",
           "Zero or more segments at any depth",
           "Only the vault root",
-          "Nothing, it is a literal"
+          "Nothing: it is a literal"
         ],
         "correctIndex": 1,
         "explanation": "* matches one segment while ** matches zero or more segments (any depth)."
@@ -242,7 +242,7 @@
           "Both policies are ignored"
         ],
         "correctIndex": 0,
-        "explanation": "Priority resolves the overlap, and 10 beats 5. Deny does not win automatically — the deny rule needs the higher priority number to take effect."
+        "explanation": "Priority resolves the overlap, and 10 beats 5. Deny does not win automatically: the deny rule needs the higher priority number to take effect."
       }
     ],
     "concepts": [
@@ -260,13 +260,13 @@
     "blocks": [
       {
         "type": "prose",
-        "text": "Path patterns and conditions cover most access control. When rules get genuinely complex — cross-resource logic, org-specific data lookups — 1Claw supports two declarative policy backends alongside the built-in engine."
+        "text": "Path patterns and conditions cover most access control. When rules get genuinely complex (cross-resource logic, org-specific data lookups), 1Claw supports two declarative policy backends alongside the built-in engine."
       },
       {
         "type": "points",
         "items": [
-          "Cedar (Team tier and above) — AWS's authorization language. Principal, action, resource, context.",
-          "OPA (Business tier and above) — Open Policy Agent, using Rego and custom data documents.",
+          "Cedar (Team tier and above): AWS's authorization language. Principal, action, resource, context.",
+          "OPA (Business tier and above): Open Policy Agent, using Rego and custom data documents.",
           "Both are additive. The built-in policy engine still runs; these express rules it cannot."
         ]
       },
@@ -321,7 +321,7 @@
       {
         "question": "How do Cedar and OPA policies relate to the built-in policy engine?",
         "options": [
-          "They are additive — the built-in engine still runs",
+          "They are additive: the built-in engine still runs",
           "They replace the built-in engine entirely",
           "They only apply to human users",
           "They only apply to on-chain signing"
@@ -356,7 +356,7 @@
     "blocks": [
       {
         "type": "prose",
-        "text": "This creates a new agent via self-enrollment — a different bootstrap path from Lesson 1's human-initiated registration. Sometimes the agent boots before anyone has provisioned it. The enroll endpoint is public, so an agent can request its own identity and wait for a human to approve. The API key is emailed to the human after approval and never returned to the agent."
+        "text": "This creates a new agent via self-enrollment: a different bootstrap path from Lesson 1's human-initiated registration. Sometimes the agent boots before anyone has provisioned it. The enroll endpoint is public, so an agent can request its own identity and wait for a human to approve. The API key is emailed to the human after approval and never returned to the agent."
       },
       {
         "type": "callout",
@@ -451,18 +451,18 @@
     "blocks": [
       {
         "type": "prose",
-        "text": "The 1Claw MCP server gives an AI client just-in-time access to vault secrets over the Model Context Protocol. It exposes 141 tools (vault, Intents signing, Execution Intents bindings, treasury, approvals, automations, runtimes, memory, chat, channels, Cedar/OPA policy backends, and Safe agent accounts). The canonical setup is local stdio — `npx @1claw/mcp` with a single ONECLAW_AGENT_API_KEY env var; the server exchanges it for a JWT, refreshes before expiry, and auto-discovers the agent and vault. The MCP server itself enforces nothing: every call is checked against the agent's policies by the vault API."
+        "text": "The 1Claw MCP server gives an AI client just-in-time access to vault secrets over the Model Context Protocol. It exposes 141 tools (vault, Intents signing, Execution Intents bindings, treasury, approvals, automations, runtimes, memory, chat, channels, Cedar/OPA policy backends, and Safe agent accounts). The canonical setup is local stdio: `npx @1claw/mcp` with a single ONECLAW_AGENT_API_KEY env var; the server exchanges it for a JWT, refreshes before expiry, and auto-discovers the agent and vault. The MCP server itself enforces nothing: every call is checked against the agent's policies by the vault API."
       },
       {
         "type": "callout",
         "variant": "warn",
-        "text": "Requires: 1Claw account, a vault with secrets, an agent, and a read policy (see Lessons 1–2)."
+        "text": "Requires: 1Claw account, a vault with secrets, an agent, and a read policy (see Lessons 1-2)."
       },
       {
         "type": "steps",
         "steps": [
           {
-            "text": "Recommended: local stdio. Run the server as a process and pass only the agent API key. It exchanges the key for a JWT, auto-refreshes it, and auto-discovers the agent and vault — no agent_id, no vault ID, no manual token minting. Paste this into .cursor/mcp.json, claude_desktop_config.json, or any MCP client that supports stdio.",
+            "text": "Recommended: local stdio. Run the server as a process and pass only the agent API key. It exchanges the key for a JWT, auto-refreshes it, and auto-discovers the agent and vault: no agent_id, no vault ID, no manual token minting. Paste this into .cursor/mcp.json, claude_desktop_config.json, or any MCP client that supports stdio.",
             "code": "{\n  \"mcpServers\": {\n    \"1claw\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@1claw/mcp\"],\n      \"env\": { \"ONECLAW_AGENT_API_KEY\": \"ocv_your_agent_api_key\" }\n    }\n  }\n}",
             "lang": "json"
           },
@@ -486,7 +486,7 @@
       {
         "type": "callout",
         "variant": "warn",
-        "text": "Do not point an IDE at the hosted https://mcp.1claw.co/mcp URL with a static Bearer token. Agent JWTs expire in about 15 minutes by default, so the connection dies mid-session and the client will not re-mint it. Use the stdio server for Cursor, Claude Desktop, VS Code, and Claude Code — it refreshes the token for you."
+        "text": "Do not point an IDE at the hosted https://mcp.1claw.co/mcp URL with a static Bearer token. Agent JWTs expire in about 15 minutes by default, so the connection dies mid-session and the client will not re-mint it. Use the stdio server for Cursor, Claude Desktop, VS Code, and Claude Code; it refreshes the token for you."
       },
       {
         "type": "callout",
@@ -553,7 +553,7 @@
       {
         "type": "points",
         "items": [
-          "The agent sends an intent — method, path, body — not a key.",
+          "The agent sends an intent (method, path, body), not a key.",
           "1Claw injects the credential, applies host and path allowlists, and makes the request.",
           "The response comes back to the agent. The secret was never in its context window.",
           "Revoking a binding cuts access instantly, with no secret to rotate."
@@ -583,7 +583,7 @@
             "lang": "bash"
           },
           {
-            "text": "Execute through it. This is what the agent calls — note there is no credential anywhere in the request.",
+            "text": "Execute through it. This is what the agent calls: note there is no credential anywhere in the request.",
             "code": "curl -s -X POST https://api.1claw.co/v1/agents/$AGENT_ID/execute \\\n  -H \"Authorization: Bearer $AGENT_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{ \"binding\": \"stripe-api\", \"intent_type\": \"http\", \"params\": { \"method\": \"GET\", \"path\": \"/v1/balance\" } }'",
             "lang": "bash"
           },
@@ -664,7 +664,7 @@
       },
       {
         "type": "prose",
-        "text": "Setting recipient_type to \"creator\" solves this. The API resolves the recipient from the agent's own created_by field — no email, no user ID, nothing the agent could get wrong or leak."
+        "text": "Setting recipient_type to \"creator\" solves this. The API resolves the recipient from the agent's own created_by field: no email, no user ID, nothing the agent could get wrong or leak."
       },
       {
         "type": "callout",
@@ -741,16 +741,16 @@
     "blocks": [
       {
         "type": "prose",
-        "text": "Agents can delegate tasks to other agents. The authorization for that is never something the agents arrange between themselves — a human creates an explicit delegation record, and agents cannot create, modify, or revoke their own (403)."
+        "text": "Agents can delegate tasks to other agents. The authorization for that is never something the agents arrange between themselves: a human creates an explicit delegation record, and agents cannot create, modify, or revoke their own (403)."
       },
       {
         "type": "points",
         "items": [
-          "allowed_tools / blocked_tools — exactly which tools the delegate may use.",
-          "max_daily_delegations — a rate limit counted from real invocations.",
-          "max_depth (1–10) — stops recursive chains of agents calling agents.",
-          "delegation_mode — caller (delegate uses its own credentials, the default), target (uses the target agent's config), or both.",
-          "expires_at — delegations can be temporary."
+          "allowed_tools / blocked_tools: exactly which tools the delegate may use.",
+          "max_daily_delegations: a rate limit counted from real invocations.",
+          "max_depth (1-10): stops recursive chains of agents calling agents.",
+          "delegation_mode: caller (delegate uses its own credentials, the default), target (uses the target agent's config), or both.",
+          "expires_at: delegations can be temporary."
         ]
       },
       {
@@ -786,14 +786,14 @@
       {
         "type": "callout",
         "variant": "tip",
-        "text": "Every delegation emits audit events: agent.delegation.created, .updated, .revoked, .invoked, and .blocked. A blocked event is the one to alert on — it means an agent tried something outside its grant."
+        "text": "Every delegation emits audit events: agent.delegation.created, .updated, .revoked, .invoked, and .blocked. A blocked event is the one to alert on; it means an agent tried something outside its grant."
       }
     ],
     "quiz": [
       {
         "question": "Who can create a delegation between two agents?",
         "options": [
-          "A human — agents get a 403 creating their own",
+          "A human: agents get a 403 creating their own",
           "Either agent involved",
           "The delegating agent only",
           "Any agent in the org"
@@ -810,7 +810,7 @@
           "Cross-organization delegation"
         ],
         "correctIndex": 0,
-        "explanation": "Depth is tracked with the X-Delegation-Depth header and capped at max_depth (1–10), which stops A→B→C→… chains from running away."
+        "explanation": "Depth is tracked with the X-Delegation-Depth header and capped at max_depth (1-10), which stops A→B→C→… chains from running away."
       },
       {
         "question": "In the default \"caller\" delegation mode, whose credentials does the delegate use?",
@@ -839,7 +839,7 @@
     "blocks": [
       {
         "type": "prose",
-        "text": "Agent Discovery turns a private agent into something other agents can find. An agent card advertises what it does, which protocols it speaks, and where to reach it — A2A URL, MCP endpoint, categories, and pricing."
+        "text": "Agent Discovery turns a private agent into something other agents can find. An agent card advertises what it does, which protocols it speaks, and where to reach it: A2A URL, MCP endpoint, categories, and pricing."
       },
       {
         "type": "callout",
@@ -855,7 +855,7 @@
             "lang": "bash"
           },
           {
-            "text": "Fetch the public card. No auth needed — this is what other agents read.",
+            "text": "Fetch the public card. No auth needed; this is what other agents read.",
             "code": "curl -s https://api.1claw.co/v1/agents/$AGENT_ID/card",
             "lang": "bash"
           },
@@ -878,14 +878,14 @@
       {
         "type": "callout",
         "variant": "tip",
-        "text": "The directory and card endpoints are unauthenticated by design. Publish only what you would put on a public web page — the card is not a place for internal detail."
+        "text": "The directory and card endpoints are unauthenticated by design. Publish only what you would put on a public web page; the card is not a place for internal detail."
       }
     ],
     "quiz": [
       {
         "question": "Can an agent publish itself to the public directory?",
         "options": [
-          "No — updating discovery settings is human-only",
+          "No: updating discovery settings is human-only",
           "Yes, with its own token",
           "Yes, if it has the discovery scope",
           "Only if it is Business tier"
@@ -899,7 +899,7 @@
           "The directory search and the agent card",
           "Only the directory search",
           "Only the agent card",
-          "Neither — both need an agent JWT"
+          "Neither: both need an agent JWT"
         ],
         "correctIndex": 0,
         "explanation": "GET /v1/agents/directory and GET /v1/agents/{id}/card are both public, which is what lets other agents discover peers before any trust exists."
@@ -907,7 +907,7 @@
       {
         "question": "Discovering an agent in the directory means you can delegate work to it.",
         "options": [
-          "False — delegation still needs a human-authored delegation record",
+          "False: delegation still needs a human-authored delegation record",
           "True, discovery implies permission",
           "True, if both agents are in the same org",
           "True, if the card lists the tool"
