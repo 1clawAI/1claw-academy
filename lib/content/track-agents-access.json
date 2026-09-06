@@ -1268,6 +1268,7 @@
         "correctIndex": 1,
         "explanation": "A hard cap refuses and the work stops. An approval policy routes the transaction to the operations lead, satisfying the attribution requirement without breaking the business case."
       }
-    ]
+    ],
+    "kind": "capstone"
   }
 ]

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { tracks, totalLessons } from "@/lib/curriculum";
 import { useProgress } from "@/lib/progress";
 import { Icon, type IconName } from "./Icon";
+import { KindBadge } from "./KindBadge";
 
 export function CurriculumView() {
   const { isDone, ready, trackPercent, completedCount, percent, reset } =
@@ -109,11 +110,12 @@ export function CurriculumView() {
                           {done ? <Icon name="check" size={13} /> : li + 1}
                         </span>
                         <span
-                          className={`flex-1 text-sm ${
+                          className={`flex flex-1 items-center gap-2 text-sm ${
                             done ? "text-[var(--muted)]" : "font-medium"
                           }`}
                         >
                           {l.title}
+                          <KindBadge kind={l.kind} size="sm" />
                         </span>
                         <span className="hidden text-xs text-[var(--muted)] sm:block">
                           {l.quiz.length} Q

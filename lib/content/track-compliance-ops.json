@@ -732,6 +732,7 @@
         "correctIndex": 1,
         "explanation": "No design prevents a person from leaking a credential. The measure of the architecture is what an attacker gets when one inevitably leaks."
       }
-    ]
+    ],
+    "kind": "capstone"
   }
 ]

@@ -5,6 +5,7 @@ import { Clock, Target } from "lucide-react";
 import type { Track } from "@/lib/types";
 import { useProgress } from "@/lib/progress";
 import { Icon, type IconName } from "./Icon";
+import { KindBadge } from "./KindBadge";
 import { readingMinutes } from "@/lib/reading";
 
 export function TrackView({
@@ -115,7 +116,10 @@ export function TrackView({
                   {done ? <Icon name="check" size={13} /> : i + 1}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium">{l.title}</span>
+                  <span className="flex items-center gap-2 text-sm font-medium">
+                    {l.title}
+                    <KindBadge kind={l.kind} size="sm" />
+                  </span>
                   <span className="mt-0.5 block text-xs leading-relaxed text-[var(--muted)]">
                     {l.summary}
                   </span>

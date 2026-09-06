@@ -289,7 +289,8 @@
         "correctIndex": 1,
         "explanation": "An IV needs to be unique, not confidential. It is stored alongside the ciphertext by design, but it is required for decryption, so losing it destroys the data as surely as losing the key."
       }
-    ]
+    ],
+    "kind": "lab"
   },
   {
     "id": "public-key-crypto",
@@ -369,6 +370,107 @@
         "explanation": "If you cannot reconstruct what produced the hash, you have no idea what you authorized. This is the root of a whole class of wallet-drain attacks."
       }
     ]
+  },
+  {
+    "id": "lab-sign-and-tamper",
+    "title": "Lab: sign, verify, then tamper",
+    "summary": "Generate an Ed25519 keypair, sign a message, verify it with the public key alone, and watch one changed character destroy the signature.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The previous lesson claimed that a signature proves authorship and detects modification, and that verification needs no secret. Three minutes of openssl turns all three claims into things you have seen."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Make a scratch directory and generate an Ed25519 private key.",
+            "code": "mkdir -p /tmp/siglab && cd /tmp/siglab\nopenssl genpkey -algorithm ed25519 -out private.pem",
+            "lang": "bash"
+          },
+          {
+            "text": "Derive the public key. This is the half you hand out, and it cannot be used to sign.",
+            "code": "openssl pkey -in private.pem -pubout -out public.pem\ncat public.pem",
+            "lang": "bash"
+          },
+          {
+            "text": "Write a message worth being careful about, and sign it with the private key.",
+            "code": "printf 'transfer 10 ETH to 0xAlice' > msg.txt\nopenssl pkeyutl -sign -inkey private.pem -rawin -in msg.txt -out msg.sig\nwc -c < msg.sig   # 64 bytes, regardless of message length",
+            "lang": "bash"
+          },
+          {
+            "text": "Verify using only the public key. Note what you did not need: the private key, a shared secret, or a call to anyone.",
+            "code": "openssl pkeyutl -verify -pubin -inkey public.pem -rawin -in msg.txt -sigfile msg.sig\n# -> Signature Verified Successfully",
+            "lang": "bash"
+          },
+          {
+            "text": "Now tamper. Change the recipient and check the original signature against it.",
+            "code": "printf 'transfer 10 ETH to 0xMallory' > tampered.txt\nopenssl pkeyutl -verify -pubin -inkey public.pem -rawin -in tampered.txt -sigfile msg.sig\n# -> Signature Verification Failure",
+            "lang": "bash"
+          },
+          {
+            "text": "Confirm the message was never hidden. The signature protects it; it does not conceal it.",
+            "code": "cat msg.txt\n# -> transfer 10 ETH to 0xAlice",
+            "lang": "bash"
+          },
+          {
+            "text": "Clean up.",
+            "code": "cd /tmp && rm -rf siglab",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "The signature stayed 64 bytes whatever you signed, because signing operates on a fixed-length hash of the message rather than the message itself. That is also why the hash function's collision resistance is part of the security of the scheme and not a separate concern."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "You verified with a public key and could not have signed with it. That asymmetry is what makes federated trust possible: a relying party validates 1Claw-issued tokens against published JWKS without holding any shared secret."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Now imagine signing msg.sig's contents without ever seeing msg.txt. That is blind signing, and it is why raw digest signing is gated behind a human-set flag in the Intents API."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "The signature was 64 bytes for a short message. What would it be for a 4GB file?",
+        "options": [
+          "Proportional to the file size",
+          "Still 64 bytes, because signing operates on a fixed-length hash",
+          "Rejected as too large to sign",
+          "Split into multiple signatures"
+        ],
+        "correctIndex": 1,
+        "explanation": "The message is hashed to a fixed-length digest first, so signature size is constant. It is also why the hash function's collision resistance matters as much as the signing algorithm."
+      },
+      {
+        "question": "You verified the signature with public.pem. Could you have produced a signature with it?",
+        "options": [
+          "Yes, public keys can both sign and verify",
+          "No, signing requires the private key, which is what makes verification safe to delegate",
+          "Only for messages under 64 bytes",
+          "Only with the original message present"
+        ],
+        "correctIndex": 1,
+        "explanation": "The asymmetry is the whole point. Anyone can check, only the key holder can produce, which is what allows verification without sharing a secret."
+      },
+      {
+        "question": "After tampering, verification failed. What did that demonstrate?",
+        "options": [
+          "The message is encrypted by the signature",
+          "Integrity: any modification is detectable by anyone holding the public key",
+          "The private key had expired",
+          "The tampered file was corrupt"
+        ],
+        "correctIndex": 1,
+        "explanation": "Signing gives integrity and authenticity. It gives no confidentiality at all, which is why you could still cat the message in plaintext."
+      }
+    ],
+    "kind": "lab"
   },
   {
     "id": "hsm-and-root-of-trust",
@@ -608,7 +710,96 @@
         "correctIndex": 1,
         "explanation": "Integrity comes from the signature. You can read freely, but any modification is detectable by anyone with the public key."
       }
-    ]
+    ],
+    "kind": "lab"
+  },
+  {
+    "id": "lab-a-timing-leak",
+    "title": "Lab: leak a secret with a stopwatch",
+    "summary": "Measure a real side channel. Compare a token the obvious way, watch the clock reveal how much of it you guessed right, then fix it in one line.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Every lesson so far has treated a comparison as free. It is not. A comparison that stops at the first difference takes longer the more of the secret you already have, and that difference is measurable, which turns a token check into an oracle."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Write the measurement. The naive comparison is the one people write by hand; compare_digest is the standard-library alternative.",
+            "code": "cat > /tmp/timing.py <<'EOF'\nimport hmac, statistics, time\n\nSECRET = b\"s3cr3t-api-token-9f2a\"\n\ndef naive_equals(a, b):\n    if len(a) != len(b):\n        return False\n    for x, y in zip(a, b):\n        if x != y:\n            return False        # returns as soon as it finds a difference\n    return True\n\ndef timed(fn, guess, rounds=20000):\n    samples = []\n    for _ in range(7):\n        t = time.perf_counter_ns()\n        for _ in range(rounds):\n            fn(SECRET, guess)\n        samples.append((time.perf_counter_ns() - t) / rounds)\n    return statistics.median(samples)\n\nprint(f\"{'correct prefix':<20}{'naive (ns)':>12}{'compare_digest':>16}\")\nfor n in (0, 5, 10, 15, 20):\n    guess = SECRET[:n] + b\"x\" * (len(SECRET) - n)\n    print(f\"{n:>2} bytes{'':<12}{timed(naive_equals, guess):>12.1f}\"\n          f\"{timed(hmac.compare_digest, guess):>16.1f}\")\nEOF\npython3 /tmp/timing.py",
+            "lang": "bash"
+          },
+          {
+            "text": "You should see something close to this. The exact numbers vary by machine; the shape does not.",
+            "code": "correct prefix        naive (ns)  compare_digest\n 0 bytes                   191.3            39.8\n 5 bytes                   302.6            40.1\n10 bytes                   394.6            39.8\n15 bytes                   489.6            39.8\n20 bytes                   571.2            39.9",
+            "lang": "text"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Read the naive column. It climbs steadily with the number of correct bytes, because the loop runs one iteration further before it can return. An attacker who can time your endpoint does not need to guess the whole token: they guess one byte at a time, keep whichever guess was slowest, and recover the secret in linear rather than exponential attempts."
+      },
+      {
+        "type": "points",
+        "items": [
+          "A 20-byte token has 256^20 possible values, which is unguessable.",
+          "Guessed one byte at a time it is 20 x 256 attempts at worst, which is trivial.",
+          "The comparison, not the token, is what collapsed the search space."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "compare_digest stays flat because it always inspects every byte, and combines the results, before returning. Constant time here means independent of the data, not fast."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Use a constant-time comparison for anything an attacker can supply and retry: API keys, session tokens, HMAC signatures, password hashes, TOTP codes. Python has hmac.compare_digest, Node has crypto.timingSafeEqual, Go has subtle.ConstantTimeCompare."
+      },
+      {
+        "type": "prose",
+        "text": "This is the first lesson in the track where the cryptography was flawless and the system leaked anyway. The key was strong, the token was random, and an ordinary equals sign gave it away. Most real breaks look like this rather than like broken maths."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why does the naive comparison get slower as more of the guess is correct?",
+        "options": [
+          "Longer strings take longer to hash",
+          "It returns at the first mismatch, so a longer correct prefix means more iterations",
+          "Python caches partial matches",
+          "The secret is re-read from memory each time"
+        ],
+        "correctIndex": 1,
+        "explanation": "Early return is the leak. The running time is a function of how much of the secret the attacker already has, which is exactly the information they are trying to obtain."
+      },
+      {
+        "question": "What does an attacker gain from the timing difference?",
+        "options": [
+          "Nothing without the private key",
+          "They can recover the token one byte at a time, turning an exponential search into a linear one",
+          "They learn the token's length only",
+          "They can only detect that a token is wrong"
+        ],
+        "correctIndex": 1,
+        "explanation": "Guessing byte by byte reduces 256^20 possibilities to roughly 20 x 256 attempts. The search space collapses because each guess is scored independently."
+      },
+      {
+        "question": "What makes compare_digest constant time?",
+        "options": [
+          "It is implemented in C, so it is faster",
+          "It always examines every byte before returning, so the duration does not depend on the input",
+          "It hashes both values first",
+          "It adds random delay to mask the real time"
+        ],
+        "correctIndex": 1,
+        "explanation": "Constant time means independent of the data, not fast. Adding random delay is a common and unreliable substitute, because averaging over many samples recovers the signal."
+      }
+    ],
+    "kind": "lab"
   },
   {
     "id": "access-control-models",
@@ -775,6 +966,91 @@
         "explanation": "The threshold t sets the security property; n provides redundancy so the loss of a single share is not fatal."
       }
     ]
+  },
+  {
+    "id": "lab-split-a-secret",
+    "title": "Lab: split a secret three ways",
+    "summary": "Implement Shamir sharing in twenty lines, reconstruct from any two of three shares, then see for yourself that one share reveals nothing.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The previous lesson claimed that below the threshold a set of shares is consistent with every possible secret, and that this is information-theoretic rather than a matter of computational difficulty. That is a strong claim. Here it is, demonstrated."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Write the implementation. Splitting hides the secret as the constant term of a random polynomial; recovery is Lagrange interpolation back to x = 0.",
+            "code": "cat > /tmp/shamir.py <<'EOF'\nimport random\nP = 2**127 - 1                    # prime field larger than any secret here\n\ndef split(secret, threshold, shares):\n    coeffs = [secret] + [random.randrange(P) for _ in range(threshold - 1)]\n    f = lambda x: sum(c * pow(x, i, P) for i, c in enumerate(coeffs)) % P\n    return [(x, f(x)) for x in range(1, shares + 1)]\n\ndef recover(points):\n    total = 0\n    for i, (xi, yi) in enumerate(points):\n        num = den = 1\n        for j, (xj, _) in enumerate(points):\n            if i != j:\n                num = (num * -xj) % P\n                den = (den * (xi - xj)) % P\n        total = (total + yi * num * pow(den, -1, P)) % P\n    return total\n\nsecret = int.from_bytes(b\"launch-code-42\", \"big\")\nparts = split(secret, threshold=2, shares=3)\nfor x, y in parts:\n    print(f\"share {x}: {y}\")\n\nprint(\"\\nany two of three:\")\nfor a, b in [(0,1), (0,2), (1,2)]:\n    got = recover([parts[a], parts[b]])\n    print(f\"  {a+1}+{b+1} -> {got.to_bytes(14, 'big')}\")\n\nprint(\"\\none share alone is consistent with every possible secret:\")\nx, y = parts[0]\nfor guess in (0, 12345, secret):\n    slope = ((y - guess) * pow(x, -1, P)) % P\n    fits = (guess + slope * x) % P == y\n    print(f\"  secret could be {str(guess)[:20]:<20} -> share 1 still fits: {fits}\")\nEOF\npython3 /tmp/shamir.py",
+            "lang": "bash"
+          },
+          {
+            "text": "Every pair reconstructs the secret exactly.",
+            "code": "any two of three:\n  1+2 -> b'launch-code-42'\n  1+3 -> b'launch-code-42'\n  2+3 -> b'launch-code-42'",
+            "lang": "text"
+          },
+          {
+            "text": "And one share fits every candidate secret you try.",
+            "code": "one share alone is consistent with every possible secret:\n  secret could be 0                    -> share 1 still fits: True\n  secret could be 12345                -> share 1 still fits: True\n  secret could be 21982217121556893152 -> share 1 still fits: True",
+            "lang": "text"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "That last block is the whole property. With threshold two, one share is a single point, and exactly one line passes through that point for every possible value of f(0). The share does not narrow the secret down; it excludes nothing. Add a second point and the line is determined, which is why two shares recover it exactly."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "This is why the guarantee does not weaken over time. It is not that reconstructing from one share is expensive, it is that the information is not present. No amount of computing changes that, which is what information-theoretic means."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Toy code, real maths. This implementation uses Python's random rather than a cryptographic source and does not authenticate shares, so a participant could submit a corrupted one and quietly poison the reconstruction. Production schemes handle both."
+      },
+      {
+        "type": "prose",
+        "text": "Now the operational half. You just held three shares in one process, which is precisely the moment threshold MPC removes: the shares came together, so the complete secret existed in one place. Everything you demonstrated about secrecy below the threshold was true and irrelevant during that instant."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "With threshold two, why does a single share exclude no candidate secret?",
+        "options": [
+          "The share is encrypted",
+          "Exactly one line passes through one point for every possible value of f(0)",
+          "The share is too short to be useful",
+          "Random noise is added to each share"
+        ],
+        "correctIndex": 1,
+        "explanation": "One point does not determine a line. For any candidate secret there is a line through the share with that constant term, so the share is consistent with all of them."
+      },
+      {
+        "question": "Why does the guarantee not weaken as computers get faster?",
+        "options": [
+          "The prime field is periodically increased",
+          "The information is absent rather than merely hard to extract",
+          "Shares are rotated automatically",
+          "The polynomial degree grows over time"
+        ],
+        "correctIndex": 1,
+        "explanation": "Information-theoretic security is not a computational bound. There is nothing to compute because the missing information was never in the share."
+      },
+      {
+        "question": "What did holding all three shares in one process demonstrate about plain Shamir?",
+        "options": [
+          "That reconstruction is fast",
+          "That using the secret requires assembling it somewhere, which is the moment MPC eliminates",
+          "That three shares are needed to recover",
+          "That shares must be stored together"
+        ],
+        "correctIndex": 1,
+        "explanation": "Reconstruction creates an instant where the complete secret exists in one place. Threshold MPC produces the signature collaboratively so that moment never occurs."
+      }
+    ],
+    "kind": "lab"
   },
   {
     "id": "tees-and-confidential-computing",

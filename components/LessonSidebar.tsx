@@ -4,6 +4,7 @@ import Link from "next/link";
 import { tracks } from "@/lib/curriculum";
 import { useProgress } from "@/lib/progress";
 import { Icon, type IconName } from "./Icon";
+import { KindBadge } from "./KindBadge";
 
 /**
  * Track-scoped contents for the lesson page. Shows the current track expanded
@@ -89,7 +90,15 @@ export function LessonSidebar({
                             <span className="block h-[11px] w-[11px]" />
                           )}
                         </span>
-                        <span className="min-w-0">{l.title}</span>
+                        <span className="min-w-0">
+                          {l.title}
+                          {l.kind ? (
+                            <>
+                              {" "}
+                              <KindBadge kind={l.kind} size="sm" />
+                            </>
+                          ) : null}
+                        </span>
                       </Link>
                     </li>
                   );

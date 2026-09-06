@@ -6,6 +6,7 @@ import { Check, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { LessonSidebar } from "./LessonSidebar";
 import { ConceptLinks } from "./ConceptLinks";
+import { KindBadge } from "./KindBadge";
 import { MobileContents } from "./MobileContents";
 import type { Lesson, LessonRef } from "@/lib/types";
 import { BlockRenderer } from "./BlockRenderer";
@@ -105,6 +106,11 @@ export function LessonView({
       <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
         {lesson.title}
       </h1>
+      {lesson.kind ? (
+        <div className="mt-3">
+          <KindBadge kind={lesson.kind} />
+        </div>
+      ) : null}
       <p className="mt-3 text-lg leading-relaxed text-[var(--muted)]">
         {lesson.summary}
       </p>

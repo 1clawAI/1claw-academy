@@ -66,6 +66,11 @@ export type Lesson = {
   quiz: QuizQuestion[];
   /** Concept lessons this one assumes. Rendered above the body. */
   concepts?: ConceptLink[];
+  /**
+   * Marks lessons that are not ordinary reading. Labs are hands-on and run
+   * locally; capstones synthesise a whole track.
+   */
+  kind?: "lab" | "capstone";
 };
 
 export type Track = {
