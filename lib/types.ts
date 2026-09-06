@@ -15,12 +15,26 @@ export type AuditTool = {
   rationale: string;
 };
 
+/** One branch of a scenario exercise. Every option carries feedback, not just the right one. */
+export type ScenarioOption = {
+  text: string;
+  correct?: boolean;
+  /** Why this choice is right, or precisely where its reasoning fails. */
+  feedback: string;
+};
+
 export type Block =
   | { type: "prose"; text: string }
   | { type: "points"; items: string[] }
   | { type: "steps"; steps: Step[] }
   | { type: "code"; lang?: string; code: string; caption?: string }
   | { type: "callout"; variant: "info" | "tip" | "warn"; text: string }
+  | {
+      type: "scenario";
+      situation: string;
+      question: string;
+      options: ScenarioOption[];
+    }
   | {
       type: "audit";
       scenario: string;

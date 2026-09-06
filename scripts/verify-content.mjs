@@ -33,6 +33,7 @@ const SPEC_URL =
 const errors = [];
 const warnings = [];
 const skipped = [];
+const answerPos = [0, 0, 0, 0];
 const fail = (lesson, msg) => errors.push({ lesson, msg });
 const warn = (lesson, msg) => warnings.push({ lesson, msg });
 
@@ -77,6 +78,7 @@ const BLOCK_TYPES = new Set([
   "code",
   "callout",
   "audit",
+  "scenario",
 ]);
 const CIRCLES = new Set([
   "private-data",
@@ -97,6 +99,19 @@ for (const l of lessons) {
       fail(ref(l), "steps block has no steps");
     if (b.type === "code" && !b.code?.trim())
       fail(ref(l), "empty code block");
+    if (b.type === "scenario") {
+      if (!b.situation?.trim() || !b.question?.trim())
+        fail(ref(l), "scenario block missing situation or question");
+      const opts = b.options ?? [];
+      if (opts.length < 3)
+        fail(ref(l), `scenario has ${opts.length} options, expected at least 3`);
+      const right = opts.filter((o) => o.correct).length;
+      if (right !== 1)
+        fail(ref(l), `scenario has ${right} correct options, expected exactly 1`);
+      for (const o of opts)
+        if (!o.feedback?.trim())
+          fail(ref(l), `scenario option "${o.text?.slice(0, 30)}" has no feedback`);
+    }
     if (b.type === "audit") {
       if (!b.tools?.length) fail(ref(l), "audit block has no tools");
       if (!b.verdict?.trim()) fail(ref(l), "audit block has no verdict");
@@ -119,6 +134,7 @@ for (const l of lessons) {
       fail(ref(l), `duplicate quiz options: "${q.question.slice(0, 40)}…"`);
     if (!q.explanation?.trim())
       fail(ref(l), `quiz question has no explanation`);
+    if (q.correctIndex >= 0 && q.correctIndex < 4) answerPos[q.correctIndex]++;
   }
   // Concept cross-links must resolve.
   for (const c of l.concepts ?? []) {
@@ -132,6 +148,48 @@ for (const l of lessons) {
   if (dashes > 0) warn(ref(l), `${dashes} em/en dash(es) — house style avoids them`);
   // Stale domain.
   if (/1claw\.xyz/.test(textOf(l))) fail(ref(l), "stale 1claw.xyz domain");
+}
+
+/*
+ * Answer-position balance. With the correct answer nearly always first, a
+ * learner who guesses A or B scores in the nineties without reading anything,
+ * so the quiz stops measuring comprehension. Any position above 35% means the
+ * set has drifted back toward that.
+ */
+{
+  const totalQ = answerPos.reduce((a, b) => a + b, 0);
+  if (totalQ >= 40) {
+    answerPos.forEach((n, i) => {
+      const pct = Math.round((100 * n) / totalQ);
+      if (pct > 35)
+        fail(
+          "quiz",
+          `answer position ${String.fromCharCode(65 + i)} holds ${pct}% of correct answers (max 35%)`,
+        );
+    });
+  }
+}
+
+/*
+ * Applied-assessment coverage. Recall questions show that a lesson was read;
+ * an Advanced lesson should also ask for a decision. Every lesson in a track
+ * marked Advanced needs at least one scenario or audit block.
+ */
+{
+  const meta = readFileSync(join(ROOT, "lib/content/meta.ts"), "utf8");
+  const advanced = new Set();
+  for (const m of meta.matchAll(
+    /id:\s*"([a-z-]+)"[\s\S]{0,400}?level:\s*"(\w+)"/g,
+  ))
+    if (m[2] === "Advanced") advanced.add(m[1]);
+  for (const l of lessons) {
+    if (!advanced.has(l.trackId)) continue;
+    const hasApplied = (l.blocks ?? []).some(
+      (b) => b.type === "scenario" || b.type === "audit",
+    );
+    if (!hasApplied)
+      fail(ref(l), "Advanced lesson has no applied exercise (scenario or audit)");
+  }
 }
 
 // Duplicate ids across the course would break routing.

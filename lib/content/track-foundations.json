@@ -51,34 +51,34 @@
       {
         "question": "What backs the encryption key for each 1Claw vault?",
         "options": [
+          "A browser cookie",
           "A password in a config file",
           "A hardware security module (HSM)",
-          "The agent's API key",
-          "A browser cookie"
+          "The agent's API key"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Each vault has its own HSM-backed key encryption key."
       },
       {
         "question": "By default, how much access does a new agent have?",
         "options": [
-          "Full access to every vault",
-          "Read access to one vault",
+          "Access to all secrets tagged public",
           "Zero access until a human writes a policy",
-          "Access to all secrets tagged public"
+          "Read access to one vault",
+          "Full access to every vault"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "1Claw is zero-trust: agents get nothing until a human grants specific paths via a policy."
       },
       {
         "question": "Which prefix identifies a human's personal API key?",
         "options": [
-          "ocv_",
-          "1ck_",
           "sk_",
-          "jwt_"
+          "jwt_",
+          "ocv_",
+          "1ck_"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Human personal API keys start with 1ck_; agent keys start with ocv_."
       }
     ],
@@ -158,20 +158,20 @@
         "question": "How are secrets addressed inside a vault?",
         "options": [
           "By numeric index",
-          "By slash-separated paths like api-keys/stripe",
+          "By tag name",
           "By UUID only",
-          "By tag name"
+          "By slash-separated paths like api-keys/stripe"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Secrets live at slash-separated paths within a vault."
       },
       {
         "question": "In envelope encryption, what wraps the per-secret data encryption key (DEK)?",
         "options": [
-          "The agent's JWT",
+          "The user's password",
           "The vault's HSM-backed key encryption key (KEK)",
-          "Another DEK",
-          "The user's password"
+          "The agent's JWT",
+          "Another DEK"
         ],
         "correctIndex": 1,
         "explanation": "Each secret's DEK is wrapped by the vault KEK, which lives in the HSM."
@@ -179,12 +179,12 @@
       {
         "question": "What happens when you PUT a new value to an existing secret path?",
         "options": [
+          "It creates a second vault",
           "It overwrites and deletes the old value",
           "It errors because the path exists",
-          "It creates a new version and keeps the old one in history",
-          "It creates a second vault"
+          "It creates a new version and keeps the old one in history"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Every write creates a new version; previous versions stay in history."
       }
     ],
@@ -269,34 +269,34 @@
       {
         "question": "Which prefix marks an agent API key?",
         "options": [
-          "1ck_",
           "ocv_",
-          "eyJ",
-          "agt_"
+          "1ck_",
+          "agt_",
+          "eyJ"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Agent API keys start with ocv_; human personal keys start with 1ck_."
       },
       {
         "question": "How does an agent turn its ocv_ key into a usable API credential?",
         "options": [
+          "POSTs just the api_key to /v1/auth/api-key-token",
           "Uses it directly as a permanent password",
           "POSTs agent_id and api_key to /v1/auth/agent-token for a short-lived JWT",
-          "POSTs just the api_key to /v1/auth/api-key-token",
           "Emails it to the human each time"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "The agent-token endpoint needs both agent_id and api_key; api-key-token is the human 1ck_ path."
       },
       {
         "question": "What happens to an agent's active tokens when a human changes its policy?",
         "options": [
-          "Nothing, they keep working",
           "They're automatically revoked and must be re-exchanged",
+          "Nothing, they keep working",
           "They gain admin access",
           "They last 30 days longer"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Policy create/update/delete auto-revokes the agent's active JWTs, forcing a fresh exchange."
       }
     ],
@@ -382,22 +382,22 @@
         "question": "What Node version does the npm install of the CLI require?",
         "options": [
           "Node 14+",
-          "Node 16+",
           "Node 20+",
+          "Node 16+",
           "Any version"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "npm install -g @1claw/cli requires Node 20 or newer."
       },
       {
         "question": "What does 1claw login use so you never type a password in the terminal?",
         "options": [
-          "A browser device flow",
-          "An SSH key",
           "A QR code scanner",
-          "A one-time SMS"
+          "A browser device flow",
+          "A one-time SMS",
+          "An SSH key"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "1claw login opens the browser, you approve there, and the CLI polls until confirmed."
       },
       {
@@ -482,23 +482,23 @@
       {
         "question": "What does 1claw secret list return?",
         "options": [
-          "Decrypted values for every secret",
-          "Metadata only, no values",
           "Only the vault name",
-          "The vault's KEK"
+          "Decrypted values for every secret",
+          "The vault's KEK",
+          "Metadata only, no values"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Listing returns paths, types, and versions but never the secret values."
       },
       {
         "question": "The dashboard is best described as what?",
         "options": [
           "A separate database",
-          "A UI on top of the same API endpoints the CLI uses",
           "An offline-only tool",
+          "A UI on top of the same API endpoints the CLI uses",
           "A replacement for HSMs"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "The dashboard at 1claw.co is a web UI over the same endpoints."
       }
     ],

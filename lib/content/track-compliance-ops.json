@@ -65,40 +65,64 @@
       {
         "type": "prose",
         "text": "You can now query the audit log by action and actor and explain why the chain plus SECURITY DEFINER insert makes it tamper-evident, which supports SOC 2 controls like CC6 and CC7."
+      },
+      {
+        "type": "scenario",
+        "situation": "An auditor asks you to prove that no agent read the secret at prod/db/root during Q3. You have the audit log.",
+        "question": "What can you actually demonstrate?",
+        "options": [
+          {
+            "text": "That no read occurred, by showing the log contains no matching access event.",
+            "feedback": "This is the claim auditors want and the one a log cannot support on its own. Absence of a record proves nothing unless you can also show the log is complete and tamper-evident for the whole period."
+          },
+          {
+            "text": "That no read was recorded, and separately that the log is complete for the period, which together support the claim.",
+            "correct": true,
+            "feedback": "Correct, and the distinction matters. The evidence is the conjunction: no matching event, plus assurance that an event would necessarily have been recorded. Stating it that way is what makes the answer defensible rather than merely confident."
+          },
+          {
+            "text": "That no agent had a policy granting access, which is stronger than the log.",
+            "feedback": "Useful supporting evidence and worth presenting, but policies change. Showing the current grant says nothing about what was granted in July unless you can also show the policy history."
+          },
+          {
+            "text": "Nothing. Audit logs record access, so they cannot evidence its absence.",
+            "feedback": "Too defeatist. Negative assurance from a complete, tamper-evident log is a normal and accepted audit primitive; it just has to be stated with its completeness condition attached."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "What is stored in an audit event?",
         "options": [
-          "The secret value and the metadata",
           "Only metadata such as path, action, actor, and timestamp",
+          "Nothing until export",
           "The private key hash",
-          "Nothing until export"
+          "The secret value and the metadata"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Audit events store metadata only; secret values are never logged."
       },
       {
         "question": "How does the log resist tampering at write time?",
         "options": [
-          "It is read-only after 24 hours",
-          "Writes go through a SECURITY DEFINER function since vault_app cannot INSERT directly",
           "Events are encrypted with the org KEK",
-          "Only admins can query it"
+          "It is read-only after 24 hours",
+          "Only admins can query it",
+          "Writes go through a SECURITY DEFINER function since vault_app cannot INSERT directly"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "vault_app has direct INSERT revoked, so all writes funnel through the trusted insert_audit_event function that enforces the chain."
       },
       {
         "question": "What links each event to the previous one?",
         "options": [
-          "A sequential integer ID",
-          "prev_event_id plus a SHA-256 integrity_hash",
+          "A Stripe invoice ID",
           "The actor's IP address",
-          "A Stripe invoice ID"
+          "prev_event_id plus a SHA-256 integrity_hash",
+          "A sequential integer ID"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Each event carries prev_event_id and an integrity_hash, forming an append-only SHA-256 chain."
       }
     ],
@@ -186,40 +210,64 @@
       {
         "type": "prose",
         "text": "You now rotate a key and deactivate an agent while keeping its audit trail, and you can scope a fleet with vault binding and conditional policies."
+      },
+      {
+        "type": "scenario",
+        "situation": "Across a fleet of forty agents you see a steady trickle of agent.delegation.blocked events from one agent, roughly twice a day for a week. Nothing has failed and no alert fired.",
+        "question": "How do you read this?",
+        "options": [
+          {
+            "text": "Normal noise. Blocked events mean the controls are working, which is the expected state.",
+            "feedback": "The control is working, and that is exactly why this is worth reading rather than dismissing. A denial is evidence that something repeatedly attempts what it is not permitted to do."
+          },
+          {
+            "text": "A misconfigured client retrying a call it was never authorized to make, or an agent being steered toward one. Either way it needs investigating.",
+            "correct": true,
+            "feedback": "Correct. A blocked event is the signal to alert on precisely because nothing breaks when it fires. Persistent, patterned denials are either a bug worth fixing or an injection worth catching, and both are cheaper to find now."
+          },
+          {
+            "text": "Rate limiting kicking in; raise max_daily_delegations to clear it.",
+            "feedback": "Raising a limit to stop a warning is how controls get widened for the wrong reason. Rate limiting also emits its own signal rather than a blocked-delegation event."
+          },
+          {
+            "text": "Clock skew causing expired delegations to be rejected intermittently.",
+            "feedback": "Expiry rejections do occur, but they would resolve permanently once expired rather than recurring twice a day for a week."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "What does vault binding (vault_ids) add on top of policies?",
         "options": [
-          "It grants access to every vault",
-          "It restricts which vaults the agent JWT works for regardless of policies",
           "It rotates keys nightly",
-          "It disables audit logging"
+          "It disables audit logging",
+          "It restricts which vaults the agent JWT works for regardless of policies",
+          "It grants access to every vault"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Vault binding is a second layer: even a too-broad policy cannot let the JWT reach vaults outside vault_ids."
       },
       {
         "question": "Why deactivate an agent instead of deleting it?",
         "options": [
+          "There is no difference",
           "Deactivate is faster to type",
-          "Deactivate preserves the records and audit trail",
           "Delete keeps the token valid",
-          "There is no difference"
+          "Deactivate preserves the records and audit trail"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Deactivating with --active false blocks access but preserves records and audit events; delete removes them."
       },
       {
         "question": "For a common set of secrets shared by all fleet agents, what layout is recommended?",
         "options": [
           "One vault per secret",
-          "A shared vault with path-scoped policies",
           "A single wildcard policy on production",
+          "A shared vault with path-scoped policies",
           "No policies at all"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "A shared vault with path-based policies (api-keys/** shared, agents/{name}/** per-agent) scales cleanly."
       }
     ],
@@ -312,40 +360,64 @@
       {
         "type": "prose",
         "text": "You now register a platform app and bootstrap a user with a vault, an intents-enabled agent, and server-side signing keys your platform cannot read, plus a claim URL to hand off."
+      },
+      {
+        "type": "scenario",
+        "situation": "You are building a product on the Platform API. Your support team needs to help users debug their integrations, which means seeing the secrets those users store in the vaults you provision for them.",
+        "question": "How should you design this?",
+        "options": [
+          {
+            "text": "Provision vaults without platform_locked so support can read values when a user asks.",
+            "feedback": "This is the design decision that ends careers. Operator access to customer secret values is a standing breach risk and a compliance problem, and 'only when the user asks' is a policy, not a control."
+          },
+          {
+            "text": "Keep platform_locked set, and give support metadata, audit trails and error detail instead of values.",
+            "correct": true,
+            "feedback": "Correct. Almost all real debugging needs to know that a secret exists, when it was last rotated, and which call failed with what error. None of that requires the value, and designing for it keeps operator access off the table permanently."
+          },
+          {
+            "text": "Allow reads but log every operator access to the audit trail.",
+            "feedback": "Logging makes misuse detectable after the fact, which is worth having, but it does not remove the capability. The stronger design removes the ability rather than recording its use."
+          },
+          {
+            "text": "Have users paste the secret into a support ticket when they need help.",
+            "feedback": "Now the secret is in a ticketing system, an inbox and a notification, which is strictly worse than a controlled read and is precisely the sprawl the platform exists to prevent."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "In a bootstrap template, how do you enable the Intents API on an agent?",
         "options": [
-          "intents_api_enabled: true (flat)",
           "intents: { enabled: true } (nested)",
+          "scopes: [intents]",
           "enable_intents: 1",
-          "scopes: [intents]"
+          "intents_api_enabled: true (flat)"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Templates use the nested intents: { enabled: true }; the flat intents_api_enabled is the direct agent-creation form."
       },
       {
         "question": "What must client_id be for Sign in with 1Claw?",
         "options": [
-          "The app UUID",
           "The app slug",
           "The plt_ key",
+          "The app UUID",
           "The user email"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "client_id is the app slug; passing the UUID returns Unknown client_id."
       },
       {
         "question": "Why can't the platform read a bootstrapped user's signing keys?",
         "options": [
           "They are deleted after bootstrap",
-          "The plt_ key cannot read signing keys across the org boundary",
+          "Signing keys are never provisioned",
           "They are only on testnets",
-          "Signing keys are never provisioned"
+          "The plt_ key cannot read signing keys across the org boundary"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Signing keys are provisioned server-side and the plt_ key cannot read them across the org boundary, keeping custody separated."
       }
     ],
@@ -414,6 +486,30 @@
         "type": "callout",
         "variant": "warn",
         "text": "Deleting a sub-org archives it rather than destroying it, which keeps the audit trail intact for anything that happened inside it."
+      },
+      {
+        "type": "scenario",
+        "situation": "You are the platform team at a company with three product groups that want separate budgets, separate agents, and no visibility into each other's secrets. A colleague suggests using the Platform API, since it is built for multi-tenancy.",
+        "question": "Which model fits?",
+        "options": [
+          {
+            "text": "Platform API, because isolating tenants is exactly what it does.",
+            "feedback": "It does isolate tenants, but the tenants it models are your product's end users, provisioned on their behalf with plt_ keys and claim flows. Using it for your own internal departments imports a consent and billing model you do not want internally."
+          },
+          {
+            "text": "Sub-organizations, which partition your own org with delegated permissions and their own wallets.",
+            "correct": true,
+            "feedback": "Correct. The distinction is whose users these are. Sub-orgs are for dividing your own organization; the Platform API is for provisioning on behalf of other people's users."
+          },
+          {
+            "text": "Three separate 1Claw organizations, which guarantees isolation.",
+            "feedback": "It does isolate, and it also gives up central billing, cross-group audit and any shared policy. That is a real option for genuinely separate legal entities, not for three groups in one company."
+          },
+          {
+            "text": "One org with naming conventions and careful policies per group.",
+            "feedback": "This is isolation by discipline, which degrades the first time someone writes a broad glob. The hierarchy exists so the boundary is structural rather than conventional."
+          }
+        ]
       }
     ],
     "quiz": [
@@ -421,9 +517,9 @@
         "question": "When should you use sub-organizations rather than the Platform API?",
         "options": [
           "When partitioning your own org into departments or subsidiaries",
-          "When provisioning resources for your product's end users",
+          "When you want a second billing account only",
           "When you need more API keys",
-          "When you want a second billing account only"
+          "When provisioning resources for your product's end users"
         ],
         "correctIndex": 0,
         "explanation": "Sub-orgs partition your own organization. The Platform API is for provisioning on behalf of other people's users: a different problem with a different model."
@@ -431,12 +527,12 @@
       {
         "question": "What happens when you delete a sub-org?",
         "options": [
-          "It is archived, preserving the audit trail",
-          "It is permanently destroyed with all records",
           "Its users are deleted too",
-          "It is merged into the parent"
+          "It is merged into the parent",
+          "It is permanently destroyed with all records",
+          "It is archived, preserving the audit trail"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "The DELETE endpoint archives the sub-org so historical activity stays auditable."
       }
     ],

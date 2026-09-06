@@ -74,40 +74,64 @@
       {
         "type": "prose",
         "text": "You now have an agent that submits a simulated, guardrailed transaction with the signing key locked inside the vault."
+      },
+      {
+        "type": "scenario",
+        "situation": "An integration asks you to enable raw_signing_enabled on a trading agent. Their SDK computes an ERC-1271 nested EIP-712 hash client-side and needs the agent to sign the resulting 32 bytes. They point out that the hash is derived from data they control, so nothing unexpected can be signed.",
+        "question": "How do you handle the request?",
+        "options": [
+          {
+            "text": "Enable it. The hash is computed from their own data, so the input is trusted.",
+            "feedback": "Their reasoning holds only while their hash construction is correct and their inputs stay clean. A raw digest bypasses every EIP-712 guardrail you have, so a bug or an injection upstream produces a signature you had no opportunity to inspect."
+          },
+          {
+            "text": "Refuse outright. Raw digest signing is never acceptable.",
+            "feedback": "Too absolute. The capability exists because nested ERC-1271 and ERC-7739 flows genuinely cannot be expressed as a typed-data payload the server can inspect. Refusing means declining a legitimate integration."
+          },
+          {
+            "text": "Enable it deliberately, with the compensating controls: it is human-set only, audit-logged, and paired with recipient and value guardrails plus HITL above a threshold.",
+            "correct": true,
+            "feedback": "Correct. This is a considered trade rather than a yes or a no. You accept blind signing for a narrow, real use case and rebuild oversight around it: a human enables it, every use is logged as signing_key.raw_digest_sign, and the transaction guardrails still bound what the signature can move."
+          },
+          {
+            "text": "Enable typed_data signing instead and have them restructure their flow.",
+            "feedback": "Worth asking, and if their flow can be expressed as EIP-712 it is the better answer. But nested ERC-1271 exists precisely because the canonical hash is computed client-side, so for that pattern this is a request to redesign around a limitation rather than a fix."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "What does intents_api_enabled: true do besides granting the transaction endpoints?",
         "options": [
-          "It exports the private key to the agent",
-          "It blocks the agent from reading private_key or ssh_key via the secrets endpoint",
+          "It rotates the signing key nightly",
           "It disables all guardrails",
-          "It rotates the signing key nightly"
+          "It exports the private key to the agent",
+          "It blocks the agent from reading private_key or ssh_key via the secrets endpoint"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "The flag is two-sided: it grants transaction endpoints and blocks direct signing-key reads so keys are only usable through the proxy."
       },
       {
         "question": "What happens when simulate_first: true and the simulation reverts?",
         "options": [
-          "The tx is broadcast anyway",
           "The API returns 422 and does not sign or broadcast",
+          "The tx is broadcast anyway",
           "The agent is deactivated",
           "The value cap is raised"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "On a reverted simulation the API returns 422 and never signs or broadcasts."
       },
       {
         "question": "Which endpoint signs a transaction without broadcasting it?",
         "options": [
-          "POST /v1/agents/:id/transactions",
           "POST /v1/agents/:id/transactions/sign",
-          "GET /v1/agents/:id/transactions",
-          "POST /v1/agents/:id/signing-keys"
+          "POST /v1/agents/:id/transactions",
+          "POST /v1/agents/:id/signing-keys",
+          "GET /v1/agents/:id/transactions"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "The /transactions/sign endpoint returns signed_tx for you to broadcast yourself, with guardrails still enforced."
       }
     ],
@@ -200,26 +224,50 @@
       {
         "type": "prose",
         "text": "You now have a treasury wallet and a Safe proposal that collects signatures and executes on its own once threshold is met."
+      },
+      {
+        "type": "scenario",
+        "situation": "A developer asks for read access to the __treasury-keys vault so their service can fetch a private key and sign locally, arguing it will be faster than round-tripping through the API.",
+        "question": "How do you respond?",
+        "options": [
+          {
+            "text": "Grant a read-only policy scoped to the one key they need.",
+            "feedback": "Direct reads of __treasury-keys and __agent-keys are refused with a 403 regardless of policy, and that is deliberate. Even if you could grant it, doing so recreates the exported-key problem the vault exists to remove."
+          },
+          {
+            "text": "Explain that direct reads are blocked by design, and that signing should happen through the API so the key never leaves the HSM boundary.",
+            "correct": true,
+            "feedback": "Correct. There is exactly one path to a private key, the audited export endpoint with password re-auth, and it exists for migration rather than for hot paths. Signing server-side keeps the key non-exportable and every use attributable."
+          },
+          {
+            "text": "Use the export endpoint on their behalf and hand them the key over a secure channel.",
+            "feedback": "This is the same outcome with an audit entry attached. Once the key is in their service it is a copy you cannot revoke, and its future use is invisible."
+          },
+          {
+            "text": "Move the key to a normal vault where policies apply, then grant read.",
+            "feedback": "That is a deliberate downgrade of the strongest control you have, in exchange for latency. If the round trip is genuinely the bottleneck, measure it first."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "Why does an agent get a 403 when calling a treasury wallet endpoint?",
         "options": [
-          "Treasury endpoints enforce require_human",
-          "The agent has no signing key",
+          "The org is over quota",
           "Treasury wallets are testnet only",
-          "The org is over quota"
+          "The agent has no signing key",
+          "Treasury endpoints enforce require_human"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "All treasury wallet endpoints enforce require_human, so agents receive a 403."
       },
       {
         "question": "In Delegated mode, where does the treasury private key live when an agent signs?",
         "options": [
-          "It is copied to the agent",
-          "It stays in __treasury-keys and signs via the Intents API",
           "It is returned in the response",
+          "It stays in __treasury-keys and signs via the Intents API",
+          "It is copied to the agent",
           "It moves to the Safe contract"
         ],
         "correctIndex": 1,
@@ -229,11 +277,11 @@
         "question": "What triggers a Safe proposal to execute automatically?",
         "options": [
           "A single approve signature",
-          "Approve signatures reaching the Safe threshold",
           "A human clicking export",
+          "Approve signatures reaching the Safe threshold",
           "The daily limit resetting"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "When approve signatures reach the Safe threshold, the proposal auto-executes and broadcasts."
       }
     ],
@@ -316,18 +364,42 @@
       {
         "type": "prose",
         "text": "You can now take a 402, sign a USDC payment on Base, and retry the same request with X-PAYMENT to get a 200."
+      },
+      {
+        "type": "scenario",
+        "situation": "Your client receives an HTTP 402 with a payment challenge. The accepts[] entry names a payTo address you do not recognise, on Base, for the exact amount you expected.",
+        "question": "What should the client do?",
+        "options": [
+          {
+            "text": "Pay it. The amount matches and the network is right, which is what the challenge is for.",
+            "feedback": "Two of the four checks passing is not the bar. The recipient is the field an attacker most wants to control, and matching the amount is exactly how a malicious challenge avoids suspicion."
+          },
+          {
+            "text": "Reject it. payTo must be on the allowlist, and an unrecognised recipient fails that check regardless of the other fields.",
+            "correct": true,
+            "feedback": "Correct. Validation is a conjunction: payTo allowlisted, network eip155:8453, amount equal to what was requested, and asset equal to the pinned Base USDC contract. Any one failing means no signature."
+          },
+          {
+            "text": "Pay it but cap the authorization at a small amount to limit exposure.",
+            "feedback": "EIP-3009 authorizes a specific transfer to a specific recipient. There is no partial payment that makes an unknown recipient acceptable."
+          },
+          {
+            "text": "Retry the request; the challenge was probably generated during a deploy.",
+            "feedback": "Retrying an unvalidated challenge is not a control, and if the endpoint is compromised the second challenge will look just like the first."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "Which network and asset do 1Claw x402 payments use?",
         "options": [
-          "Ethereum mainnet ETH",
           "Base USDC (eip155:8453)",
-          "Solana USDC",
-          "Polygon DAI"
+          "Ethereum mainnet ETH",
+          "Polygon DAI",
+          "Solana USDC"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "The accepts[] entry uses network eip155:8453 with USDC on Base, settled via the Coinbase CDP facilitator."
       },
       {
@@ -345,11 +417,11 @@
         "question": "After the API returns 402, how does the client complete the request?",
         "options": [
           "It waits for the quota to reset",
-          "It signs the payment and retries with an X-PAYMENT header",
           "It upgrades the subscription tier",
-          "It switches to credits automatically"
+          "It switches to credits automatically",
+          "It signs the payment and retries with an X-PAYMENT header"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "An x402 client pays the required amount on-chain and retries with the X-PAYMENT header."
       }
     ]
@@ -426,40 +498,64 @@
         "type": "callout",
         "variant": "tip",
         "text": "OneclawEmbeddedWallet is standalone and needs no provider. Reach for OneclawWalletProvider plus the useOneclawWallet hook only when you are building custom wallet UI; it takes apiKey and appId and gives you wallets, balances, send, swap and loginWithEmailOtp to wire up yourself."
+      },
+      {
+        "type": "scenario",
+        "situation": "You are shipping the embedded wallet in a React app. A teammate wires the widget with your platform key, writing apiKey=\"plt_live_...\" directly on the component in client-side code.",
+        "question": "What is the problem?",
+        "options": [
+          {
+            "text": "None. The widget needs the platform key to talk to the API.",
+            "feedback": "The standalone widget does not take a platform key at all; it takes appId, the app slug. The key in this snippet is both unnecessary and in the worst possible place."
+          },
+          {
+            "text": "A plt_ key is a platform-wide credential and must never ship to a browser; the standalone widget takes appId, not apiKey.",
+            "correct": true,
+            "feedback": "Correct. plt_ keys provision and act across every connection your app owns. The widget authenticates users through the app slug and their own session, so the key has no business in client code."
+          },
+          {
+            "text": "It should be moved to an environment variable so it is not hardcoded.",
+            "feedback": "An env var inlined into a client bundle is still shipped to every visitor. The problem is the key reaching the browser, not the syntax used to reference it."
+          },
+          {
+            "text": "It works, but you should rotate the key more often to limit exposure.",
+            "feedback": "Rotation shortens the life of a credential that is being published on every page load. The fix is to stop publishing it."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "What do you need before creating embedded wallets?",
         "options": [
-          "A Free plan and a 1ck_ key",
           "A Pro+ plan and a platform app plt_ key",
+          "A Safe multisig",
           "Only an EOA private key",
-          "A Safe multisig"
+          "A Free plan and a 1ck_ key"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Embedded wallets require a Pro or higher plan plus a platform app plt_ key."
       },
       {
         "question": "How does a user log in to get a wallet?",
         "options": [
+          "MetaMask connect",
           "Seed phrase import",
           "Email OTP with sendEmailOtp and verifyEmailOtp",
-          "MetaMask connect",
           "Password only"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "You send a code with sendEmailOtp and confirm it with verifyEmailOtp, which returns the wallet_address."
       },
       {
         "question": "Which two components does wallet-react provide for the widget?",
         "options": [
           "OneclawClient and OneclawAuth",
-          "OneclawWalletProvider and OneclawEmbeddedWallet",
           "WalletKit and WalletButton",
-          "ProviderRoot and WalletCard"
+          "ProviderRoot and WalletCard",
+          "OneclawWalletProvider and OneclawEmbeddedWallet"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "OneclawWalletProvider wraps the OneclawEmbeddedWallet component."
       }
     ]
@@ -525,29 +621,53 @@
         "type": "callout",
         "variant": "tip",
         "text": "Audit the shadow decisions with the guardrail_shadow.would_deny event, and review history through GET /v1/org/guardrail-revisions."
+      },
+      {
+        "type": "scenario",
+        "situation": "An agent's daily spend cap is blocking a legitimate weekly settlement run. The team wants the cap raised from 1 ETH to 5 ETH before tomorrow morning. You PATCH the agent and get back a 202 with a pending_approval_id rather than a 200.",
+        "question": "What has happened, and what do you tell the team?",
+        "options": [
+          {
+            "text": "The API is rate limiting the change; retry in a few minutes.",
+            "feedback": "A 202 here is not backpressure. It is the platform telling you the change has been accepted for review rather than applied."
+          },
+          {
+            "text": "Widening a guardrail queues behind a policy_change approval with step-up re-auth, so a human must approve before it takes effect.",
+            "correct": true,
+            "feedback": "Correct. Narrowing applies immediately because it only reduces access; widening is itself a privileged change. Tell the team the settlement run needs the approval completed first, not that the change failed."
+          },
+          {
+            "text": "The agent is auto-suspended by the circuit breaker, so edits are held until it is cleared.",
+            "feedback": "Suspension is a real state and would block activity, but it produces a different signal than a pending approval on the edit itself."
+          },
+          {
+            "text": "The guardrail JSON was malformed and the 202 is a soft validation failure.",
+            "feedback": "Malformed input returns a 4xx with an error, not an approval id. A pending_approval_id in the response is a positive signal that the request parsed and is waiting on a person."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "What does enforcement \"log\" do?",
         "options": [
-          "Runs the rule in shadow mode, recording what it would deny without denying it",
-          "Logs every request to the audit trail",
           "Disables the guardrail entirely",
-          "Denies and logs the reason"
+          "Denies and logs the reason",
+          "Logs every request to the audit trail",
+          "Runs the rule in shadow mode, recording what it would deny without denying it"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "Shadow mode measures a rule against real traffic before it can break anything, and the shadow report tells you what would have been blocked."
       },
       {
         "question": "You widen an agent's guardrail with a PATCH and get back a 202 with a pending_approval_id. Why?",
         "options": [
-          "Widening edits queue behind a policy_change approval with step-up re-auth",
           "The API is rate limiting you",
+          "Widening edits queue behind a policy_change approval with step-up re-auth",
           "The agent is suspended",
           "The guardrail JSON was invalid"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "Since v0.56.2 widening access is itself a privileged change: it waits for an approval. Narrowing edits still apply immediately, because they only reduce access."
       },
       {
@@ -632,38 +752,62 @@
         "type": "callout",
         "variant": "warn",
         "text": "Revealing a card is human-only by default. Agents get a 403 unless a human enabled a per-card reveal_policy. Reveal is deliberately absent from the MCP tool set, so a PAN can never land in a model's context window."
+      },
+      {
+        "type": "scenario",
+        "situation": "A finance lead asks you to set card_require_approval to false for a procurement agent. Its guardrails are tight: 25 USD per order, 25 USD per day, and a payTo allowlist limited to the built-in Laso recipients.",
+        "question": "Is the request safe to grant?",
+        "options": [
+          {
+            "text": "Yes. The daily cap bounds the loss at 25 USD, which is below any reasonable approval threshold.",
+            "feedback": "The arithmetic is right and the framing is incomplete. The caps bound the purchase, not what a card can later be spent on. A funded card is a bearer instrument, and its balance leaves the guardrail's reach the moment it is issued."
+          },
+          {
+            "text": "No, never disable it. Human approval on spending is not negotiable.",
+            "feedback": "Too rigid to survive contact with operations. Approval on every 5 USD gift card produces reflexive clicking, which is the failure mode graduated HITL exists to avoid."
+          },
+          {
+            "text": "Grant it, but pair it with what approval was providing: a narrow payTo allowlist, monitored card.ordered webhooks, and reveal left human-only.",
+            "correct": true,
+            "feedback": "Correct. Turning off the prompt is defensible for genuinely low-value, high-frequency orders, but only if you replace the oversight rather than remove it. Detection after the fact substitutes for approval before it; leaving reveal human-only keeps the PAN out of agent context regardless."
+          },
+          {
+            "text": "Grant it only if the agent also has intents_require_tee enabled.",
+            "feedback": "TEE enforcement constrains where signing happens, which is a different property. It does not add oversight to the decision to order a card."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "With card_require_approval true, when does the x402 payment actually happen?",
         "options": [
-          "Only after a human approves the pending approval",
           "Immediately, and it is refunded if rejected",
+          "At the end of the billing period",
           "When the card monitor next runs",
-          "At the end of the billing period"
+          "Only after a human approves the pending approval"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "The order returns 202 awaiting_approval and creates a card row in that state. No payment is made until a human approves: rejecting simply marks the card rejected."
       },
       {
         "question": "Why is the reveal operation deliberately missing from the MCP tool set?",
         "options": [
-          "So a card number can never be written into a model's context window",
-          "Because MCP does not support it technically",
           "Because reveal is deprecated",
-          "To reduce the tool count"
+          "To reduce the tool count",
+          "Because MCP does not support it technically",
+          "So a card number can never be written into a model's context window"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "order_card, list_cards and get_card_status are exposed, but reveal is omitted on purpose to keep PANs out of agent context. Humans reveal through re-authenticated paths."
       },
       {
         "question": "What does the Vault validate before signing the x402 payment authorization?",
         "options": [
           "payTo allowlist, Base network, exact amount, and the pinned USDC contract",
-          "Only the amount",
+          "Nothing: the provider validates it",
           "Only that the agent has cards_enabled",
-          "Nothing: the provider validates it"
+          "Only the amount"
         ],
         "correctIndex": 0,
         "explanation": "That four-part check on the 402 challenge is the payment security boundary, and it is why a malicious challenge cannot redirect funds elsewhere."
@@ -735,40 +879,64 @@
         "type": "callout",
         "variant": "tip",
         "text": "Treasury wallets are human-only: agents get a 403. Swap remains EVM-only, while send now covers all six chains."
+      },
+      {
+        "type": "scenario",
+        "situation": "Finance asks for a single number: total holdings across the org. You have treasury wallets on four chains, agent signing keys on three, and two imported smart accounts.",
+        "question": "What is the right approach?",
+        "options": [
+          {
+            "text": "Call the balance endpoint per chain for each wallet type and sum the results.",
+            "feedback": "It gets there, and it is a lot of calls you will have to keep in sync as wallet types are added. It also leaves you doing the USD conversion yourself."
+          },
+          {
+            "text": "Call GET /v1/portfolio, which aggregates all three wallet types and returns USD estimates.",
+            "correct": true,
+            "feedback": "Correct. It exists precisely because holdings accumulate in three different shapes, and it takes chain filters and a token flag so you can narrow it without reassembling the query yourself."
+          },
+          {
+            "text": "Export the treasury wallets and total them from an external block explorer.",
+            "feedback": "Exporting keys to answer a reporting question is a serious control failure, and the export endpoint is for migration rather than analytics."
+          },
+          {
+            "text": "Query the audit log and reconstruct balances from transaction history.",
+            "feedback": "Replaying history to derive a balance is fragile and will drift the moment a transfer happens outside the platform."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "What does GET /v1/portfolio aggregate?",
         "options": [
-          "Treasury wallets, agent signing keys, and smart accounts",
           "Only treasury wallets",
+          "Treasury wallets, agent signing keys, and smart accounts",
           "Only EVM chains",
           "Only wallets with a non-zero balance"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "It is a unified aggregator across all three wallet types, with optional token balances and USD estimates."
       },
       {
         "question": "Why does reading __treasury-keys directly return 403?",
         "options": [
-          "Private keys may only leave through the audited export endpoints",
           "The vault does not exist yet",
-          "Only agents may read it",
-          "It requires a Business tier plan"
+          "It requires a Business tier plan",
+          "Private keys may only leave through the audited export endpoints",
+          "Only agents may read it"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Blocking direct reads means there is exactly one path to a private key: the export endpoint, which demands password re-auth and writes an audit record."
       },
       {
         "question": "Which MPC custody mode applies to a Business-tier org's treasury keys?",
         "options": [
+          "No MPC",
           "Shamir 2-of-3 across multiple HSMs",
           "XOR 2-of-2",
-          "No MPC",
           "Client-custody 2-of-2"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "Custody is set automatically by tier: XOR 2-of-2 for Pro and Team, Shamir 2-of-3 multi-HSM for Business and Enterprise."
       }
     ],
@@ -836,29 +1004,53 @@
       {
         "type": "prose",
         "text": "The pattern generalises: when a credential can be minted on demand, leasing beats storing. There is nothing long-lived to leak, and expiry is the default rather than something you have to remember to do."
+      },
+      {
+        "type": "scenario",
+        "situation": "An agent needs a Bankr key for a long-running job that may take up to six hours. A developer requests a lease with a 24-hour TTL so the job cannot fail partway through on an expired credential.",
+        "question": "What is the better design?",
+        "options": [
+          {
+            "text": "Grant the 24-hour TTL. It is within the documented maximum, so it is supported.",
+            "feedback": "Supported is not the same as advisable. The maximum exists as a ceiling for exceptional cases, and a day-long credential recreates the standing-access problem that leasing was adopted to remove."
+          },
+          {
+            "text": "Lease a short TTL and re-lease as needed during the job, so no single credential is long-lived.",
+            "correct": true,
+            "feedback": "Correct. Leasing is cheap and deny-by-default, so the job can mint a fresh 10-to-15-minute credential whenever it needs one. Failure partway through is a retry concern, not a reason to widen the credential's lifetime."
+          },
+          {
+            "text": "Store a long-lived Bankr key as a normal secret and grant the agent read access.",
+            "feedback": "This abandons vending entirely and puts a static partner credential in a vault where the agent can read it, which is the pattern the secret engine replaced."
+          },
+          {
+            "text": "Grant 24 hours but restrict the agent's policy to the Bankr path only.",
+            "feedback": "That policy is already required before any lease is possible. It does not compensate for the credential's lifetime."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "Why does an agent's Bankr lease response omit the api_key field?",
         "options": [
-          "So the key never enters the agent's context: Shroud resolves it at request time",
           "Because the key is not generated yet",
+          "To reduce response size",
           "Because the agent lacks permission",
-          "To reduce response size"
+          "So the key never enters the agent's context: Shroud resolves it at request time"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "The lease gives the agent metadata only. Shroud resolves the actual key when the request is made, so the credential never reaches the model's context window."
       },
       {
         "question": "What must exist before an agent can lease a Bankr key?",
         "options": [
-          "A policy on agents/{id}/bankr/* in the __agent-keys vault",
-          "A treasury wallet",
+          "Business tier billing",
           "A signing key on Base",
-          "Business tier billing"
+          "A policy on agents/{id}/bankr/* in the __agent-keys vault",
+          "A treasury wallet"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Bankr vending is deny-by-default. Without an explicit policy on that path the lease is refused."
       },
       {
@@ -933,27 +1125,51 @@
         "type": "callout",
         "variant": "tip",
         "text": "The dashboard has a guided migration wizard at /agents/[agentId]/migrate-safe, and org-wide allowance sync runs through POST /v1/org/safe/sync-allowances."
+      },
+      {
+        "type": "scenario",
+        "situation": "You migrate an agent to a counterfactual Safe on Base and want to enforce a per-recipient allowlist on-chain, so a compromised Vault path cannot move funds anywhere. You call the deploy endpoint and receive a 501.",
+        "question": "What does that mean for your plan?",
+        "options": [
+          {
+            "text": "The chain is unsupported; try a different one from the module registry.",
+            "feedback": "The registry is chain-scoped and Base is present. A 501 is the server saying the operation is not implemented, not that your argument was wrong."
+          },
+          {
+            "text": "On-chain deploy and module enforcement are held pending a Guard audit, so for now the Safe address exists but your guardrails remain Vault-enforced.",
+            "correct": true,
+            "feedback": "Correct. Provisioning, migration and the registry work today; the on-chain execution paths deliberately return 501. You can adopt the address now and keep the enforcement you already have, but the on-chain property is not available yet."
+          },
+          {
+            "text": "Your agent lacks the entitlement for on-chain Safe operations; upgrade the tier.",
+            "feedback": "Tier gates return a tier error, not a 501. This one is not about your plan."
+          },
+          {
+            "text": "Deploy the Safe manually with the Safe SDK and register the address.",
+            "feedback": "You could deploy a Safe yourself, but then it is outside the platform's account model, and the migration and allowance-sync paths will not know about it. That trades a temporary limitation for a permanent inconsistency."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "What does counterfactual provisioning mean here?",
         "options": [
+          "The Safe exists only in the database",
           "The Safe address is derived and usable before any deployment transaction is sent",
-          "The Safe is deployed immediately on creation",
           "The address changes after deployment",
-          "The Safe exists only in the database"
+          "The Safe is deployed immediately on creation"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "The address is computed deterministically up front, so you can fund and reference the account without paying deployment gas until it is actually needed."
       },
       {
         "question": "Why do several Safe endpoints currently return 501?",
         "options": [
           "On-chain deploy, cosign, passkey, timelock and 4337 are pending a Guard audit",
-          "They are deprecated",
+          "They were removed in v0.56",
           "They require Enterprise tier",
-          "They were removed in v0.56"
+          "They are deprecated"
         ],
         "correctIndex": 0,
         "explanation": "The provisioning and migration foundation ships now; the on-chain execution paths are held back behind 501 until the Guard audit completes."
@@ -961,12 +1177,12 @@
       {
         "question": "What is the advantage of a Safe over a bare EOA for an agent?",
         "options": [
-          "Guardrails can eventually be enforced on-chain rather than only by the Vault",
-          "It signs transactions faster",
           "It removes the need for signing keys",
-          "It works on non-EVM chains"
+          "Guardrails can eventually be enforced on-chain rather than only by the Vault",
+          "It works on non-EVM chains",
+          "It signs transactions faster"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "An EOA is one key with no on-chain policy. A Safe with modules can enforce constraints at the chain level, so a compromised Vault path is not automatically a compromised wallet."
       }
     ],

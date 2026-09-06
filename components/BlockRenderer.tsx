@@ -1,6 +1,7 @@
 import type { Block } from "@/lib/types";
 import { CodeBlock } from "./CodeBlock";
 import { TrifectaAudit } from "./TrifectaAudit";
+import { ScenarioExercise } from "./ScenarioExercise";
 import { Icon, type IconName } from "./Icon";
 
 const calloutStyle: Record<
@@ -21,6 +22,16 @@ export function BlockRenderer({ blocks }: { blocks: Block[] }) {
         if (b.type === "code")
           return (
             <CodeBlock key={i} code={b.code} lang={b.lang} caption={b.caption} />
+          );
+
+        if (b.type === "scenario")
+          return (
+            <ScenarioExercise
+              key={i}
+              situation={b.situation}
+              question={b.question}
+              options={b.options}
+            />
           );
 
         if (b.type === "audit")

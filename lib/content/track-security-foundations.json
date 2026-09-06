@@ -53,34 +53,34 @@
       {
         "question": "Why is a leaked credential more dangerous than a broken encryption algorithm in practice?",
         "options": [
-          "A valid credential keeps working and looks legitimate to the system",
-          "Encryption breaks are more common",
           "Credentials are harder to rotate than algorithms",
+          "Encryption breaks are more common",
+          "A valid credential keeps working and looks legitimate to the system",
           "Leaked credentials trigger automatic alerts"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "A leaked credential does not stop being valid; it stops being exclusive. Its use looks like normal authorized traffic, which is exactly why it is hard to detect."
       },
       {
         "question": "Which of the four leak modes does encryption at rest actually address?",
         "options": [
-          "Confidentiality of the stored value, but not sprawl, persistence, or scope",
-          "All four",
           "Persistence and freshness",
-          "Over-scope"
+          "Confidentiality of the stored value, but not sprawl, persistence, or scope",
+          "Over-scope",
+          "All four"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "Encryption protects the value where it is stored. Sprawl, persistence and over-scope are lifecycle and authorization problems that need different tools."
       },
       {
         "question": "A key is copied into a .env file, a CI secret, and a teammate's laptop. Which failure mode is this?",
         "options": [
-          "Sprawl: there is no single place to revoke it",
-          "Over-scope",
           "Observability gap",
-          "Persistence"
+          "Over-scope",
+          "Persistence",
+          "Sprawl: there is no single place to revoke it"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "Sprawl is about the number of copies. The danger is that revocation is no longer a single action, so you can never be confident the credential is actually dead."
       }
     ]
@@ -144,34 +144,34 @@
       {
         "question": "Why does envelope encryption make key rotation cheap?",
         "options": [
-          "Rotating the KEK only requires re-wrapping small DEKs, not re-encrypting the data",
-          "DEKs never need rotating",
           "The data is stored unencrypted",
-          "Rotation is deferred until the next read"
+          "DEKs never need rotating",
+          "Rotation is deferred until the next read",
+          "Rotating the KEK only requires re-wrapping small DEKs, not re-encrypting the data"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "The bulk data stays encrypted under its DEK. Only the small wrapped DEKs are re-encrypted under the new KEK, which is why rotation scales."
       },
       {
         "question": "What is the effect of deleting a wrapped DEK while keeping the ciphertext?",
         "options": [
-          "The ciphertext becomes permanently unreadable: cryptographic erasure",
           "Nothing, the KEK can still decrypt it",
-          "The ciphertext is automatically deleted too",
-          "The DEK is regenerated on next read"
+          "The DEK is regenerated on next read",
+          "The ciphertext becomes permanently unreadable: cryptographic erasure",
+          "The ciphertext is automatically deleted too"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Without the DEK there is no way back to the plaintext. Destroying the key is an effective and instant way to erase data you cannot easily overwrite."
       },
       {
         "question": "A single DEK is compromised. What is exposed?",
         "options": [
-          "Exactly one secret, because each secret has its own DEK",
           "Every secret under the same KEK",
+          "The KEK as well",
           "Nothing: DEKs are not sensitive",
-          "The KEK as well"
+          "Exactly one secret, because each secret has its own DEK"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "Per-secret DEKs limit the blast radius of a single key compromise to one value, which is the main security argument for the pattern."
       }
     ]
@@ -223,21 +223,21 @@
       {
         "question": "What does a digital signature provide that encryption does not?",
         "options": [
-          "Proof of who produced the message and that it is unchanged",
-          "Confidentiality of the message",
+          "Protection against replay",
           "A smaller message size",
-          "Protection against replay"
+          "Proof of who produced the message and that it is unchanged",
+          "Confidentiality of the message"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Signatures give authenticity and integrity. They deliberately do not hide the message; encryption is the separate tool for confidentiality."
       },
       {
         "question": "Why is a signature computed over a hash rather than the whole message?",
         "options": [
           "It keeps the signature a fixed small size regardless of message length",
+          "It makes verification require the private key",
           "Hashes are encrypted more securely",
-          "It prevents replay attacks",
-          "It makes verification require the private key"
+          "It prevents replay attacks"
         ],
         "correctIndex": 0,
         "explanation": "Signing a fixed-length digest keeps signatures small and fast. It also means the hash function's collision resistance is part of the security of the scheme."
@@ -245,12 +245,12 @@
       {
         "question": "Why is blind signing a 32-byte digest risky?",
         "options": [
-          "You vouch for a message you cannot read",
           "Digests are easy to forge",
-          "It uses a weaker curve",
-          "It reveals the private key"
+          "You vouch for a message you cannot read",
+          "It reveals the private key",
+          "It uses a weaker curve"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "If you cannot reconstruct what produced the hash, you have no idea what you authorized. This is the root of a whole class of wallet-drain attacks."
       }
     ]
@@ -300,34 +300,34 @@
       {
         "question": "What does non-exportability actually prevent?",
         "options": [
-          "An attacker taking the key material away for later or elsewhere",
-          "Any unauthorized use of the key",
+          "Audit logs from being tampered with",
           "The key from being rotated",
-          "Audit logs from being tampered with"
+          "Any unauthorized use of the key",
+          "An attacker taking the key material away for later or elsewhere"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "The key cannot leave the hardware boundary, so it cannot be exfiltrated. It does not stop an attacker with valid API access from using the key while they have that access."
       },
       {
         "question": "Why keep old key versions after rotation?",
         "options": [
-          "Data encrypted under previous versions still needs to be decryptable",
+          "Compliance forbids deletion",
           "To allow rollback of the rotation",
-          "Old versions are more secure",
-          "Compliance forbids deletion"
+          "Data encrypted under previous versions still needs to be decryptable",
+          "Old versions are more secure"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Rotation creates a new version for new operations, while old versions remain available so previously encrypted data stays readable."
       },
       {
         "question": "In the envelope hierarchy, which key lives in the HSM?",
         "options": [
+          "Both, equally",
           "The KEK",
           "The DEK",
-          "Both, equally",
           "Neither: the HSM holds ciphertext"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "The KEK is the long-lived root that never leaves hardware. DEKs are generated per secret and stored wrapped by it."
       }
     ]
@@ -390,8 +390,8 @@
         "question": "Why must a verifier check the aud claim?",
         "options": [
           "A token minted for another service may otherwise be replayed against yours",
-          "aud determines the expiry",
           "Without it the signature cannot be verified",
+          "aud determines the expiry",
           "aud identifies the signing key"
         ],
         "correctIndex": 0,
@@ -400,12 +400,12 @@
       {
         "question": "What is the primary defence against a stolen bearer token?",
         "options": [
-          "A short expiry, so the window of use is small",
           "Encrypting the token payload",
           "Using a longer signing key",
-          "Storing it in localStorage"
+          "Storing it in localStorage",
+          "A short expiry, so the window of use is small"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "Bearer tokens are transferable by design. Since you cannot stop a thief holding one from using it, you limit how long it remains useful."
       }
     ]
@@ -461,34 +461,34 @@
       {
         "question": "Why is deny-by-default safer than deny-by-exception?",
         "options": [
-          "A forgotten rule refuses access rather than granting it",
           "It is faster to evaluate",
           "It requires fewer policies",
+          "A forgotten rule refuses access rather than granting it",
           "It logs more detail"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Allowlists fail closed and denylists fail open. With deny-by-default the cost of an oversight is a support ticket, not a breach."
       },
       {
         "question": "In an engine that resolves conflicts by priority, what happens to a deny rule with a lower priority than an overlapping allow?",
         "options": [
-          "The allow wins and the deny has no effect",
           "The deny wins regardless",
-          "The request errors",
-          "Both are ignored"
+          "The allow wins and the deny has no effect",
+          "Both are ignored",
+          "The request errors"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "Under priority resolution, deny has no inherent advantage. A deny rule written on the assumption that 'deny always wins' can silently do nothing."
       },
       {
         "question": "What is the point of separating the decision point from the enforcement point?",
         "options": [
-          "Policy can be tested and shadow-run independently of the request path",
-          "It improves latency",
           "It removes the need for authentication",
-          "It allows denylists to be used safely"
+          "Policy can be tested and shadow-run independently of the request path",
+          "It allows denylists to be used safely",
+          "It improves latency"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "Separating them lets you evaluate policies against real or historical inputs without those decisions affecting live traffic, which is exactly what shadow mode does."
       }
     ]
@@ -544,34 +544,34 @@
       {
         "question": "What do t-1 Shamir shares reveal about the secret?",
         "options": [
-          "Nothing at all: the guarantee is information-theoretic",
           "A partial reconstruction",
           "The length of the secret",
+          "Nothing at all: the guarantee is information-theoretic",
           "Enough to brute force it"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Below the threshold, the shares are consistent with every possible secret. The guarantee does not degrade with more computing power."
       },
       {
         "question": "What does threshold MPC provide that Shamir sharing alone does not?",
         "options": [
-          "The complete key is never assembled, even momentarily",
-          "Faster signing",
           "Smaller shares",
-          "Protection against lost shares"
+          "Protection against lost shares",
+          "The complete key is never assembled, even momentarily",
+          "Faster signing"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Shamir requires reconstruction to use the key, creating a moment where it exists whole. MPC produces the signature collaboratively so that moment never occurs."
       },
       {
         "question": "In a 2-of-3 split, what does n = 3 buy you?",
         "options": [
-          "Availability: you can lose one share and still operate",
+          "Faster reconstruction",
           "Higher security than 2-of-2",
-          "A lower threshold",
-          "Faster reconstruction"
+          "Availability: you can lose one share and still operate",
+          "A lower threshold"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "The threshold t sets the security property; n provides redundancy so the loss of a single share is not fatal."
       }
     ]
@@ -620,34 +620,34 @@
       {
         "question": "Which gap does a TEE close that encryption at rest and TLS do not?",
         "options": [
+          "Data in backups",
           "Data in use: while it sits in memory during execution",
-          "Data at rest on disk",
           "Data in transit over the network",
-          "Data in backups"
+          "Data at rest on disk"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "At-rest and in-transit encryption leave data readable in memory while a program runs. A TEE encrypts memory so even the host operator cannot read it."
       },
       {
         "question": "What does remote attestation prove?",
         "options": [
-          "Which code and configuration are running inside the enclave",
           "That the code is free of bugs",
+          "Which code and configuration are running inside the enclave",
           "That the data is encrypted at rest",
           "That the operator is trustworthy"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "Attestation is a hardware-signed measurement of what was loaded. It says nothing about whether that code is correct: a faithfully attested buggy program is still buggy."
       },
       {
         "question": "Why is a TEE a good location for a traffic inspection proxy?",
         "options": [
-          "Traffic can be decrypted and inspected without the operator being able to observe it",
           "It makes inspection faster",
           "It removes the need for TLS",
+          "Traffic can be decrypted and inspected without the operator being able to observe it",
           "It guarantees the traffic is safe"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "The enclave can see plaintext to inspect it while the host operator cannot, which is what makes inspecting sensitive traffic acceptable."
       }
     ]
@@ -705,8 +705,8 @@
         "question": "Why does the perimeter model fail?",
         "options": [
           "It grants broad implicit trust to anything inside the boundary",
-          "Firewalls are unreliable",
           "It is too slow to evaluate",
+          "Firewalls are unreliable",
           "It requires too many credentials"
         ],
         "correctIndex": 0,
@@ -716,9 +716,9 @@
         "question": "Which dimension of least privilege is most often overlooked?",
         "options": [
           "Time: grants that never expire",
-          "Scope",
           "Permission",
-          "Identity"
+          "Identity",
+          "Scope"
         ],
         "correctIndex": 0,
         "explanation": "Scope and permission get attention; duration is routinely ignored. A credential with no expiry converts a single leak into indefinite access."
@@ -726,12 +726,12 @@
       {
         "question": "What does 'assume breach' change about how you design?",
         "options": [
+          "You log less to reduce exposure",
           "You optimise for limiting what a compromise yields, not only for preventing it",
           "You stop investing in prevention",
-          "You require more passwords",
-          "You log less to reduce exposure"
+          "You require more passwords"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "Prevention still matters, but the design goal becomes minimising blast radius, because the probability of some compromise over time approaches certainty."
       }
     ]

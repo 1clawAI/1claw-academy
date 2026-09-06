@@ -54,6 +54,30 @@
       {
         "type": "prose",
         "text": "You now have a registered agent and a fresh JWT bound to its vaults and TTL. Later calls use a Bearer JWT like this one; you will refresh it when policies change."
+      },
+      {
+        "type": "scenario",
+        "situation": "A team is migrating a batch job to an agent identity. They ask whether to reuse the service account credential the job already has, since it is already scoped correctly.",
+        "question": "What do you advise?",
+        "options": [
+          {
+            "text": "Reuse it. The scope is already right, and fewer credentials is better.",
+            "feedback": "Fewer credentials is a real goal, but this shares one identity between a deterministic job and a principal that can be steered by its input. When something goes wrong, the audit trail cannot tell you which one did it."
+          },
+          {
+            "text": "Give the agent its own identity, because an agent is a different kind of principal and attribution must distinguish them.",
+            "correct": true,
+            "feedback": "Correct. Scope is only half of what an identity provides; the other half is answering who did this. An agent can be talked into acting, so its actions need to be separable from a job that cannot be."
+          },
+          {
+            "text": "Reuse it but add a header identifying which caller is which.",
+            "feedback": "A caller-supplied header is not an identity. Anything that can set it can claim to be either party, which is precisely the property you need to not have."
+          },
+          {
+            "text": "Give the agent its own identity only if it will use the Intents API.",
+            "feedback": "Signing raises the stakes but does not create the need. The attribution and blast-radius argument applies to a read-only agent too."
+          }
+        ]
       }
     ],
     "quiz": [
@@ -61,33 +85,33 @@
         "question": "How many times is the plaintext ocv_ API key returned?",
         "options": [
           "On every token exchange",
-          "Once, at agent creation or key rotation",
+          "Once per day",
           "Never, it stays in the HSM",
-          "Once per day"
+          "Once, at agent creation or key rotation"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Only the argon2 hash is stored; the plaintext is shown once at creation or rotation."
       },
       {
         "question": "Which endpoint turns an agent_id plus api_key into a JWT?",
         "options": [
-          "POST /v1/agents",
-          "POST /v1/auth/agent-token",
+          "POST /v1/vaults",
           "GET /v1/agents/me",
-          "POST /v1/vaults"
+          "POST /v1/agents",
+          "POST /v1/auth/agent-token"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "POST /v1/auth/agent-token takes the credentials in the body and returns a short-lived access_token."
       },
       {
         "question": "What two keypairs does 1Claw auto-generate for a new agent?",
         "options": [
-          "RSA and DSA",
-          "Ed25519 signing and P-256 ECDH",
+          "Two AES keys",
           "secp256k1 and Ed25519",
-          "Two AES keys"
+          "RSA and DSA",
+          "Ed25519 signing and P-256 ECDH"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Every agent gets an Ed25519 signing keypair and a P-256 ECDH keypair at creation."
       }
     ],
@@ -197,16 +221,40 @@
         "type": "callout",
         "variant": "warn",
         "text": "Priority decides overlaps, not effect. A deny rule does not automatically beat an allow: give it the higher priority, or the broad allow may win."
+      },
+      {
+        "type": "scenario",
+        "situation": "An agent needs to read everything under app/ except the billing prefix. You write an allow on app/** with priority 10, and a deny on app/billing/** with priority 5. In testing the agent reads app/billing/stripe successfully.",
+        "question": "What is wrong?",
+        "options": [
+          {
+            "text": "Deny rules only apply to human principals, not agents.",
+            "feedback": "Effects apply to any principal. There is no distinction of that kind in the model, and believing there is would hide a much larger hole than this one."
+          },
+          {
+            "text": "The deny has a lower priority than the allow, so the allow wins the overlap.",
+            "correct": true,
+            "feedback": "Correct. Priority resolves overlaps and 10 beats 5. The intuition that deny automatically wins comes from other systems; here a deny rule with a lower number is silently inert, which is the dangerous part."
+          },
+          {
+            "text": "Glob patterns do not support a double asterisk, so app/billing/** never matched.",
+            "feedback": "The pattern is fine and does match. If globbing were the problem the deny would fail on every path, not lose an overlap to a competing rule."
+          },
+          {
+            "text": "The agent's JWT was minted before the deny existed and had stale scopes.",
+            "feedback": "A reasonable guess, since policy changes do revoke an agent's active tokens and force a re-exchange. But that would produce a stale-permissions failure, not a permanent one, and a fresh token here still reads the secret."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "What access does an agent have before any policy is written?",
         "options": [
+          "Read plus write on the default vault",
           "Full read on all vaults",
-          "Read on its own vault only",
           "Zero access, empty scopes",
-          "Read plus write on the default vault"
+          "Read on its own vault only"
         ],
         "correctIndex": 2,
         "explanation": "1Claw is safe-by-default: no scopes and no policies means the JWT grants nothing."
@@ -214,23 +262,23 @@
       {
         "question": "In a policy pattern, what does ** match?",
         "options": [
-          "Exactly one segment",
           "Zero or more segments at any depth",
+          "Nothing: it is a literal",
           "Only the vault root",
-          "Nothing: it is a literal"
+          "Exactly one segment"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "* matches one segment while ** matches zero or more segments (any depth)."
       },
       {
         "question": "What happens to active JWTs when an agent's policy changes?",
         "options": [
           "Nothing until they expire",
-          "They are revoked immediately",
           "They gain the new scope automatically",
+          "They are revoked immediately",
           "Only write tokens are revoked"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Any policy create, update, or delete revokes the agent's active JWTs so stale scopes cannot linger."
       },
       {
@@ -238,8 +286,8 @@
         "options": [
           "The read is allowed, because the allow rule has higher priority",
           "The read is denied, because deny always beats allow",
-          "The request errors as an unresolvable conflict",
-          "Both policies are ignored"
+          "Both policies are ignored",
+          "The request errors as an unresolvable conflict"
         ],
         "correctIndex": 0,
         "explanation": "Priority resolves the overlap, and 10 beats 5. Deny does not win automatically: the deny rule needs the higher priority number to take effect."
@@ -304,38 +352,62 @@
         "type": "callout",
         "variant": "warn",
         "text": "Cedar is Team+ and OPA is Business+. On a lower tier these endpoints exist but return a tier error, so check your plan before designing around them."
+      },
+      {
+        "type": "scenario",
+        "situation": "You have written a Cedar policy that forbids agents from reading production secrets outside business hours. It is your first Cedar policy and production traffic runs continuously.",
+        "question": "How do you roll it out?",
+        "options": [
+          {
+            "text": "Create it and watch the audit log for unexpected denials.",
+            "feedback": "This is a test in production with real denials as the signal. If the policy is wrong you find out from a failed job at 02:00, which is both the worst time to learn it and the worst way."
+          },
+          {
+            "text": "Dry-run it against representative principals and contexts with the test endpoint, then create it.",
+            "correct": true,
+            "feedback": "Correct. The test endpoint evaluates a full principal, action, resource and context and returns the decision without saving anything, so you can confirm the boundary conditions before any request is affected."
+          },
+          {
+            "text": "Create it with a short expiry so it lapses if it turns out to be wrong.",
+            "feedback": "Expiry limits how long a mistake lasts but does nothing about the damage inside the window, and a policy that silently lapses is its own failure mode."
+          },
+          {
+            "text": "Deploy it to a sub-organization first as a staging environment.",
+            "feedback": "Sub-orgs isolate resources, not policy semantics, and a sub-org without production traffic will not exercise the time conditions you are actually unsure about."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "What is the purpose of the /v1/org/cedar-policies/test endpoint?",
         "options": [
-          "Dry-run a policy against a hypothetical request without saving it",
           "Verify the policy's syntax only",
+          "Apply the policy to every past request",
           "Load-test the policy engine",
-          "Apply the policy to every past request"
+          "Dry-run a policy against a hypothetical request without saving it"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "The test endpoint evaluates a full principal/action/resource/context request and returns the decision, so you can confirm behaviour before a policy affects live traffic."
       },
       {
         "question": "How do Cedar and OPA policies relate to the built-in policy engine?",
         "options": [
-          "They are additive: the built-in engine still runs",
-          "They replace the built-in engine entirely",
+          "They only apply to on-chain signing",
           "They only apply to human users",
-          "They only apply to on-chain signing"
+          "They are additive: the built-in engine still runs",
+          "They replace the built-in engine entirely"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Both are additional backends layered alongside the built-in engine, for rules that path patterns and conditions cannot express."
       },
       {
         "question": "Which tiers gate Cedar and OPA respectively?",
         "options": [
           "Cedar is Team+, OPA is Business+",
+          "Both are Enterprise-only",
           "Both are Free",
-          "Cedar is Business+, OPA is Team+",
-          "Both are Enterprise-only"
+          "Cedar is Business+, OPA is Team+"
         ],
         "correctIndex": 0,
         "explanation": "Cedar requires Team or above; OPA requires Business or above. On lower tiers the endpoints return a tier error."
@@ -399,38 +471,62 @@
       {
         "type": "prose",
         "text": "You can now bootstrap an agent from zero credentials and hand the approval to a human, who receives the key and grants scoped access."
+      },
+      {
+        "type": "scenario",
+        "situation": "Self-enrollment is public: an agent posts a name and a human's email, and credentials are mailed to that human. A security reviewer flags this as an open registration endpoint and asks you to remove it.",
+        "question": "How do you answer?",
+        "options": [
+          {
+            "text": "They are right; remove it and provision agents only from the dashboard.",
+            "feedback": "It closes a door that was not open. Enrollment creates an identity with zero access until a human writes a policy, so the endpoint grants nothing on its own."
+          },
+          {
+            "text": "Enrollment creates an identity with no access until a human grants it, and it is rate limited per email and per IP, so the open endpoint is not the risk it appears to be.",
+            "correct": true,
+            "feedback": "Correct. The reviewer is applying a sound instinct to the wrong shape. What matters is not who can create an identity but what an identity can do on creation, and the answer here is nothing."
+          },
+          {
+            "text": "It is fine because the credentials go to the human, who must be a real 1Claw user.",
+            "feedback": "True and worth saying, but on its own it argues that delivery is safe rather than that creation is harmless. The zero-access default is the load-bearing part."
+          },
+          {
+            "text": "Add an allowlist of domains permitted to enroll.",
+            "feedback": "A reasonable hardening if you want it, but proposing a control before establishing whether there is a risk concedes the reviewer's premise."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "Where does the enrolled agent's API key go?",
         "options": [
-          "Returned in the enroll response",
           "Emailed to the human after approval",
+          "Printed to the server log",
           "Stored in the agent's env",
-          "Printed to the server log"
+          "Returned in the enroll response"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "The plaintext key is emailed to the approving human and is never returned from the enroll endpoint."
       },
       {
         "question": "Which risk tier requires passkey plus TOTP attestation?",
         "options": [
+          "None require step-up",
           "T1",
           "T2",
-          "T3",
-          "None require step-up"
+          "T3"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "T1 is informational, T2 requires biometric, and T3 requires passkey plus TOTP."
       },
       {
         "question": "What can an agent submit with name only and no email?",
         "options": [
-          "Nothing, email is mandatory",
+          "A policy change",
           "A link-only enrollment returning an approval_url",
-          "A full agent with an immediate key",
-          "A policy change"
+          "Nothing, email is mandatory",
+          "A full agent with an immediate key"
         ],
         "correctIndex": 1,
         "explanation": "Name-only enrollment creates a link-only pending enrollment and returns an approval_url for a signed-in human."
@@ -496,26 +592,50 @@
       {
         "type": "prose",
         "text": "Your AI client is now wired to the vault, and a first list_secrets call returns metadata scoped to the agent's policies."
+      },
+      {
+        "type": "scenario",
+        "situation": "A developer installs a third-party MCP server alongside 1Claw in their editor. It is open source, has plenty of stars, and its tool descriptions are unusually detailed and helpful.",
+        "question": "What is the risk that is easy to miss?",
+        "options": [
+          {
+            "text": "It could exfiltrate secrets by calling the 1Claw tools directly.",
+            "feedback": "MCP servers do not call each other's tools; the client does. A malicious server influences the model rather than invoking your vault itself."
+          },
+          {
+            "text": "Tool descriptions are read by the model as guidance, so unusually detailed text is an injection surface as much as the server's code.",
+            "correct": true,
+            "feedback": "Correct, and it is why the detail is worth noticing rather than appreciating. Descriptions enter the context window and can carry instructions, which makes an installed tool's metadata part of your attack surface."
+          },
+          {
+            "text": "It might consume enough context tokens to crowd out the 1Claw tools.",
+            "feedback": "A genuine annoyance and a cost concern, but it degrades usefulness rather than creating an exposure."
+          },
+          {
+            "text": "It could impersonate the 1Claw server and capture the agent key.",
+            "feedback": "The stdio server receives its key from the client's own config, so another server has no path to it. Worth pinning versions regardless, but this is not the mechanism."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "Which two headers authenticate a hosted MCP connection?",
         "options": [
+          "Cookie and X-Vault-ID",
           "Authorization and X-Vault-ID",
           "X-Api-Key and X-Agent-ID",
-          "Cookie and X-Vault-ID",
           "Authorization and X-Client-Share"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "The hosted server takes a Bearer JWT in Authorization and the vault UUID in X-Vault-ID."
       },
       {
         "question": "Who enforces access control for MCP tool calls?",
         "options": [
-          "The MCP server itself",
-          "The vault API policy engine",
           "The AI client",
+          "The vault API policy engine",
+          "The MCP server itself",
           "The LLM provider"
         ],
         "correctIndex": 1,
@@ -524,12 +644,12 @@
       {
         "question": "What does list_secrets return?",
         "options": [
+          "The agent's private keys",
           "Decrypted values",
           "Paths, types, versions, and metadata only",
-          "Only the vault name",
-          "The agent's private keys"
+          "Only the vault name"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "list_secrets returns metadata and never secret values; use get_secret for a value."
       }
     ],
@@ -603,6 +723,30 @@
         "type": "callout",
         "variant": "warn",
         "text": "Set execution_require_tee on the agent to force every execution through Shroud AND block the agent's direct secret reads outright. It is the strongest form of this pattern, but it requires execution_intents_enabled first."
+      },
+      {
+        "type": "scenario",
+        "situation": "A binding holds a partner API key inline. The partner rotates the credential on a schedule, and every rotation breaks your agent until someone updates the binding by hand. A colleague proposes storing the key in the vault and giving the agent read access to that path, so it can fetch the current value before each call.",
+        "question": "What do you do?",
+        "options": [
+          {
+            "text": "Take the proposal. Reading from the vault is the same trust boundary as the binding.",
+            "feedback": "It is not. The moment the agent reads that value it is in the model's context, which is exactly what Execution Intents exists to prevent. The proposal solves the rotation problem by giving up the property that made bindings worth using."
+          },
+          {
+            "text": "Change the binding's credential_source to a vault_ref pointing at that path.",
+            "correct": true,
+            "feedback": "Correct. The credential is resolved server-side at execution time, so rotation is picked up automatically and the agent still never sees the value. It solves the same problem as the proposal without moving the secret into context."
+          },
+          {
+            "text": "Keep the inline credential and add a scheduled automation to update the binding after each rotation.",
+            "feedback": "This works and is a real option, but it is machinery to keep two copies in sync when the platform can hold one. It also leaves a window after each rotation where the binding is stale."
+          },
+          {
+            "text": "Rotate the binding credential through the rotate-credential endpoint on a timer.",
+            "feedback": "That endpoint changes the stored credential to a value you supply; it does not discover the partner's new key. You would still need to fetch the new value from somewhere, which returns you to the original problem."
+          }
+        ]
       }
     ],
     "quiz": [
@@ -610,9 +754,9 @@
         "question": "What is the main security advantage of executing through a binding rather than reading the secret?",
         "options": [
           "The credential is injected server-side and never enters the agent's context",
-          "The request is faster",
+          "The agent gets a longer-lived token",
           "The credential is rotated after every call",
-          "The agent gets a longer-lived token"
+          "The request is faster"
         ],
         "correctIndex": 0,
         "explanation": "The agent sends an intent, not a key. The credential stays server-side, so it cannot leak into the context window, logs, or model memory."
@@ -621,9 +765,9 @@
         "question": "Why choose credential_source vault_ref over an inline credential?",
         "options": [
           "The credential resolves from the vault at execution time, so rotation needs no binding update",
-          "It encrypts the credential more strongly",
           "It removes the need for allowed_hosts",
-          "It makes the binding usable by every agent"
+          "It makes the binding usable by every agent",
+          "It encrypts the credential more strongly"
         ],
         "correctIndex": 0,
         "explanation": "Inline copies the credential at creation. A vault_ref is a live pointer resolved at execution, so rotating the underlying secret is picked up automatically."
@@ -632,9 +776,9 @@
         "question": "What does execution_require_tee do beyond forcing execution through Shroud?",
         "options": [
           "It also blocks the agent's direct secret reads",
+          "It exempts the agent from binding allowlists",
           "It disables the agent's signing keys",
-          "It grants the agent Business tier features",
-          "It exempts the agent from binding allowlists"
+          "It grants the agent Business tier features"
         ],
         "correctIndex": 0,
         "explanation": "It forces execution through the TEE and blocks direct secret reads by that agent, pushing it entirely onto bindings. It requires execution_intents_enabled to be on first."
@@ -700,6 +844,30 @@
         "type": "callout",
         "variant": "tip",
         "text": "This is the clean pattern for agents that generate credentials: the agent creates the value, shares it to its creator, and the human accepts. The agent never needs directory access or an email address."
+      },
+      {
+        "type": "scenario",
+        "situation": "An agent provisions a database and needs to hand the generated password to the human who created it. A developer proposes having the agent look up that human's email from the org directory and share to it.",
+        "question": "What is wrong with the proposal?",
+        "options": [
+          {
+            "text": "Nothing, provided the agent has directory read access.",
+            "feedback": "Granting directory access to solve this is the problem. You have widened the agent's reach to every user's contact details in order to avoid a field the API already resolves for you."
+          },
+          {
+            "text": "It needs directory access it should not have, when recipient_type creator resolves the recipient from created_by server-side.",
+            "correct": true,
+            "feedback": "Correct. The agent never needs to know or store who its human is. Removing the lookup removes both a failure mode and a small standing data exposure."
+          },
+          {
+            "text": "Email-based shares are less secure than user-id shares.",
+            "feedback": "Both are legitimate recipient types with the same acceptance step. The issue is what the agent had to be granted to determine the address."
+          },
+          {
+            "text": "The agent cannot share secrets at all; sharing is human-only.",
+            "feedback": "Agents can share, and sharing back to their creator is a supported pattern. The design question is how the recipient gets resolved."
+          }
+        ]
       }
     ],
     "quiz": [
@@ -708,8 +876,8 @@
         "options": [
           "The API resolves the recipient from the agent's created_by field, so the agent needs no identity data",
           "It delivers the share faster",
-          "It skips the acceptance step",
-          "It grants write access automatically"
+          "It grants write access automatically",
+          "It skips the acceptance step"
         ],
         "correctIndex": 0,
         "explanation": "The agent does not need to know or store who its human is. The server resolves it from created_by, which removes both a failure mode and a small data-leak surface."
@@ -719,8 +887,8 @@
         "options": [
           "It is pending and grants nothing",
           "The recipient already has full access",
-          "It expires after one minute",
-          "It is auto-accepted for the creator"
+          "It is auto-accepted for the creator",
+          "It expires after one minute"
         ],
         "correctIndex": 0,
         "explanation": "Shares are pending until accepted. The recipient sees it in their Inbound tab and must accept before any access is granted."
@@ -787,40 +955,64 @@
         "type": "callout",
         "variant": "tip",
         "text": "Every delegation emits audit events: agent.delegation.created, .updated, .revoked, .invoked, and .blocked. A blocked event is the one to alert on; it means an agent tried something outside its grant."
+      },
+      {
+        "type": "scenario",
+        "situation": "A research agent delegates summarisation to a second agent. The delegation is human-created, scoped to two tools, and rate limited. The research agent reads public web pages; the summariser has vault access to internal notes.",
+        "question": "Where is the exposure?",
+        "options": [
+          {
+            "text": "Nowhere. The delegation is explicit, scoped, and rate limited, which is the documented pattern.",
+            "feedback": "Every one of those controls is correct and none of them addresses the actual path. Authorization decides that the summariser may be asked; it says nothing about what it is asked to do."
+          },
+          {
+            "text": "The summariser should treat the delegated task as untrusted content, because it can carry an injection from the web pages the caller read.",
+            "correct": true,
+            "feedback": "Correct. The research agent's input is attacker-influenced, so the task text it forwards is too. Authorization and content trust are independent, and a correctly scoped delegation still carries whatever was in the caller's context."
+          },
+          {
+            "text": "The rate limit is too high, letting an attacker exhaust the daily delegation budget.",
+            "feedback": "Availability is worth bounding and the limit does that, but exhausting a quota is a denial of service. The exposure here is that internal notes can be summarised into an attacker-chosen shape and returned."
+          },
+          {
+            "text": "Delegation depth is unbounded, so the summariser could delegate onward indefinitely.",
+            "feedback": "Worth checking, and max_depth exists for exactly that. But depth limits runaway chains; it does not stop the first hop from carrying a payload."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "Who can create a delegation between two agents?",
         "options": [
+          "Any agent in the org",
           "A human: agents get a 403 creating their own",
           "Either agent involved",
-          "The delegating agent only",
-          "Any agent in the org"
+          "The delegating agent only"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "Delegation records are human-authored. Agents cannot create, modify, or revoke their own delegations; those calls return 403."
       },
       {
         "question": "What does max_depth protect against?",
         "options": [
-          "Recursive chains of agents delegating onward indefinitely",
-          "Too many tools being allowed",
+          "Cross-organization delegation",
           "Delegations lasting too long",
-          "Cross-organization delegation"
+          "Too many tools being allowed",
+          "Recursive chains of agents delegating onward indefinitely"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "Depth is tracked with the X-Delegation-Depth header and capped at max_depth (1-10), which stops A→B→C→… chains from running away."
       },
       {
         "question": "In the default \"caller\" delegation mode, whose credentials does the delegate use?",
         "options": [
-          "Its own",
+          "A temporary shared credential",
           "The delegating agent's",
           "The human creator's",
-          "A temporary shared credential"
+          "Its own"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "In caller mode the delegate acts with its own credentials and its own scopes. target mode instead runs it with the target agent's config and tools."
       }
     ],
@@ -879,6 +1071,30 @@
         "type": "callout",
         "variant": "tip",
         "text": "The directory and card endpoints are unauthenticated by design. Publish only what you would put on a public web page; the card is not a place for internal detail."
+      },
+      {
+        "type": "scenario",
+        "situation": "Your agent's public card lists its A2A endpoint, its categories, and, to help integrators, the internal service names it orchestrates and the regions it runs in.",
+        "question": "What should change?",
+        "options": [
+          {
+            "text": "Nothing. The card is metadata, not credentials, so it discloses nothing sensitive.",
+            "feedback": "Metadata is exactly what reconnaissance consists of. Internal service names and regions map your architecture for anyone who asks, and the endpoint is unauthenticated by design."
+          },
+          {
+            "text": "Remove the internal service names and regions. The card is unauthenticated, so publish only what you would put on a public web page.",
+            "correct": true,
+            "feedback": "Correct. Discovery endpoints take no auth so that agents can find peers before any trust exists, which means the card is genuinely public. Capabilities and protocols belong there; internal topology does not."
+          },
+          {
+            "text": "Keep them but require an agent JWT to fetch the card.",
+            "feedback": "That would break discovery, which depends on the card being readable before a relationship exists. The fix is to publish less, not to gate it."
+          },
+          {
+            "text": "Keep them but set discoverable to false so only direct links resolve.",
+            "feedback": "Unlisted is not private. The card endpoint still answers, so this hides the page from search rather than from anyone who has the id."
+          }
+        ]
       }
     ],
     "quiz": [
@@ -896,23 +1112,23 @@
       {
         "question": "Which discovery endpoints require no authentication?",
         "options": [
-          "The directory search and the agent card",
+          "Neither: both need an agent JWT",
           "Only the directory search",
           "Only the agent card",
-          "Neither: both need an agent JWT"
+          "The directory search and the agent card"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "GET /v1/agents/directory and GET /v1/agents/{id}/card are both public, which is what lets other agents discover peers before any trust exists."
       },
       {
         "question": "Discovering an agent in the directory means you can delegate work to it.",
         "options": [
-          "False: delegation still needs a human-authored delegation record",
           "True, discovery implies permission",
           "True, if both agents are in the same org",
+          "False: delegation still needs a human-authored delegation record",
           "True, if the card lists the tool"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Discovery and authorization are separate. Finding an agent tells you it exists; a human-created delegation decides whether work can actually be handed to it."
       }
     ],

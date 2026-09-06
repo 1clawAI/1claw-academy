@@ -50,18 +50,42 @@
       {
         "type": "prose",
         "text": "You stored a secret and can now explain why a stolen database is worthless: the plaintext DEK exists only in memory during the operation, and the KEK never leaves the HSM."
+      },
+      {
+        "type": "scenario",
+        "situation": "An engineer reports that an attacker briefly had shell on an application server. That server does not hold key material; it authenticates to the HSM and calls it to sign and unwrap. Access was revoked after roughly forty minutes.",
+        "question": "What is the correct assessment of the damage?",
+        "options": [
+          {
+            "text": "The keys are safe because they never left the HSM, so no action is needed.",
+            "feedback": "Half right, and the dangerous half is missing. Non-exportability means the attacker could not take the key with them, which is a real containment win. But for forty minutes they could ask the HSM to perform operations, and it would have complied. You have to establish what was signed or decrypted in that window."
+          },
+          {
+            "text": "Assume every operation the server could request was performed, audit the HSM log for that window, and rotate anything the results touched.",
+            "correct": true,
+            "feedback": "Correct. An HSM protects against key theft, not key misuse. The key is intact, so you do not need to re-key the hierarchy, but every operation in that window is suspect and the audit log is the only record of what actually happened."
+          },
+          {
+            "text": "Rotate the KEK immediately and re-wrap every DEK.",
+            "feedback": "Disproportionate, and it treats the wrong risk. The KEK was never exposed, so rotating it costs real effort and fixes nothing. Rotation is the answer to key compromise; this was credential compromise."
+          },
+          {
+            "text": "Destroy the HSM key version so anything signed during the window becomes invalid.",
+            "feedback": "This confuses signing with encryption. Destroying a key version makes data encrypted under it unreadable, but it does not retroactively invalidate signatures already produced and accepted by others. You would also lose access to legitimate data."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "What wraps the DEK before it is stored?",
         "options": [
+          "The JWT signing key",
           "Another DEK",
-          "The per-vault KEK inside the HSM",
           "The agent's ocv_ key",
-          "The JWT signing key"
+          "The per-vault KEK inside the HSM"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Each vault has one KEK in KMS that wraps and unwraps that vault's DEKs."
       },
       {
@@ -79,11 +103,11 @@
         "question": "How often do KEKs rotate automatically?",
         "options": [
           "Every 30 days",
-          "Every 90 days",
           "Every 365 days",
+          "Every 90 days",
           "Never"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "KEKs rotate on a 365-day period, the NIST SP 800-57 maximum for symmetric KEKs."
       }
     ],
@@ -162,6 +186,30 @@
         "type": "callout",
         "variant": "warn",
         "text": "Two easy mistakes here. generateCmekKey, cmekFingerprint, cmekEncrypt and cmekDecrypt all return promises, so every one needs await. And cmekEncrypt takes (plaintext, key) in that order, both as Uint8Array: swapping them produces a blob that will never decrypt."
+      },
+      {
+        "type": "scenario",
+        "situation": "A customer on CMEK reports that their finance team lost the laptop holding the only copy of their key. They have their dashboard login and their secrets are all still listed in the vault.",
+        "question": "What can you actually do for them?",
+        "options": [
+          {
+            "text": "Restore the key from the server-side backup taken at enrolment.",
+            "feedback": "There is no such backup, and that is the point of CMEK. Only the SHA-256 fingerprint is stored server-side, which can verify a key but cannot reconstruct one."
+          },
+          {
+            "text": "Nothing recovers the values. The ciphertext is unreadable, and they must re-supply every secret under a new key.",
+            "correct": true,
+            "feedback": "Correct, and it is the trade they accepted. The key never left their device, so the provider genuinely cannot help. This is why CMEK enrolment should be paired with an escrow process the customer controls."
+          },
+          {
+            "text": "Use server-assisted rotation to move the secrets onto a new key.",
+            "feedback": "Rotation re-encrypts by decrypting with the old key first. Without that key there is nothing to rotate from. The feature helps you change keys, not recover from losing one."
+          },
+          {
+            "text": "Read the values from the audit log, which records secret access.",
+            "feedback": "The audit log records that an access occurred, along with who and when. It never records the value; if it did, it would be a second copy of every secret in a place with weaker controls."
+          }
+        ]
       }
     ],
     "quiz": [
@@ -170,8 +218,8 @@
         "options": [
           "The full key",
           "Only its SHA-256 fingerprint",
-          "An encrypted copy in the HSM",
-          "Nothing at all"
+          "Nothing at all",
+          "An encrypted copy in the HSM"
         ],
         "correctIndex": 1,
         "explanation": "Only the SHA-256 fingerprint is stored so the vault can track which key was used."
@@ -179,23 +227,23 @@
       {
         "question": "What algorithm does the client-side CMEK layer use?",
         "options": [
+          "ChaCha20 only",
           "RSA-2048",
           "AES-256-GCM",
-          "ChaCha20 only",
           "Ed25519"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "CMEK encrypts values client-side with AES-256-GCM before the HSM layer is applied."
       },
       {
         "question": "What protects a secret if the CMEK vault's database is stolen?",
         "options": [
+          "The IV alone",
           "Nothing extra",
-          "It is doubly encrypted and useless without your key",
           "Only the fingerprint is needed to decrypt",
-          "The IV alone"
+          "It is doubly encrypted and useless without your key"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Each secret carries two independent encryption layers, so a backup yields only doubly-encrypted blobs."
       }
     ],
@@ -272,38 +320,62 @@
       {
         "type": "prose",
         "text": "The vault now returns a client_share on write and requires it on read, so 1Claw alone cannot reconstruct the DEK."
+      },
+      {
+        "type": "scenario",
+        "situation": "You are choosing a custody mode for a vault holding the signing material behind a treasury that moves large sums. The team is small and operationally inexperienced, and there is no formal key-escrow process.",
+        "question": "Which mode fits, and why?",
+        "options": [
+          {
+            "text": "2of2_client_custody, so the provider mathematically cannot act alone.",
+            "feedback": "The trust property is exactly what you want, but pair it with this team and it is a liability. Both shares are required, one is held by them, and losing it is unrecoverable. Strong cryptography plus weak key operations is how funds get permanently locked, not secured."
+          },
+          {
+            "text": "2of3_multi_hsm, so no single HSM provider holds a complete key and losing one share is survivable.",
+            "correct": true,
+            "feedback": "Correct for this team. It removes single-provider trust, which is the threat that matters here, while tolerating the loss of one share. Client custody is stronger against a colluding provider, but only if the client can actually operate a key."
+          },
+          {
+            "text": "No MPC. Standard envelope encryption in the HSM is enough for a treasury.",
+            "feedback": "Defensible for most vaults, but this one concentrates unusual value in a single provider's control. That is precisely the case where splitting custody earns its operational cost."
+          },
+          {
+            "text": "2of3_client_custody, for the strongest guarantee available.",
+            "feedback": "It is the strongest, and it still requires this team to hold and never lose a share. Choosing the maximum guarantee without the operational maturity to support it trades a modest risk for a catastrophic one."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "Which mode returns a client_share and needs X-Client-Share on reads?",
         "options": [
-          "2of3_multi_hsm",
           "2of2_client_custody",
-          "Standard HSM only",
-          "CMEK"
+          "2of3_multi_hsm",
+          "CMEK",
+          "Standard HSM only"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "The 2of2_client_custody XOR split gives you a client_share and requires it on every read."
       },
       {
         "question": "Can a vault's MPC custody mode be changed after it is set?",
         "options": [
-          "Yes, anytime",
           "Yes, once per year",
           "No, it is immutable",
-          "Only by support"
+          "Only by support",
+          "Yes, anytime"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "The custody mode is immutable once set on a vault."
       },
       {
         "question": "Where are the shares stored in 2of3_multi_hsm?",
         "options": [
-          "All on GCP",
-          "Across GCP, AWS, and Azure",
           "On the client only",
-          "In a single HSM"
+          "Across GCP, AWS, and Azure",
+          "In a single HSM",
+          "All on GCP"
         ],
         "correctIndex": 1,
         "explanation": "2of3_multi_hsm distributes three Shamir shares across GCP KMS, AWS KMS, and Azure Key Vault."
@@ -368,18 +440,42 @@
       {
         "type": "prose",
         "text": "Your agent's LLM traffic now flows through the TEE proxy, inspected and redacted, with a normal OpenAI-style response coming back."
+      },
+      {
+        "type": "scenario",
+        "situation": "An agent has intents_require_tee set. A developer reports that their new service calls the Intents API directly at api.1claw.co and receives a 403, and asks you to disable the flag so they can ship.",
+        "question": "What is the right response?",
+        "options": [
+          {
+            "text": "Disable intents_require_tee for that agent, since the call is coming from your own infrastructure.",
+            "feedback": "This is the reasoning the flag exists to prevent. The guarantee is not that the caller is trustworthy, it is that signing is routed through an attested enclave. Turning it off because a trusted service is inconvenienced removes the property for every caller, trusted or not."
+          },
+          {
+            "text": "Route the service through shroud.1claw.co instead, which is what the flag requires.",
+            "correct": true,
+            "feedback": "Correct. The 403 is the control working as designed. Shroud sets an HMAC-signed X-1Claw-TEE-Origin header that the Vault verifies, so the fix is to send the request through the enclave rather than to remove the requirement."
+          },
+          {
+            "text": "Add the service's IP to an allowlist so it can bypass the check.",
+            "feedback": "The check is not about network origin, so an IP allowlist cannot satisfy it. It verifies a shared-secret HMAC header that only Shroud can produce, precisely so that reaching the API from a permitted address is not sufficient."
+          },
+          {
+            "text": "Give the service a second agent identity without the flag set.",
+            "feedback": "This is the flag disabled with extra steps, and it is worse: you now have two identities for one workload, one of which quietly lacks the control, and the audit trail no longer tells you which path a signature took."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "What is the format of the X-Shroud-Agent-Key header value?",
         "options": [
+          "vault_id:secret_path",
           "Just the ocv_ key",
-          "agent_id:api_key",
           "A Bearer JWT",
-          "vault_id:secret_path"
+          "agent_id:api_key"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "The value is exactly agent_id:api_key, with the agent's ocv_ key on the right."
       },
       {
@@ -387,21 +483,21 @@
         "options": [
           "Above 0.5",
           "Above 0.7",
-          "Above 0.9",
-          "Only at 1.0"
+          "Only at 1.0",
+          "Above 0.9"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Scores above 0.9 are always blocked, even if the agent's threshold is higher."
       },
       {
         "question": "What TEE technology runs the Shroud proxy?",
         "options": [
-          "Intel SGX",
           "AMD SEV-SNP on confidential GKE",
-          "Apple Secure Enclave",
-          "AWS Nitro only"
+          "Intel SGX",
+          "AWS Nitro only",
+          "Apple Secure Enclave"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Shroud runs on GKE confidential nodes using AMD SEV-SNP."
       }
     ],
@@ -479,26 +575,50 @@
       {
         "type": "prose",
         "text": "You now have a live canary: any read of api-keys/production records a critical verdict and revokes that principal's sessions."
+      },
+      {
+        "type": "scenario",
+        "situation": "A nightly reconciliation job has used the same 1ck_ key for two years. It works, nobody has touched it, and there has been no incident.",
+        "question": "What is the strongest argument for changing it?",
+        "options": [
+          {
+            "text": "It has probably been copied somewhere by now, so it should be rotated on principle.",
+            "feedback": "Plausible but unfalsifiable, and it will lose to 'if it isn't broken' every time. It also suggests rotation as the fix when the durable problem is duration itself."
+          },
+          {
+            "text": "A credential with no expiry converts any single past leak into permanent access, so the fix is a short-lived token rather than a fresher long-lived one.",
+            "correct": true,
+            "feedback": "Correct, and it is the argument that actually changes the design. Rotation resets the clock; expiry removes the property that makes a leak permanent. Exchange the key for a short-lived JWT at the point of use."
+          },
+          {
+            "text": "Two years exceeds most compliance rotation windows, so it is an audit finding.",
+            "feedback": "Often true and useful for getting the work scheduled, but it argues from policy rather than risk, and it is satisfied by rotating to another two-year key."
+          },
+          {
+            "text": "The job should use mTLS instead, which does not expire.",
+            "feedback": "Certificates do expire, and swapping the credential type without shortening its life leaves the same standing-access problem in a different format."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "What does the audit log use to stay tamper-evident?",
         "options": [
-          "A SHA-256 hash chain",
           "Nightly backups",
           "Row-level encryption only",
+          "A SHA-256 hash chain",
           "A blockchain"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Audit entries form a SHA-256 hash chain, and inserts go through a SECURITY DEFINER function."
       },
       {
         "question": "What happens the moment a honeytoken is read?",
         "options": [
-          "The request is blocked immediately",
-          "A critical verdict is recorded but the request proceeds",
           "The vault is locked",
+          "A critical verdict is recorded but the request proceeds",
+          "The request is blocked immediately",
           "Nothing until a human reviews it"
         ],
         "correctIndex": 1,
@@ -509,8 +629,8 @@
         "options": [
           "Weak passwords",
           "Use of a stolen JWT without the matching private key",
-          "Database theft",
-          "Slow token refresh"
+          "Slow token refresh",
+          "Database theft"
         ],
         "correctIndex": 1,
         "explanation": "DPoP binds a JWT to a client keypair, so a stolen token is useless without the private key."
@@ -584,40 +704,64 @@
         "type": "callout",
         "variant": "warn",
         "text": "Social-login users may have no password. If you require the password method they cannot satisfy it: have them enrol a passkey or TOTP at /settings/security first."
+      },
+      {
+        "type": "scenario",
+        "situation": "You set the HFA policy to require a password for treasury sends. A batch of users, all of whom signed up through Google, immediately cannot send at all.",
+        "question": "What happened?",
+        "options": [
+          {
+            "text": "Their sessions predate the policy and need re-issuing.",
+            "feedback": "Policy changes take effect on the next protected call, so a stale session would surface as a prompt rather than an impossibility."
+          },
+          {
+            "text": "Social-login users have no password to verify, so the step-up cannot be satisfied at all.",
+            "correct": true,
+            "feedback": "Correct. There is nothing to check, so the requirement is unsatisfiable rather than merely inconvenient. Those users need a passkey or TOTP enrolled, or the policy should require a method they can actually present."
+          },
+          {
+            "text": "Google OAuth sessions are not eligible for step-up authentication.",
+            "feedback": "They are eligible; the mechanism works for any authenticated user. The gap is the specific factor you chose, not the login method."
+          },
+          {
+            "text": "The policy resolved to the wallet spend policy instead of the user policy.",
+            "feedback": "Resolution runs user policy first, then wallet, then defaults, so the user policy is what applied. It applied correctly and the requirement is the problem."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "In what order does an HFA policy resolve?",
         "options": [
-          "User policy, then wallet spend policy, then defaults",
-          "Defaults, then wallet policy, then user policy",
           "Wallet policy only",
-          "Whichever was configured most recently"
+          "Whichever was configured most recently",
+          "User policy, then wallet spend policy, then defaults",
+          "Defaults, then wallet policy, then user policy"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Resolution runs most specific first: the user's human_factor_auth_policies, then human_factor_auth on the wallet spend policy, then system defaults."
       },
       {
         "question": "Why prefetch GET /v1/treasury/wallets/auth-policy?",
         "options": [
+          "To list pending approvals",
           "So the client knows which step-up to prompt for before the user acts",
           "To cache wallet balances",
-          "To rotate the wallet key",
-          "To list pending approvals"
+          "To rotate the wallet key"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "Prefetching the effective policy lets the client show the right passkey or password prompt up front, instead of failing the send and retrying."
       },
       {
         "question": "A social-login user has no password set. What breaks if the HFA policy requires the password method?",
         "options": [
-          "They cannot satisfy the step-up until they enrol a passkey or TOTP",
+          "Their account is locked",
           "Nothing: a password is generated for them",
           "The policy silently falls back to no step-up",
-          "Their account is locked"
+          "They cannot satisfy the step-up until they enrol a passkey or TOTP"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "Without a password there is nothing to verify. They need to enrol a passkey or TOTP at /settings/security, or the policy should require one of those methods instead."
       }
     ],
@@ -685,40 +829,64 @@
       {
         "type": "prose",
         "text": "Separately, 1Claw can act as an OAuth2 authorization server, \"Sign in with 1Claw\", with PKCE-required authorize, token, and userinfo endpoints under /v1/oauth. That is for signing users into your app, whereas federation is for machine identity at a service boundary."
+      },
+      {
+        "type": "scenario",
+        "situation": "A partner wants to call your service using a 1Claw-issued federated token. They ask you to accept any token that validates against the 1Claw JWKS, since that proves it came from 1Claw.",
+        "question": "Is that sufficient?",
+        "options": [
+          {
+            "text": "Yes. A valid signature from the published JWKS is exactly the guarantee federation provides.",
+            "feedback": "It proves the issuer, which is necessary and not sufficient. Any 1Claw customer can mint a validly signed token; without checking who it was minted for, you accept tokens intended for someone else."
+          },
+          {
+            "text": "No. You must also validate the audience, or you will accept tokens minted for a different relying party.",
+            "correct": true,
+            "feedback": "Correct, and this is the classic confused-deputy shape. The agent's federation_audiences allowlist controls what it may request; your service must independently check that aud names you."
+          },
+          {
+            "text": "No. Federated tokens are RS256 and you should require EdDSA.",
+            "feedback": "Backwards. Agent JWTs are EdDSA; federation tokens are deliberately RS256 because external relying parties overwhelmingly expect RSA. The algorithm is not the gap."
+          },
+          {
+            "text": "Yes, provided you pin a single kid from the JWKS.",
+            "feedback": "Pinning a kid breaks silently on key rotation and still does not tell you who the token was issued for. It adds fragility without adding the missing check."
+          }
+        ]
       }
     ],
     "quiz": [
       {
         "question": "What does OIDC federation let you remove?",
         "options": [
+          "TLS between services",
           "Static long-lived API keys at the service boundary",
           "The need for agent policies",
-          "TLS between services",
           "The vault itself"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "The relying party validates a short-lived 1Claw-issued JWT against published JWKS, so there is no long-lived shared secret to store or rotate."
       },
       {
         "question": "An agent has federation_enabled true but federation_audiences empty. What happens?",
         "options": [
-          "Every audience is denied",
-          "Every audience is allowed",
           "Only the default audience is allowed",
-          "The agent cannot authenticate at all"
+          "The agent cannot authenticate at all",
+          "Every audience is denied",
+          "Every audience is allowed"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "federation_audiences is an allowlist and empty means deny all. Federation is deny-by-default throughout."
       },
       {
         "question": "Which algorithms sign agent JWTs and federation tokens?",
         "options": [
-          "EdDSA for agent JWTs, RS256 for federation tokens",
+          "EdDSA for both",
           "RS256 for both",
-          "HS256 for both",
-          "EdDSA for both"
+          "EdDSA for agent JWTs, RS256 for federation tokens",
+          "HS256 for both"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Agent JWTs use the EC_SIGN_ED25519 key (EdDSA); federation tokens use an HSM-backed RSA-2048 key (RS256), because external relying parties overwhelmingly expect RSA."
       }
     ],
