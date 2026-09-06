@@ -807,5 +807,159 @@
         "explanation": "An agent that reads nothing external is rarely useful. That is precisely why the other two circles must carry the defensive weight."
       }
     ]
+  },
+  {
+    "id": "capstone-audit-an-agent-fleet",
+    "title": "Capstone: audit an agent fleet",
+    "summary": "Apply the whole track to three real agents: find the exploitable one, rank the risk, and say what you would change first.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "This pulls the track together. You are handed three agents that a growing team shipped over six months. Each was reviewed and approved at the time. Your job is the one nobody did: look at them together and decide what to fix first."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Work through it before reading the verdicts. The exercise is the point; the answers are worth much less if you arrive at them by scrolling."
+      },
+      {
+        "type": "prose",
+        "text": "Agent one. A documentation bot that answers questions in a public Slack channel."
+      },
+      {
+        "type": "audit",
+        "scenario": "The docs bot reads questions from a public channel, searches an internal wiki, and replies in the thread. The wiki includes engineering runbooks.",
+        "tools": [
+          {
+            "name": "read_slack_message",
+            "description": "Reads the question posted in the public channel.",
+            "circles": [
+              "untrusted-content"
+            ],
+            "rationale": "The channel is public, so anyone can post. This is attacker-controlled input."
+          },
+          {
+            "name": "search_wiki",
+            "description": "Full-text search across the internal engineering wiki, including runbooks.",
+            "circles": [
+              "private-data"
+            ],
+            "rationale": "Runbooks routinely contain internal hostnames, architecture detail and occasionally credentials. Treat the wiki as private data."
+          },
+          {
+            "name": "post_slack_reply",
+            "description": "Posts the answer back into the public channel.",
+            "circles": [
+              "external-comms"
+            ],
+            "rationale": "The reply is visible to everyone, including whoever posted the question. Publishing to a channel the attacker reads is exfiltration."
+          }
+        ],
+        "verdict": "All three circles. A question containing hidden instructions can make the bot search the wiki and publish what it finds into a public channel. This is the most exposed of the three, and it looks like the most harmless."
+      },
+      {
+        "type": "prose",
+        "text": "Agent two. A deployment agent with production credentials."
+      },
+      {
+        "type": "audit",
+        "scenario": "The deploy agent reads a merged pull request, calls the deploy API through a binding, and writes a status back to the PR. It runs only on merges to main, which requires review approval.",
+        "tools": [
+          {
+            "name": "read_merged_pr",
+            "description": "Reads the title, body and diff of a PR that has already been approved and merged.",
+            "circles": [
+              "untrusted-content"
+            ],
+            "rationale": "Weaker than the docs bot, because a human reviewed it, but review catches bugs rather than injections. A hidden instruction in a diff comment survives approval easily."
+          },
+          {
+            "name": "execute:deploy",
+            "description": "Triggers a deploy through a binding. The credential is injected server-side.",
+            "circles": [
+              "external-comms"
+            ],
+            "rationale": "Brokering keeps the credential out of context, which is a real win. The agent can still cause an outbound action with parameters it chooses."
+          },
+          {
+            "name": "post_pr_status",
+            "description": "Writes a status comment back onto the pull request.",
+            "circles": [
+              "external-comms"
+            ],
+            "rationale": "Another channel the author can read, though it duplicates a circle already present rather than adding a new one."
+          }
+        ],
+        "verdict": "Two circles, not three: there is no private-data read here. That makes exfiltration hard, but do not mistake this for low risk. The impact is not disclosure, it is an unintended production deploy, which the trifecta does not measure at all."
+      },
+      {
+        "type": "scenario",
+        "situation": "Agent three is a finance assistant. It reads invoices from a shared mailbox, looks up vendor records, and drafts payment instructions that a human approves in the dashboard before anything moves. All three trifecta circles are present.",
+        "question": "You have budget to fix one agent this quarter. Which, and why?",
+        "options": [
+          {
+            "text": "The finance assistant, because it has all three circles and touches money.",
+            "feedback": "The circles are present and the stakes are real, which is why it feels like the answer. But a human approves every payment before it moves, so a successful injection produces a suspicious draft rather than a loss. The control that matters is already there."
+          },
+          {
+            "text": "The docs bot, because all three circles are present with no human in any path.",
+            "correct": true,
+            "feedback": "Correct. It is the only one of the three that is both fully exploitable and fully autonomous: injection to private data to public publication, with nobody in the loop. Its apparent harmlessness is why it was never scrutinised, and why it is the right thing to fix first."
+          },
+          {
+            "text": "The deploy agent, because production access is the highest impact.",
+            "feedback": "Impact is highest and it deserves attention, particularly a narrower binding and approval on deploys. But it has no private-data circle, so the specific failure this track is about cannot occur there. Rank it second."
+          },
+          {
+            "text": "None individually. Roll out output redaction across all three first.",
+            "feedback": "Redaction is a backstop that catches values it already knows about. Buying it instead of closing a circle leaves the docs bot exploitable while feeling like progress, which is the worst outcome of the four."
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Two lessons worth carrying out of this. First, the agent that looks least dangerous was the most exploitable, because nobody scrutinises a documentation bot. Second, the trifecta measures exfiltration and nothing else. The deploy agent's real risk is an unintended action, and you need the excessive-agency lens for that, not this one."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "A model that answers one question well will quietly answer a different question badly if you let it. Use the trifecta for disclosure and the agency root causes for impact, and run both."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "The deploy agent has only two circles. What does that tell you about its risk?",
+        "options": [
+          "It is low risk and can be deprioritised indefinitely",
+          "Exfiltration is unlikely, but the trifecta says nothing about the risk of an unintended action",
+          "It is safe because a human approved the pull request",
+          "It needs a third circle before anything can go wrong"
+        ],
+        "correctIndex": 1,
+        "explanation": "The trifecta is a model of data exfiltration. An agent that cannot leak data can still take a damaging action, which is what the excessive-agency root causes address."
+      },
+      {
+        "question": "Why was the documentation bot the right answer despite the finance assistant handling money?",
+        "options": [
+          "Public channels are inherently less secure than mailboxes",
+          "It is fully exploitable and fully autonomous, while the finance flow has a human before anything moves",
+          "Slack has weaker authentication than email",
+          "It processes more messages per day"
+        ],
+        "correctIndex": 1,
+        "explanation": "Human approval in the payment path converts a successful injection into a suspicious draft. The docs bot has no equivalent control anywhere in its path."
+      },
+      {
+        "question": "What made the documentation bot easy to overlook in review?",
+        "options": [
+          "It was approved by a different team",
+          "Each capability is individually reasonable and the agent seems harmless",
+          "It was deployed without a review",
+          "Its tools were undocumented"
+        ],
+        "correctIndex": 1,
+        "explanation": "Every capability was justified on its own terms, and reviewing them one at a time never surfaces the combination. Auditing the set together is what the trifecta is for."
+      }
+    ]
   }
 ]

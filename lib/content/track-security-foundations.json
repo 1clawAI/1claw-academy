@@ -177,6 +177,121 @@
     ]
   },
   {
+    "id": "lab-envelope-encryption",
+    "title": "Lab: build envelope encryption by hand",
+    "summary": "Do the KEK and DEK dance yourself with openssl, then destroy a key and watch the data become unreadable.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The previous lesson described envelope encryption. Ten minutes with openssl makes it concrete, and nothing here needs an account, a network, or 1Claw. Everything happens in a scratch directory you delete afterwards."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "You need openssl, which ships with macOS and every Linux distribution. Run `openssl version` to confirm."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Make a scratch directory so nothing lands in a real project.",
+            "code": "mkdir -p /tmp/envlab && cd /tmp/envlab",
+            "lang": "bash"
+          },
+          {
+            "text": "Generate the key encryption key. In production this lives inside an HSM and never comes out; here it is a file, which is exactly the weakness the HSM removes.",
+            "code": "openssl rand -hex 32 > kek.hex",
+            "lang": "bash"
+          },
+          {
+            "text": "Generate a data encryption key for one secret. Every secret gets its own, which is what limits the blast radius of a single compromise.",
+            "code": "openssl rand -hex 32 > dek.hex",
+            "lang": "bash"
+          },
+          {
+            "text": "Encrypt the secret under the DEK. Save the IV: it is not sensitive, but without it the ciphertext is undecryptable, which is a very common way to lose data.",
+            "code": "printf 'sk-live-abc123' > secret.txt\nopenssl rand -hex 16 > iv.hex\nopenssl enc -aes-256-cbc \\\n  -K \"$(cat dek.hex)\" -iv \"$(cat iv.hex)\" \\\n  -in secret.txt -out secret.enc",
+            "lang": "bash"
+          },
+          {
+            "text": "Wrap the DEK under the KEK. This is the envelope: the file you store next to the ciphertext is the encrypted key, never the key itself.",
+            "code": "openssl rand -hex 16 > wiv.hex\nopenssl enc -aes-256-cbc \\\n  -K \"$(cat kek.hex)\" -iv \"$(cat wiv.hex)\" \\\n  -in dek.hex -out dek.wrapped",
+            "lang": "bash"
+          },
+          {
+            "text": "Look at what a server would actually hold. There is no plaintext key anywhere in this list.",
+            "code": "ls -l secret.enc dek.wrapped iv.hex wiv.hex",
+            "lang": "bash"
+          },
+          {
+            "text": "Read the secret back the way the vault does: unwrap the DEK with the KEK, then decrypt with the DEK.",
+            "code": "openssl enc -d -aes-256-cbc \\\n  -K \"$(cat kek.hex)\" -iv \"$(cat wiv.hex)\" \\\n  -in dek.wrapped -out dek.recovered\n\nopenssl enc -d -aes-256-cbc \\\n  -K \"$(cat dek.recovered)\" -iv \"$(cat iv.hex)\" \\\n  -in secret.enc\n# -> sk-live-abc123",
+            "lang": "bash"
+          },
+          {
+            "text": "Now do cryptographic erasure. Delete only the wrapped DEK and try again.",
+            "code": "rm dek.wrapped dek.recovered\n\nopenssl enc -d -aes-256-cbc \\\n  -K \"$(cat kek.hex)\" -iv \"$(cat wiv.hex)\" \\\n  -in dek.wrapped -out dek.recovered\n# -> Can't open \"dek.wrapped\" for reading, No such file or directory",
+            "lang": "bash"
+          },
+          {
+            "text": "The ciphertext is untouched and permanently unreadable. Clean up.",
+            "code": "cd /tmp && rm -rf envlab",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Three properties you just demonstrated rather than read about. The KEK never touched the secret, only the DEK. Rotating the KEK would mean re-encrypting one small wrapped key, not the data. And deleting a key erased the data instantly, without overwriting a single byte of it."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Real implementations use AES-GCM rather than CBC, because GCM authenticates as well as encrypts, so tampering is detected instead of producing garbage plaintext. CBC is used here only because it needs fewer flags to demonstrate."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "You just held a KEK in a file, which is the thing the next lesson exists to fix. Everything above is correct and still weak, because the root of the hierarchy sat on disk where any process could read it."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "You deleted the wrapped DEK but kept the ciphertext. Why is the data unrecoverable?",
+        "options": [
+          "The KEK can only decrypt data it encrypted directly",
+          "The ciphertext was overwritten when the DEK was deleted",
+          "There is no path back to the DEK, and only the DEK can decrypt the ciphertext",
+          "The IV was deleted along with it"
+        ],
+        "correctIndex": 2,
+        "explanation": "Cryptographic erasure works because the data is only reachable through the key. Destroying the small wrapped key is instant and complete, with no need to overwrite the data itself."
+      },
+      {
+        "question": "Why does each secret get its own DEK rather than sharing one?",
+        "options": [
+          "It makes encryption faster",
+          "A compromised DEK exposes exactly one secret",
+          "It allows a shorter key length",
+          "The KEK can only wrap one key at a time"
+        ],
+        "correctIndex": 1,
+        "explanation": "Per-secret DEKs bound the blast radius. One leaked DEK is one leaked secret, whereas a shared key would turn any single compromise into a full-store compromise."
+      },
+      {
+        "question": "The IV was stored in plaintext next to the ciphertext. Is that a problem?",
+        "options": [
+          "Yes, the IV must be kept as secret as the key",
+          "No, an IV is not secret, but losing it makes the ciphertext undecryptable",
+          "Yes, it lets an attacker recover the DEK",
+          "No, and it can safely be discarded after encrypting"
+        ],
+        "correctIndex": 1,
+        "explanation": "An IV needs to be unique, not confidential. It is stored alongside the ciphertext by design, but it is required for decryption, so losing it destroys the data as surely as losing the key."
+      }
+    ]
+  },
+  {
     "id": "public-key-crypto",
     "title": "Public-key cryptography and digital signatures",
     "summary": "Separate the key that proves identity from the key that verifies it, and see why signing is not encryption.",
@@ -407,6 +522,91 @@
         ],
         "correctIndex": 3,
         "explanation": "Bearer tokens are transferable by design. Since you cannot stop a thief holding one from using it, you limit how long it remains useful."
+      }
+    ]
+  },
+  {
+    "id": "lab-read-a-jwt",
+    "title": "Lab: read a token without its key",
+    "summary": "Decode a real JWT with nothing but base64, and see for yourself which claims a bearer can read.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The previous lesson said a signed JWT is readable by anyone holding it. That is worth proving rather than believing, because the belief that a token is opaque is behind a lot of accidental disclosure."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Save a token. This one is a realistic 1Claw agent JWT with a fake signature, so there is nothing sensitive here.",
+            "code": "cat > /tmp/jwt.txt <<'EOF'\neyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCIsImtpZCI6ImVkZHNhLXYzIn0.eyJpc3MiOiJodHRwczovL2FwaS4xY2xhdy5jbyIsInN1YiI6ImFnZW50XzAxSDhYSyIsImF1ZCI6Imh0dHBzOi8vYXBpLjFjbGF3LmNvIiwiZXhwIjoxNzY3MjI1NjAwLCJzY29wZSI6InNlY3JldHM6cmVhZCJ9.c2lnbmF0dXJlLWJ5dGVz\nEOF",
+            "lang": "bash"
+          },
+          {
+            "text": "Decode the payload. Note what you did not need: a key, a network call, or permission.",
+            "code": "cut -d. -f2 /tmp/jwt.txt | python3 -c \"\nimport sys, base64, json\ns = sys.stdin.read().strip()\nprint(json.dumps(json.loads(base64.urlsafe_b64decode(s + '=' * (-len(s) % 4))), indent=2))\n\"",
+            "lang": "bash"
+          },
+          {
+            "text": "You should see the claims in the clear.",
+            "code": "{\n  \"iss\": \"https://api.1claw.co\",\n  \"sub\": \"agent_01H8XK\",\n  \"aud\": \"https://api.1claw.co\",\n  \"exp\": 1767225600,\n  \"scope\": \"secrets:read\"\n}",
+            "lang": "json"
+          },
+          {
+            "text": "Decode the header too. It names the algorithm and the key id the verifier should use from the JWKS.",
+            "code": "cut -d. -f1 /tmp/jwt.txt | python3 -c \"\nimport sys, base64, json\ns = sys.stdin.read().strip()\nprint(json.loads(base64.urlsafe_b64decode(s + '=' * (-len(s) % 4))))\n\"",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "The padding arithmetic is not incidental. JWTs use base64url with the trailing = stripped, so a plain `base64 -d` fails on most tokens. That is why the snippet re-adds it."
+      },
+      {
+        "type": "prose",
+        "text": "Now consider what you could not do. You read every claim, but you could not change one: altering the payload invalidates the signature, and you do not hold the signing key. That is the split at the centre of the previous lesson. Signing gives integrity and authenticity; it gives no confidentiality at all."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Never put anything in a JWT you would not publish. Internal ids, email addresses and role names all end up in browser storage, proxy logs and error reports, because a token travels everywhere its bearer goes."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What did decoding the payload require?",
+        "options": [
+          "The public key from the JWKS",
+          "Nothing but the token itself",
+          "The issuer's permission",
+          "The signing key"
+        ],
+        "correctIndex": 1,
+        "explanation": "A signed JWT is encoded, not encrypted. Anyone holding it can read every claim, which is why secrets must never be placed in one."
+      },
+      {
+        "question": "Why does `base64 -d` often fail on a JWT segment?",
+        "options": [
+          "JWTs use base64url with padding stripped, so it must be re-added",
+          "The segments are compressed before encoding",
+          "The payload is encrypted",
+          "Each segment uses a different encoding"
+        ],
+        "correctIndex": 0,
+        "explanation": "base64url swaps two characters and drops the trailing equals signs. Restoring the padding is what makes a standard decoder work."
+      },
+      {
+        "question": "You decoded the token but cannot alter its claims. Why not?",
+        "options": [
+          "The claims are checksummed by the client",
+          "Editing the payload breaks the signature, which you cannot recompute without the signing key",
+          "The payload is write-protected",
+          "The exp claim locks the contents"
+        ],
+        "correctIndex": 1,
+        "explanation": "Integrity comes from the signature. You can read freely, but any modification is detectable by anyone with the public key."
       }
     ]
   },

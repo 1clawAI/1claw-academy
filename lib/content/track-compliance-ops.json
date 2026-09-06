@@ -67,6 +67,24 @@
         "text": "You can now query the audit log by action and actor and explain why the chain plus SECURITY DEFINER insert makes it tamper-evident, which supports SOC 2 controls like CC6 and CC7."
       },
       {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. Audit logs are written continuously and read rarely, so their defects surface at the least convenient moment."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Retention is shorter than the question. Regulators ask about periods measured in years and default retention is measured in months, which is discovered during the first audit rather than before it.",
+          "Nobody has tested completeness. Negative assurance depends on an event necessarily being recorded, and that claim needs evidence rather than confidence.",
+          "The log is queried only after incidents. A log nobody reads routinely is a log whose gaps nobody knows about, and the gaps are what an incident will find.",
+          "Attribution collapses onto one identity. Every action attributed to \"the agent\" satisfies retention and answers nothing, which is why identity separation is an audit concern rather than a tidiness one."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Query your audit log for something ordinary once a month. It keeps the retention window honest and surfaces gaps while they are still cheap to fix."
+      },
+      {
         "type": "scenario",
         "situation": "An auditor asks you to prove that no agent read the secret at prod/db/root during Q3. You have the audit log.",
         "question": "What can you actually demonstrate?",
@@ -210,6 +228,24 @@
       {
         "type": "prose",
         "text": "You now rotate a key and deactivate an agent while keeping its audit trail, and you can scope a fleet with vault binding and conditional policies."
+      },
+      {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. Fleets fail by accumulation. No single agent is a problem and the set becomes one."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Agents are created and never retired. Deactivation preserves the audit trail where deletion does not, and the absence of a retirement step leaves a growing population of live identities nobody owns.",
+          "Policies drift between agents that should match. Three agents doing the same job diverge one exception at a time, and the widest one becomes the effective posture.",
+          "Blocked events are unmonitored. Denials are the cheapest signal available precisely because nothing breaks when they fire, and they indicate either a broken client or a steered agent.",
+          "Environment tags are set but not enforced. Tagging without env.enforce_agent_environment_scope is documentation, not a control."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Run a quarterly review that lists every agent, its owner, its last activity and its effective scope. Anything with no owner or no recent activity should be deactivated by default."
       },
       {
         "type": "scenario",
@@ -362,6 +398,25 @@
         "text": "You now register a platform app and bootstrap a user with a vault, an intents-enabled agent, and server-side signing keys your platform cannot read, plus a claim URL to hand off."
       },
       {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. Multi-tenancy failures are rarely subtle and almost always consequential, because the blast radius is every customer at once."
+      },
+      {
+        "type": "points",
+        "items": [
+          "platform_locked is omitted at provisioning. It is far easier to set at creation than to retrofit once support workflows have grown to depend on operator reads.",
+          "The plt_ key reaches client code. It is a platform-wide credential; anywhere it appears in a browser bundle it is published to every visitor.",
+          "Bootstrap runs without an idempotency key. Retries then double-provision, and the second set of resources is attributed to the same connection.",
+          "Delegation scopes are set broadly during development. secrets:read added for debugging tends to stay, and it applies across every connected user rather than one.",
+          "Claim tokens are treated as durable links. They are one-time and expiring, so a token pasted into a ticket for later is a support case waiting to happen."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Design support tooling around metadata, audit trails and error detail rather than values. Almost all real debugging needs to know that a secret exists and when it last changed, not what it is."
+      },
+      {
         "type": "scenario",
         "situation": "You are building a product on the Platform API. Your support team needs to help users debug their integrations, which means seeing the secrets those users store in the vaults you provision for them.",
         "question": "How should you design this?",
@@ -488,6 +543,24 @@
         "text": "Deleting a sub-org archives it rather than destroying it, which keeps the audit trail intact for anything that happened inside it."
       },
       {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. Hierarchies are created for isolation and then eroded for convenience."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Permissions are granted at the parent for expedience. A grant made once at the top to unblock someone dissolves the boundary the hierarchy was created to draw.",
+          "Sub-orgs are used for what the Platform API does. Modelling your product's end users as sub-orgs works until you need per-user claim flows and billing, and by then migration is expensive.",
+          "Archived sub-orgs are assumed gone. Archiving preserves history deliberately, so anything counting active resources needs to account for them.",
+          "Wallet quotas are forgotten. Sub-org wallets count toward the org quota, and a per-sub-org wallet strategy consumes it faster than anyone plans for."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "The dividing question is whose users these are. Your own departments are sub-orgs; other people's users are the Platform API. Getting it wrong is recoverable and expensive."
+      },
+      {
         "type": "scenario",
         "situation": "You are the platform team at a company with three product groups that want separate budgets, separate agents, and no visibility into each other's secrets. A colleague suggests using the Platform API, since it is built for multi-tenancy.",
         "question": "Which model fits?",
@@ -541,6 +614,123 @@
         "trackId": "security-foundations",
         "lessonId": "access-control-models",
         "note": "hierarchy and delegated permission"
+      }
+    ]
+  },
+  {
+    "id": "capstone-architect-a-control-plane",
+    "title": "Capstone: architect a control plane",
+    "summary": "The closing exercise. Design the whole system for a hostile brief, and defend the trade-offs you make.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "This is the last lesson in the course, and it asks for the thing every previous track was building toward: a complete design, with the compromises stated out loud."
+      },
+      {
+        "type": "prose",
+        "text": "The brief. A healthcare scheduling company runs a fleet of agents that read patient referral emails, look up clinician availability, book appointments, and settle small payments to partner clinics. Referrals arrive from outside the organisation. Regulators require that every access to patient data be attributable to a named principal and retained for seven years. The company has been breached once already, through a contractor's leaked API key."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Design it before reading on. Then compare, and pay attention to the places you and the walkthrough disagree, because several of these have more than one defensible answer."
+      },
+      {
+        "type": "prose",
+        "text": "Start from the threat model, not the product. Referral emails are untrusted content by definition, patient records are the private data, and booking confirmations go back out to the referrer. All three circles are present and none can be removed without destroying the product. That settles the shape of everything else: injection will eventually succeed, so the design has to make success cheap."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Identity. One agent per function, never one fleet identity. Referral parsing, scheduling, and settlement are three principals with three audit trails, because the seven-year retention requirement is worthless if every action is attributed to \"the agent\".",
+          "Credentials. No agent holds one. Clinical systems and the payment rail are reached through bindings with vault_ref credentials, so the contractor breach that started all this cannot repeat in the same shape.",
+          "Storage. Patient identifiers live in a vault with MPC custody, because a single provider holding complete key material is exactly the concentration a regulator will ask about.",
+          "Inference. Referral text goes through Shroud, so PII is scrubbed before it reaches a model provider and never enters a third party's logs.",
+          "Authorization. Deny-by-default, scoped per path, with environment tags locked on the production agents so a preview identity can never resolve production data.",
+          "Human factor. Settlement above a threshold routes to a person with step-up authentication, and the threshold is set where a human will still read the prompt."
+        ]
+      },
+      {
+        "type": "scenario",
+        "situation": "The clinical team asks for one agent that can do all three jobs, arguing that three agents means three integrations to maintain and the same human owns all of them anyway.",
+        "question": "How do you answer?",
+        "options": [
+          {
+            "text": "Agree. One owner means one identity is a fair simplification, and fewer integrations is a real benefit.",
+            "feedback": "The maintenance argument is genuine and the conclusion still fails. A single identity means the referral-parsing path, which consumes attacker-controlled email, carries the settlement credential too. You would be handing an injected agent the payment rail."
+          },
+          {
+            "text": "Refuse on principle. Agents must always be single-purpose.",
+            "feedback": "Right answer, wrong reasoning, and the reasoning is what fails you at the next meeting. A rule stated as principle invites an exception the moment it is inconvenient; state the specific consequence instead."
+          },
+          {
+            "text": "Keep them separate, because merging puts the settlement capability on the path that reads untrusted email, and offer to reduce the integration cost another way.",
+            "correct": true,
+            "feedback": "Correct. Name the concrete consequence rather than the principle, and take the maintenance concern seriously, because it is real. Shared bindings and a common runtime template address the cost without merging the identities."
+          },
+          {
+            "text": "Merge them but add approval on every settlement.",
+            "feedback": "This puts a human in front of every payment in a system doing small settlements at volume, which produces reflexive approval within days. You would have merged the identities and neutralised the control meant to compensate."
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Now the part that separates a design from a diagram: say what you gave up. Every choice above has a cost, and a design that claims otherwise has not been thought through."
+      },
+      {
+        "type": "points",
+        "items": [
+          "MPC custody adds operational failure modes. Shares can be lost, and a team without key-handling maturity can lock itself out of patient data permanently.",
+          "Routing inference through a TEE proxy adds latency to every referral, and attestation proves which code runs, not that the code is correct.",
+          "Three identities mean three sets of policies that can drift apart, and drift is how a preview agent ends up with a production grant.",
+          "Deny-by-default guarantees a support burden. Someone is blocked on a Friday afternoon by a rule nobody remembers writing.",
+          "Approval thresholds decay. Set too low they get clicked through; set too high they never fire. Either way they need revisiting, and nobody schedules that."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "If you cannot name what a control costs, you do not yet understand it well enough to defend it when someone asks to remove it. That conversation always comes."
+      },
+      {
+        "type": "prose",
+        "text": "One last thing the brief tried to hide. Nothing above prevents the breach that already happened: a contractor leaked a key. What the design changes is the consequence. The leaked credential is now short-lived, scoped to one path, attributable to one principal, and useless for reaching the payment rail. That is the whole thesis of this course, stated as an outcome rather than a principle."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why does the brief's threat model settle the shape of the design before any product decision?",
+        "options": [
+          "Regulators require a threat model first",
+          "All three trifecta circles are present and none can be removed, so the design must assume injection succeeds",
+          "Healthcare data requires MPC by law",
+          "Referral emails cannot be parsed safely"
+        ],
+        "correctIndex": 1,
+        "explanation": "When no circle can be removed without destroying the product, prevention stops being the goal and limiting the consequence becomes it. That drives identity, credential handling and approval design."
+      },
+      {
+        "question": "What is the strongest argument against merging the three agents into one?",
+        "options": [
+          "Single-purpose agents are a best practice",
+          "It would put the settlement credential on the path that consumes untrusted email",
+          "It would exceed the agent quota",
+          "Three audit trails are required by the regulator"
+        ],
+        "correctIndex": 1,
+        "explanation": "Naming the concrete consequence is what survives a follow-up meeting. Stating it as a principle invites an exception the first time it is inconvenient."
+      },
+      {
+        "question": "What does the design actually change about the original contractor breach?",
+        "options": [
+          "It prevents credentials from leaking",
+          "It makes the leaked credential short-lived, narrowly scoped, attributable, and useless for reaching payments",
+          "It removes the need for contractors to hold credentials",
+          "It detects the leak faster"
+        ],
+        "correctIndex": 1,
+        "explanation": "No design prevents a person from leaking a credential. The measure of the architecture is what an attacker gets when one inevitably leaks."
       }
     ]
   }

@@ -76,6 +76,25 @@
         "text": "You now have an agent that submits a simulated, guardrailed transaction with the signing key locked inside the vault."
       },
       {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. Guardrails are configured once and then quietly outgrown, and signing failures are unusually expensive because they are irreversible."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Value caps are set in native units and the price moves. A 0.5 ETH daily limit written when ETH was cheap is a different limit a year later, and nothing re-evaluates it.",
+          "EIP-712 is left at the default and then widened for one integration. Typed-data signing is deny-by-default for good reason, and every allowlisted domain is a permanent widening made for a temporary need.",
+          "Unlimited ERC-20 approvals slip through. A transfer cap bounds what one transaction moves; an approval grants standing authority to move everything later, and it looks like a small transaction at signing time.",
+          "Simulation failures are treated as noise. A failing simulation is the cheapest warning available, and routing it to a policy rather than a log is the difference between catching a bad call and funding one.",
+          "Gas budgets are forgotten. Value caps say nothing about fees, so an agent stuck in a retry loop drains the account in overhead while every individual transaction stays inside its limit."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Set a calendar reminder to re-read every guardrail quarterly. They are written against conditions that change and they do not fail loudly when those conditions do."
+      },
+      {
         "type": "scenario",
         "situation": "An integration asks you to enable raw_signing_enabled on a trading agent. Their SDK computes an ERC-1271 nested EIP-712 hash client-side and needs the agent to sign the resulting 32 bytes. They point out that the hash is derived from data they control, so nothing unexpected can be signed.",
         "question": "How do you handle the request?",
@@ -226,6 +245,24 @@
         "text": "You now have a treasury wallet and a Safe proposal that collects signatures and executes on its own once threshold is met."
       },
       {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. Treasury operations are low-frequency and high-consequence, which is the worst combination for building operational muscle."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Export is used as an integration path. The endpoint exists for migration, requires password re-auth and is audit-logged, and the moment a key is exported for convenience it becomes a copy you cannot revoke.",
+          "Recovery is never rehearsed. Wallet generation is easy and the first real test of your recovery procedure should not be an incident.",
+          "Non-EVM chains are assumed to behave like EVM. Bitcoin needs a fee rate, XRP needs a destination tag, Cardano needs a TTL. A missing chain-specific field is a failed or misdirected send, not a validation error you catch in review.",
+          "Gasless sends hide a dependency. Sponsorship requires a configured paymaster, so a working flow can stop working because of a third-party key nobody on the team remembers."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Destination tags deserve particular care. An XRP send without one reaches the right address and the wrong account at an exchange, and it is generally unrecoverable."
+      },
+      {
         "type": "scenario",
         "situation": "A developer asks for read access to the __treasury-keys vault so their service can fetch a private key and sign locally, arguing it will be faster than round-tripping through the API.",
         "question": "How do you respond?",
@@ -364,6 +401,24 @@
       {
         "type": "prose",
         "text": "You can now take a 402, sign a USDC payment on Base, and retry the same request with X-PAYMENT to get a 200."
+      },
+      {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. x402 puts payment authorisation in an automated path, so the checks that a human would perform implicitly must be written down."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Challenge validation is partially implemented. Amount and network are checked because they are obvious; payTo and the asset contract are the ones an attacker actually controls.",
+          "402 responses are retried blindly. A retry loop against a priced endpoint spends real money, and the failure looks like a transient network problem in every dashboard you own.",
+          "The asset is matched by symbol. Any token can call itself USDC, so the check has to pin the contract address rather than the name.",
+          "Overage is enabled without a ceiling. Automatic payment removes the friction that used to cap the damage of a runaway loop."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Validation is a conjunction, not a score. payTo allowlisted, network correct, amount exact, asset pinned; three out of four means do not sign."
       },
       {
         "type": "scenario",
@@ -623,6 +678,25 @@
         "text": "Audit the shadow decisions with the guardrail_shadow.would_deny event, and review history through GET /v1/org/guardrail-revisions."
       },
       {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. Graduated HITL introduces a human decision into an automated path, and the humans are the part that degrades."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Approval fatigue sets in. A threshold that fires many times a day produces reflexive approval, at which point the queue is theatre and everyone believes it is a control.",
+          "Approval context is too thin to decide on. A prompt that says an agent wants to send 2 ETH is not a decision, it is a coin flip. Recipient, purpose and precedent are what make review meaningful.",
+          "Shadow mode is enabled and never read. Running a rule in log mode is only useful if someone reads the shadow report, and rules commonly sit in shadow indefinitely because nobody owns the promotion.",
+          "Widening approvals are rubber-stamped. Since v0.56.2 widening a guardrail queues behind an approval, which is a real control and becomes a formality if the same person requests and approves it.",
+          "There is no timeout policy. A pending approval that nobody actions blocks the work, and the pressure to add an auto-approve fallback arrives quickly."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "The health metric for an approval queue is not how many are approved, it is how many are rejected. A queue that has never rejected anything is not being read."
+      },
+      {
         "type": "scenario",
         "situation": "An agent's daily spend cap is blocking a legitimate weekly settlement run. The team wants the cap raised from 1 ETH to 5 ETH before tomorrow morning. You PATCH the agent and get back a 202 with a pending_approval_id rather than a 200.",
         "question": "What has happened, and what do you tell the team?",
@@ -754,6 +828,25 @@
         "text": "Revealing a card is human-only by default. Agents get a 403 unless a human enabled a per-card reveal_policy. Reveal is deliberately absent from the MCP tool set, so a PAN can never land in a model's context window."
       },
       {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. Card ordering combines an agent, a payment rail and a bearer instrument, and each seam has its own failure."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Order caps are mistaken for spend caps. The guardrails bound what an agent may buy, not what the resulting card can be spent on. Once funded, the balance is outside their reach.",
+          "Idempotency keys are reused or omitted. The key is required on order, and getting it wrong means either a rejected request or a duplicate purchase depending on which direction you err.",
+          "Orphaned payments are ignored. The monitor flags rows stuck in ordering as orphaned_payment, which means money moved and no card resulted. That needs reconciliation, not a filter.",
+          "Reveal policy is enabled for convenience. Per-card reveal for agents exists for narrow cases, and enabling it broadly puts a PAN one injection away from a context window.",
+          "Card lifecycle is unmanaged. Cards accumulate with residual balances unless void_after is set and depleted cards are cleaned up."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Reveal is deliberately absent from the MCP tool set. If you find yourself building a way for an agent to obtain a PAN, stop and re-read why that omission exists."
+      },
+      {
         "type": "scenario",
         "situation": "A finance lead asks you to set card_require_approval to false for a procurement agent. Its guardrails are tight: 25 USD per order, 25 USD per day, and a payTo allowlist limited to the built-in Laso recipients.",
         "question": "Is the request safe to grant?",
@@ -881,6 +974,24 @@
         "text": "Treasury wallets are human-only: agents get a 403. Swap remains EVM-only, while send now covers all six chains."
       },
       {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. Aggregation looks like a reporting concern until someone makes a decision on a number that was quietly wrong."
+      },
+      {
+        "type": "points",
+        "items": [
+          "USD estimates are treated as authoritative. They are estimates from a price feed at a moment in time, fine for a dashboard and not for settlement.",
+          "Token balances are omitted by default. Without include_tokens the total reflects native balances only, which under-reports a stablecoin treasury dramatically.",
+          "Chain filters silently narrow the answer. A query scoped to two chains returns a confident total that is simply missing the others.",
+          "Imported smart accounts drift. An account imported once is included in the portfolio, and if its ownership changes externally the aggregate keeps reporting it."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Any number shown to finance should carry its scope: which chains, whether tokens are included, and when the prices were read. An unqualified total invites a decision it cannot support."
+      },
+      {
         "type": "scenario",
         "situation": "Finance asks for a single number: total holdings across the org. You have treasury wallets on four chains, agent signing keys on three, and two imported smart accounts.",
         "question": "What is the right approach?",
@@ -1006,6 +1117,24 @@
         "text": "The pattern generalises: when a credential can be minted on demand, leasing beats storing. There is nothing long-lived to leak, and expiry is the default rather than something you have to remember to do."
       },
       {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. Vending removes the static credential and introduces a lifecycle, which is a smaller problem that still has to be managed."
+      },
+      {
+        "type": "points",
+        "items": [
+          "TTLs drift upward. Each extension is justified by one long job, and the ceiling becomes the default, at which point leasing has recreated the static key it replaced.",
+          "Leases are never revoked. Expiry eventually handles it, but an incident needs immediate revocation, and teams discover the endpoint exists while trying to use it.",
+          "The lease response is logged. It omits api_key by design, and a service that logs whole responses can still capture surrounding metadata useful to an attacker.",
+          "The path policy is written broadly. Vending is deny-by-default and a glob written as agents/** grants far more than the one agent's Bankr path."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "The general rule this illustrates: when a credential can be minted on demand, leasing beats storing. There is nothing long-lived to leak and expiry is the default rather than an operational chore."
+      },
+      {
         "type": "scenario",
         "situation": "An agent needs a Bankr key for a long-running job that may take up to six hours. A developer requests a lease with a 24-hour TTL so the job cannot fail partway through on an expired credential.",
         "question": "What is the better design?",
@@ -1125,6 +1254,24 @@
         "type": "callout",
         "variant": "tip",
         "text": "The dashboard has a guided migration wizard at /agents/[agentId]/migrate-safe, and org-wide allowance sync runs through POST /v1/org/safe/sync-allowances."
+      },
+      {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. Safe accounts are a foundation with parts still under audit, so the main risk is assuming a property you do not yet have."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Counterfactual is read as deployed. The address is real and fundable before any deployment transaction exists, and funds sent to an undeployed Safe are safe but not yet movable.",
+          "On-chain enforcement is assumed. Deploy, cosign, timelock and 4337 paths return 501 pending a Guard audit, so guardrails remain Vault-enforced for now.",
+          "The EOA is deprecated too early. Deprecating before every dependent path is migrated turns a planned change into an outage.",
+          "Module versions are not pinned. The registry pins Safe v1.4.1 and Zodiac deliberately; deploying against unpinned modules gives up the property the registry exists to provide."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Adopt the address now and keep your existing enforcement. The migration is real and available; the on-chain guarantees are not, and designing as though they are is the mistake this section exists to prevent."
       },
       {
         "type": "scenario",

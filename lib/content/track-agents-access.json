@@ -1139,5 +1139,135 @@
         "note": "discovery is not authorization"
       }
     ]
+  },
+  {
+    "id": "capstone-design-an-access-model",
+    "title": "Capstone: design an access model",
+    "summary": "Take a real brief and produce the identities, policies, and bindings a working system needs.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "A logistics company is putting three agents into production. Design the access model. The brief is deliberately underspecified in the places real briefs are."
+      },
+      {
+        "type": "points",
+        "items": [
+          "A quoting agent reads carrier rate cards and answers customer questions on a public web form.",
+          "A booking agent creates shipments through a carrier API, which is billed per call.",
+          "A reconciliation agent runs nightly, reads invoices, and writes a summary to an internal vault path.",
+          "One human operations lead owns all three. Compliance requires that any spend above 500 USD be attributable to a person."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Write your answer down before reading on. The value is in committing to a design and then finding out where it leaks."
+      },
+      {
+        "type": "prose",
+        "text": "Start with identity. Three agents, three identities, no sharing. That is not bureaucracy: the reconciliation agent runs unattended at night and the quoting agent takes input from the open internet, and when something goes wrong you need the audit trail to distinguish them. Give each its own environment tag, and lock the tag on the two that touch production."
+      },
+      {
+        "type": "prose",
+        "text": "Then scope. Work path by path rather than agent by agent, because the interesting question is which agent should not reach a path:"
+      },
+      {
+        "type": "points",
+        "items": [
+          "rates/** read for the quoting agent only. It never needs write, and it must never reach invoices.",
+          "invoices/** read for reconciliation only, with a deny on the quoting agent even though no allow would have matched it. The deny documents the intent and survives a later broad grant.",
+          "reports/** write for reconciliation only.",
+          "The booking agent gets no secret read at all, which is the interesting part."
+        ]
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Give the booking agent a binding rather than a credential. It calls the carrier API through Execution Intents, so the key stays server-side.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/agents/$BOOKING_AGENT/bindings \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"name\": \"carrier-api\",\n    \"binding_type\": \"http\",\n    \"base_url\": \"https://api.carrier.example\",\n    \"allowed_hosts\": [\"api.carrier.example\"],\n    \"allowed_paths\": [\"/v2/shipments\"],\n    \"credential_source\": {\n      \"type\": \"vault_ref\",\n      \"vault_id\": \"'$VAULT_ID'\",\n      \"path\": \"providers/carrier/key\"\n    }\n  }'",
+            "lang": "bash"
+          },
+          {
+            "text": "Scope the quoting agent to exactly one prefix, and add the deny that documents what it must never reach.",
+            "code": "curl -s -X POST https://api.1claw.co/v1/vaults/$VAULT_ID/policies \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -d '{\"principal_type\":\"agent\",\"principal_id\":\"'$QUOTE_AGENT'\",\n       \"path_pattern\":\"rates/**\",\"permissions\":[\"read\"],\n       \"effect\":\"allow\",\"priority\":10}'\n\ncurl -s -X POST https://api.1claw.co/v1/vaults/$VAULT_ID/policies \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -d '{\"principal_type\":\"agent\",\"principal_id\":\"'$QUOTE_AGENT'\",\n       \"path_pattern\":\"invoices/**\",\"permissions\":[\"read\"],\n       \"effect\":\"deny\",\"priority\":100}'",
+            "lang": "bash"
+          },
+          {
+            "text": "Satisfy the compliance requirement with an approval policy rather than a hard cap, so large bookings reach the operations lead instead of failing.",
+            "code": "curl -s -X PATCH https://api.1claw.co/v1/agents/$BOOKING_AGENT \\\n  -H \"Authorization: Bearer $ONECLAW_TOKEN\" \\\n  -d '{\"tx_approval_policy\":{\"min_value_usd\":500,\"action\":\"approve\"}}'",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "scenario",
+        "situation": "Six weeks in, the operations lead asks for the quoting agent to also answer questions about past shipments, so it needs read access to invoices/**. They point out that the deny you wrote is now blocking a legitimate business need.",
+        "question": "What do you do?",
+        "options": [
+          {
+            "text": "Delete the deny policy and add an allow on invoices/** for the quoting agent.",
+            "feedback": "This is the request taken at face value, and it puts customer invoice data one injection away from a public web form. The quoting agent is the one principal in this system whose input comes from the open internet."
+          },
+          {
+            "text": "Raise the quoting agent's allow priority above the deny so the existing rules resolve in its favour.",
+            "feedback": "Mechanically this works, which is what makes it dangerous. It achieves the same exposure as deleting the deny while leaving a rule in place that looks like a control, so the next reviewer sees a deny and assumes invoices are protected."
+          },
+          {
+            "text": "Keep the boundary and give the quoting agent a binding to a shipment-status endpoint, so it gets answers without reading invoice secrets.",
+            "correct": true,
+            "feedback": "Correct. The business need is answers about shipments, not access to invoice material. A binding returns the former without granting the latter, and the deny stays meaningful."
+          },
+          {
+            "text": "Allow it but require approval on every invoice read.",
+            "feedback": "Approval on a read that happens on every customer question is approval fatigue by design. It will be clicked through within a week, and then you have the exposure plus a false sense of oversight."
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "The pattern to take away: when a request arrives as \"agent X needs access to Y\", the useful question is what X actually needs to produce. Access is one way to get there and usually the widest one."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Notice what the finished design contains. Three identities, four path policies, one deny that documents intent, two bindings, and one approval threshold. Almost none of it is about encryption, which is where people expect secret management to live."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why does the booking agent get no secret read access at all?",
+        "options": [
+          "Booking agents cannot be granted policies",
+          "It executes through a binding, so the carrier credential stays server-side",
+          "Its traffic is billed per call, so reads are expensive",
+          "It runs unattended"
+        ],
+        "correctIndex": 1,
+        "explanation": "The binding injects the credential at execution time. The agent never holds it, so there is nothing to scope a read policy to and nothing to leak."
+      },
+      {
+        "question": "What does the deny on invoices/** achieve when no allow would have matched anyway?",
+        "options": [
+          "It speeds up policy evaluation",
+          "It documents the intent and survives a later broad grant",
+          "It is required before a binding can be created",
+          "It prevents the path from being created"
+        ],
+        "correctIndex": 1,
+        "explanation": "Today it is redundant. Its value is on the day someone adds a broad allow, when it turns an accidental grant into an explicit decision someone has to override."
+      },
+      {
+        "question": "Why is an approval policy preferred over a hard 500 USD cap for the booking agent?",
+        "options": [
+          "Caps are not supported for booking flows",
+          "A legitimate large booking reaches a human instead of simply failing",
+          "It is cheaper to evaluate",
+          "Approval policies cannot be bypassed"
+        ],
+        "correctIndex": 1,
+        "explanation": "A hard cap refuses and the work stops. An approval policy routes the transaction to the operations lead, satisfying the attribution requirement without breaking the business case."
+      }
+    ]
   }
 ]

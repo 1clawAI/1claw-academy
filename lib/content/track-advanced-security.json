@@ -52,6 +52,24 @@
         "text": "You stored a secret and can now explain why a stolen database is worthless: the plaintext DEK exists only in memory during the operation, and the KEK never leaves the HSM."
       },
       {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. The hierarchy is simple enough to draw on a whiteboard, and almost every failure comes from a gap between the drawing and the deployment."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The application caches decrypted material. An HSM call has latency, so someone adds a cache, and the plaintext DEK now lives in process memory for the lifetime of the pod. The key never left the HSM and the secret is readable from a core dump.",
+          "The audit log is treated as a byproduct. Non-exportability means misuse is your detection surface, so an HSM log nobody ships anywhere converts your best forensic record into a file that ages out.",
+          "Key versions are pruned to tidy up. Rotation creates a version and old data still points at the old one. Deleting retired versions is cryptographic erasure performed by accident.",
+          "The credential that calls the HSM is treated as ordinary. It is the whole boundary. A key file on disk is protected by the HSM; the token that authorises calls to it usually is not."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "The pattern across all four: the hardware boundary is strong and everything adjacent to it is ordinary software. Attackers do not attack the boundary, they attack what stands next to it."
+      },
+      {
         "type": "scenario",
         "situation": "An engineer reports that an attacker briefly had shell on an application server. That server does not hold key material; it authenticates to the HSM and calls it to sign and unwrap. Access was revoked after roughly forty minutes.",
         "question": "What is the correct assessment of the damage?",
@@ -188,6 +206,24 @@
         "text": "Two easy mistakes here. generateCmekKey, cmekFingerprint, cmekEncrypt and cmekDecrypt all return promises, so every one needs await. And cmekEncrypt takes (plaintext, key) in that order, both as Uint8Array: swapping them produces a blob that will never decrypt."
       },
       {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. CMEK moves a real risk from the provider to the customer, and the failures are consistently operational rather than cryptographic."
+      },
+      {
+        "type": "points",
+        "items": [
+          "No escrow. The most common CMEK incident is not theft, it is a laptop and an unrecoverable vault. Enrolment should be paired with a customer-controlled escrow before the first secret is written.",
+          "Rotation is started and never finished. Server-assisted rotation runs in batches with progress tracking, and a job interrupted midway leaves secrets split across two keys. Both keys must be retained until the job reports completion.",
+          "The fingerprint is mistaken for a backup. It is a SHA-256 of the key, which can verify a candidate but cannot reconstruct one. Teams have discovered this at exactly the wrong moment.",
+          "Client-side encryption is bypassed by one integration. A single service that writes through the API without encrypting first leaves plaintext in a vault everyone believes is customer-encrypted, and nothing in the interface will point it out."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "The last one is worth auditing for directly. Uniform CMEK is a property of every writer, and it fails silently the moment one of them does not participate."
+      },
+      {
         "type": "scenario",
         "situation": "A customer on CMEK reports that their finance team lost the laptop holding the only copy of their key. They have their dashboard login and their secrets are all still listed in the vault.",
         "question": "What can you actually do for them?",
@@ -322,6 +358,24 @@
         "text": "The vault now returns a client_share on write and requires it on read, so 1Claw alone cannot reconstruct the DEK."
       },
       {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. Threshold schemes are mathematically sound and operationally demanding, and the gap between those two is where incidents live."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Custody mode is immutable, and it is chosen early. The decision is made during a spike, by whoever is setting up the vault, usually before anyone has thought about who will hold a share in a year.",
+          "The client share has no owner. A share held by \"the team\" is held by nobody. It needs a named custodian, a documented location, and a successor.",
+          "The X-Client-Share header is forgotten in one path. Client-custody modes require it on every read, and the service that was written last, or by a different team, is the one that discovers this in production.",
+          "Availability is confused with security. 2-of-3 tolerates losing one share; 2-of-2 tolerates nothing. Teams pick 2-of-2 for its stronger trust property and discover the availability cost during an incident."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Before enabling a client-custody mode, write down who holds the share, where, and who takes over if they leave. If that is hard to answer, choose multi-HSM instead: a weaker trust assumption you can operate beats a stronger one you cannot."
+      },
+      {
         "type": "scenario",
         "situation": "You are choosing a custody mode for a vault holding the signing material behind a treasury that moves large sums. The team is small and operationally inexperienced, and there is no formal key-escrow process.",
         "question": "Which mode fits, and why?",
@@ -440,6 +494,24 @@
       {
         "type": "prose",
         "text": "Your agent's LLM traffic now flows through the TEE proxy, inspected and redacted, with a normal OpenAI-style response coming back."
+      },
+      {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. A TEE proxy is easy to deploy and easy to hold wrongly, because it produces a strong feeling of safety that outruns what it actually guarantees."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Attestation is enabled but never verified. The hardware signs a measurement of what loaded; if nothing on your side checks that measurement against an expected value, you have the ceremony without the assurance.",
+          "One caller bypasses the proxy. Unless intents_require_tee or execution_require_tee is set, direct API calls still work, and the service written before the proxy existed keeps using the path it always used.",
+          "Redaction is assumed to be complete. Inspection catches known secret values and recognisable patterns. A credential in a format it has never seen passes through, which is why the proxy is a layer rather than a guarantee.",
+          "Latency pressure erodes it. Every referral, prompt or completion pays the proxy cost, and the first performance review proposes a fast path around it for \"internal\" traffic."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Attestation proves which code is running. It does not prove that code is correct, and a faithfully attested enclave running a flawed program is flawed with a signature attached."
       },
       {
         "type": "scenario",
@@ -577,6 +649,24 @@
         "text": "You now have a live canary: any read of api-keys/production records a critical verdict and revokes that principal's sessions."
       },
       {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. Zero trust fails less from bad architecture than from the slow accumulation of individually reasonable exceptions."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Grants outlive their reason. Access is added for a migration, the migration ends, and nothing removes it. Expiry on the grant is the only mechanism that survives people forgetting.",
+          "Least privilege is applied once, at creation. Scope is set carefully on day one and then only ever widened, because widening unblocks someone and narrowing risks breaking something nobody has time to test.",
+          "Break-glass becomes routine. An emergency path used twice a year is a control; used twice a month it is the normal path with extra logging.",
+          "Blast radius is never actually calculated. Teams assert that a compromise would be contained without enumerating what one credential reaches. The enumeration is usually surprising."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "A useful exercise: pick your most ordinary service credential and list every resource it can reach today. Do it before an incident forces the same list under time pressure."
+      },
+      {
         "type": "scenario",
         "situation": "A nightly reconciliation job has used the same 1ck_ key for two years. It works, nobody has touched it, and there has been no incident.",
         "question": "What is the strongest argument for changing it?",
@@ -706,6 +796,24 @@
         "text": "Social-login users may have no password. If you require the password method they cannot satisfy it: have them enrol a passkey or TOTP at /settings/security first."
       },
       {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. HFA is the control most sensitive to human factors, which is exactly why the failures are behavioural rather than technical."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The threshold is set where prompts are constant. A step-up that fires on every operation is satisfied reflexively within a week, and reflexive satisfaction is indistinguishable from no control.",
+          "A required factor cannot be presented. Social-login users have no password, so a password requirement is unsatisfiable rather than strict, and the failure looks like a bug rather than a policy choice.",
+          "Clients do not prefetch the policy. Without reading the effective policy first, the interface discovers the requirement by failing the send, which trains users to retry rather than to authenticate.",
+          "Denials are not monitored. human_factor_auth.denied is the signal that something is repeatedly attempting to move funds without a person, and it is worth an alert rather than a dashboard."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Sustained denials are more interesting than sustained approvals. Approval means the system is being used; denial means something is trying and failing, which is either a broken client or an attacker."
+      },
+      {
         "type": "scenario",
         "situation": "You set the HFA policy to require a password for treasury sends. A batch of users, all of whom signed up through Google, immediately cannot send at all.",
         "question": "What happened?",
@@ -829,6 +937,25 @@
       {
         "type": "prose",
         "text": "Separately, 1Claw can act as an OAuth2 authorization server, \"Sign in with 1Claw\", with PKCE-required authorize, token, and userinfo endpoints under /v1/oauth. That is for signing users into your app, whereas federation is for machine identity at a service boundary."
+      },
+      {
+        "type": "prose",
+        "text": "Where this goes wrong in practice. Federation removes a static credential and replaces it with a validation contract, and the failures are all in the validation half."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The audience is not checked. A signature proves the issuer, not the intended recipient, and any customer of the same issuer can mint a validly signed token. Checking aud is what makes federation safe rather than merely convenient.",
+          "A kid is pinned. Pinning one key from the JWKS works until rotation, then fails everywhere at once, at a moment nobody connects to a key rotation.",
+          "The audience allowlist is left empty and assumed permissive. Empty means deny all, which is the safe default and the opposite of what people assume when a call unexpectedly fails.",
+          "Clock skew is not tolerated. Short TTLs make exp checks tight, and a relying party with a fast clock rejects tokens that are minutes from being issued.",
+          "The JWKS is fetched per request. It is stable and cacheable, and fetching it on every call turns the issuer into a hard dependency of your request path."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Short TTLs are the point and they raise the cost of every other mistake. A skew bug that would be invisible with a 24-hour token is an outage with a 900-second one."
       },
       {
         "type": "scenario",
