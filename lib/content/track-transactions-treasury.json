@@ -163,6 +163,134 @@
     ]
   },
   {
+    "id": "lab-blind-signing",
+    "title": "Lab: sign something you cannot read",
+    "summary": "Build a typed payload, watch a guardrail catch a drain, then hand the same guardrail a raw digest and watch it wave the drain through.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The signing lesson said that raw digest signing bypasses your guardrails, and that a 32-byte hash tells you nothing about what it authorises. Both are easy to accept in the abstract and easy to trade away when an integration is blocked. Build it once and the trade becomes concrete."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Real EIP-712 hashes with keccak256, which Python has no stdlib implementation of. This lab substitutes sha256 so it runs anywhere with no installs. The digests will not match a real chain; the structure and the conclusion are identical."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Each step appends to the same script, so every run reprints the sections before it. The expected output shown under each step is the new part; scroll to the bottom of your terminal to find it."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Build the typed structure and its digest. This is the EIP-712 shape: a domain separator, a hash of the typed struct, and the two combined behind the 0x1901 prefix.",
+            "code": "mkdir -p /tmp/blindlab && cd /tmp/blindlab\ncat > typed.py <<'EOF'\nimport hashlib, json\nh = lambda b: hashlib.sha256(b).digest()\n\nDOMAIN = {\"name\": \"DemoDEX\", \"version\": \"1\", \"chainId\": 8453,\n          \"verifyingContract\": \"0xDEX0000000000000000000000000000000000dex\"}\nTYPE = \"Transfer(address to,uint256 value,uint256 deadline)\"\n\ndomain_separator = lambda d: h(json.dumps(d, sort_keys=True).encode())\nstruct_hash = lambda m: h(TYPE.encode() + json.dumps(m, sort_keys=True).encode())\ndigest = lambda d, m: h(b\"\\x19\\x01\" + domain_separator(d) + struct_hash(m))\n\nbenign = {\"to\": \"0xAlice000000000000000000000000000000alice\",\n          \"value\": 1, \"deadline\": 1767225600}\ndrain  = {\"to\": \"0xMallory00000000000000000000000000mallory\",\n          \"value\": 10**24, \"deadline\": 1767225600}\n\nfor name, m in ((\"benign\", benign), (\"drain\", drain)):\n    print(f\"{name:8} to={m['to'][:14]}... value={m['value']:<25} \"\n          f\"digest={digest(DOMAIN, m).hex()[:32]}...\")\nEOF\npython3 typed.py",
+            "lang": "bash"
+          },
+          {
+            "text": "Two payloads, two digests. Reading the typed data, the difference is obvious.",
+            "code": "benign   to=0xAlice0000000... value=1                         digest=f7ea1df01073d3017aa7f99520be29be...\ndrain    to=0xMallory00000... value=1000000000000000000000000 digest=14aa45ebac6ed98e2a66325486425220...",
+            "lang": "text"
+          },
+          {
+            "text": "Now add a guardrail of the kind the Intents API applies: a recipient allowlist and a value cap.",
+            "code": "cat >> typed.py <<'EOF'\n\nMAX_VALUE = 1000\nALLOWED = {\"0xAlice000000000000000000000000000000alice\"}\n\ndef guard_typed(m):\n    if m[\"to\"] not in ALLOWED:\n        return f\"DENY: recipient {m['to'][:14]}... not on the allowlist\"\n    if m[\"value\"] > MAX_VALUE:\n        return f\"DENY: value {m['value']} exceeds cap {MAX_VALUE}\"\n    return \"ALLOW\"\n\nprint(\"\\n=== guardrail with the typed data ===\")\nfor name, m in ((\"benign\", benign), (\"drain\", drain)):\n    print(f\"  {name:8} {guard_typed(m)}\")\nEOF\npython3 typed.py",
+            "lang": "bash"
+          },
+          {
+            "text": "It works exactly as intended. The drain is refused on the recipient before the value is even considered.",
+            "code": "=== guardrail with the typed data ===\n  benign   ALLOW\n  drain    DENY: recipient 0xMallory00000... not on the allowlist",
+            "lang": "text"
+          },
+          {
+            "text": "Now give the same guardrail what a raw signing request actually contains: 32 bytes.",
+            "code": "cat >> typed.py <<'EOF'\n\ndef guard_digest(d32):\n    # Nothing to inspect. A hash is one-way by construction.\n    return \"ALLOW (cannot determine recipient or value from 32 bytes)\"\n\nprint(\"\\n=== the same guardrail with only a digest ===\")\nfor name, m in ((\"benign\", benign), (\"drain\", drain)):\n    print(f\"  {name:8} {guard_digest(digest(DOMAIN, m))}\")\nEOF\npython3 typed.py",
+            "lang": "bash"
+          },
+          {
+            "text": "This is the whole lab. The guardrail that caught the drain a moment ago now allows it, and nothing failed, errored or warned.",
+            "code": "=== the same guardrail with only a digest ===\n  benign   ALLOW (cannot determine recipient or value from 32 bytes)\n  drain    ALLOW (cannot determine recipient or value from 32 bytes)",
+            "lang": "text"
+          },
+          {
+            "text": "Finish the job: sign the drain digest without ever seeing what it authorises.",
+            "code": "openssl genpkey -algorithm ed25519 -out k.pem\npython3 -c \"\nimport typed\nopen('digest.bin','wb').write(typed.digest(typed.DOMAIN, typed.drain))\n\"\nopenssl pkeyutl -sign -inkey k.pem -rawin -in digest.bin -out d.sig\nwc -c < d.sig   # a valid 64-byte signature over bytes you never inspected",
+            "lang": "bash"
+          },
+          {
+            "text": "Clean up.",
+            "code": "cd /tmp && rm -rf blindlab",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Nothing in that sequence was a bug. The hash function did its job, the guardrail ran, the signature is cryptographically valid, and the transfer is authorised. The guardrail simply had nothing to inspect, because a digest is one-way by construction and that is the property it exists to have."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Guardrails on typed data work because the server can read the fields: recipient, value, chain, verifying contract.",
+          "Guardrails on a raw digest cannot work, in principle rather than in this implementation. No amount of engineering recovers the preimage.",
+          "This is why raw_signing_enabled is off by default, human-set only, and audit-logged as signing_key.raw_digest_sign. It is not a lesser setting, it is a different security model."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "If you enable raw signing, you have moved the entire burden of validation to whoever constructs the hash. That is defensible when the flow genuinely requires it, such as nested ERC-1271 or ERC-7739, and it means the caller is now the control."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Rebuild the guardrails somewhere else when you make that trade. Recipient allowlists on the signing key, per-transaction value caps, daily budgets and human approval above a threshold all still apply, and they are what stands between a blind signature and a loss."
+      },
+      {
+        "type": "prose",
+        "text": "A useful habit whenever you meet a signing request: ask what the signer can see. If the answer is 32 bytes, then every control you believe you have is running somewhere else, and you should be able to name where."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why can a guardrail not inspect a raw digest?",
+        "options": [
+          "Digests are encrypted with the signing key",
+          "A hash is one-way, so the recipient and value are not recoverable from it",
+          "The digest arrives after the guardrail runs",
+          "Guardrails only support EVM chains"
+        ],
+        "correctIndex": 1,
+        "explanation": "It is a property of hashing rather than a limitation of the implementation. No engineering effort recovers the preimage, which is exactly why the hash is useful and exactly why it is opaque."
+      },
+      {
+        "question": "The guardrail allowed the drain in the second run. What failed?",
+        "options": [
+          "The allowlist was misconfigured",
+          "Nothing failed; the guardrail had nothing to inspect and correctly reported that",
+          "The digest was computed incorrectly",
+          "The value cap was too high"
+        ],
+        "correctIndex": 1,
+        "explanation": "Every component behaved correctly. That is what makes blind signing dangerous: there is no error to notice and no alert to fire."
+      },
+      {
+        "question": "You enable raw signing for a legitimate ERC-1271 flow. What must you do?",
+        "options": [
+          "Nothing; the flow is legitimate so the risk is accepted",
+          "Rebuild the validation elsewhere: recipient allowlists, value caps and approval above a threshold",
+          "Rotate the signing key more frequently",
+          "Restrict it to testnets"
+        ],
+        "correctIndex": 1,
+        "explanation": "Enabling raw signing moves the burden of validation to whoever builds the hash. The compensating controls have to exist somewhere, and you should be able to name where."
+      }
+    ],
+    "kind": "lab"
+  },
+  {
     "id": "treasury-and-smart-accounts",
     "title": "Treasury wallets and smart accounts",
     "summary": "Create human-owned multi-chain treasury wallets and drive a Safe multisig with proposals.",

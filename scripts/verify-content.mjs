@@ -179,8 +179,9 @@ for (const l of lessons) {
 
 /*
  * Applied-assessment coverage. Recall questions show that a lesson was read;
- * an Advanced lesson should also ask for a decision. Every lesson in a track
- * marked Advanced needs at least one scenario or audit block.
+ * an Advanced lesson should also ask the reader to do or decide something.
+ * A scenario, an audit, or the lesson being a hands-on lab all satisfy that --
+ * a lab is the most applied form of assessment there is, not an exception to it.
  */
 {
   const meta = readFileSync(join(ROOT, "lib/content/meta.ts"), "utf8");
@@ -191,11 +192,14 @@ for (const l of lessons) {
     if (m[2] === "Advanced") advanced.add(m[1]);
   for (const l of lessons) {
     if (!advanced.has(l.trackId)) continue;
-    const hasApplied = (l.blocks ?? []).some(
-      (b) => b.type === "scenario" || b.type === "audit",
-    );
+    const hasApplied =
+      l.kind === "lab" ||
+      (l.blocks ?? []).some((b) => b.type === "scenario" || b.type === "audit");
     if (!hasApplied)
-      fail(ref(l), "Advanced lesson has no applied exercise (scenario or audit)");
+      fail(
+        ref(l),
+        "Advanced lesson has no applied exercise (lab, scenario or audit)",
+      );
   }
 }
 
