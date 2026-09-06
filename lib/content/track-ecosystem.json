@@ -56,6 +56,23 @@
       {
         "type": "prose",
         "text": "You now have a Python script that authenticates to 1Claw and prints a real secret pulled from your vault."
+      },
+      {
+        "type": "prose",
+        "text": "What this gives you, and what it does not. The Python client mirrors the TypeScript one in shape while following Python conventions, and the differences catch people who move between them."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Resource names differ deliberately. Python exposes client.vaults and snake_case methods; TypeScript uses client.vault and camelCase. Neither is a typo for the other.",
+          "The response envelope is the same. Calls return an object with data and error, so reading resp.data['value'] rather than treating the result as the value itself is the habit to build.",
+          "It does not manage your process environment. Fetching a secret gives you a value in memory; putting it into os.environ is a decision you are making, and one that widens its reach to every library in the process."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "If you work in both languages, expect the pluralisation difference to bite once. client.vault in Python and client.vaults in TypeScript are both wrong, and both fail as attribute errors rather than anything descriptive."
       }
     ],
     "quiz": [
@@ -153,6 +170,48 @@
       {
         "type": "prose",
         "text": "Your AI client now calls list_secrets against your vault and returns the secret paths and metadata."
+      },
+      {
+        "type": "prose",
+        "text": "What this gives you, and what it does not. MCP hands an assistant a set of tools; it does not hand it judgment, and it does not change who is allowed to do what."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The MCP server enforces nothing. Every call is authorised by the vault API against the agent's policies, so connecting an assistant grants exactly the access the agent already had.",
+          "Tool descriptions enter the model's context. Anything you install contributes text the model reads as guidance, which makes an installed server's metadata part of your attack surface.",
+          "Output inspection is a backstop, not a boundary. Known secret values are redacted before reaching the model, and a credential in an unfamiliar format is not.",
+          "The stdio server holds your agent key. It comes from the client config on your machine, so it is only as protected as that file."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Before installing a third-party MCP server, read its tool descriptions rather than only its code. That text is executed by the model in a way source code is not."
+      },
+      {
+        "type": "scenario",
+        "situation": "A teammate wants to give the whole engineering team MCP access to the production vault, using one shared agent key distributed through the password manager.",
+        "question": "What is the problem with this plan?",
+        "options": [
+          {
+            "text": "MCP does not support multiple concurrent connections with one key.",
+            "feedback": "It handles concurrency fine. Arguing a technical limitation that does not exist means losing the argument when someone tests it."
+          },
+          {
+            "text": "Every action is attributed to one agent, so the audit log cannot tell you who did what.",
+            "correct": true,
+            "feedback": "Correct. The access may be scoped correctly and the attribution is destroyed, which matters most in exactly the situation where you need the log. One agent per person keeps the trail usable."
+          },
+          {
+            "text": "Shared keys cannot be rotated.",
+            "feedback": "They rotate normally. The rotation is more disruptive because everyone is affected at once, but that is a consequence rather than the core objection."
+          },
+          {
+            "text": "The password manager is not a safe distribution channel.",
+            "feedback": "It is a reasonable channel for a credential that genuinely must be shared. The problem is that this one should not be shared at all."
+          }
+        ]
       }
     ],
     "quiz": [
@@ -250,6 +309,23 @@
       {
         "type": "prose",
         "text": "Your LangChain agent now lists vault secrets through the SDK tool and reports paths and types without leaking the value."
+      },
+      {
+        "type": "prose",
+        "text": "What this gives you, and what it does not. Wrapping the SDK in tools lets the model decide when to fetch a secret, which is a real capability and a real widening."
+      },
+      {
+        "type": "points",
+        "items": [
+          "A tool the model can call is a tool an injection can call. Tool-calling moves the decision from your code to the model, so tool scope becomes the security boundary.",
+          "Returning a value puts it in context. A tool that fetches a secret and returns it has published that secret to the conversation, its history and the provider. Prefer tools that act rather than tools that reveal.",
+          "The published package exists. langchain-1claw ships ready-made tools with names like oneclaw_get_secret and oneclaw_list_secrets, so hand-written wrappers are a choice rather than a requirement."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "The safest LangChain tool for a vault is one that lists metadata rather than one that returns values. If the agent needs a credential to make a call, an Execution Intents binding does that without the value entering context."
       }
     ],
     "quiz": [
@@ -347,6 +423,23 @@
       {
         "type": "prose",
         "text": "Your crew now fetches a secret from 1Claw through the oneclaw_vault tool during a task, without the value ever landing in code or repo."
+      },
+      {
+        "type": "prose",
+        "text": "What this gives you, and what it does not. Multi-agent frameworks multiply the surface, because every agent in the crew inherits whatever the crew's tools can reach."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Tools are usually shared across the crew. An agent added later for an unrelated job often gets the whole toolset by default, including the vault access the first one needed.",
+          "One agent's output becomes another's input, and it should be treated as untrusted. A researcher reading the web feeds text to a summariser, and that text can carry instructions.",
+          "Cascading failure is the characteristic multi-agent bug. An early error is treated as established fact by every downstream step, which is why it appears in the OWASP agentic list as its own category."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Give each crew member the narrowest toolset that lets it do its job, even when the framework makes sharing the default. The convenience of a shared toolset is exactly the excessive-functionality root cause."
       }
     ],
     "quiz": [
@@ -449,6 +542,18 @@
       {
         "type": "prose",
         "text": "Your elizaOS agent now boots with the 1Claw plugin loaded, authenticates with its ocv_ key, and can run vault and signing actions."
+      },
+      {
+        "type": "prose",
+        "text": "What this gives you, and what it does not. The plugin registers actions an agent can take; the guardrails on those actions still live in 1Claw."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Registering an action does not authorise it. The agent's policies and guardrails still apply, so an action can be present and consistently refused.",
+          "Multi-chain signing is included. That raises the stakes: an elizaOS agent with signing actions needs the same transaction guardrails as any other signing agent.",
+          "The context provider shapes what the model sees. What it injects becomes part of the prompt, so it is worth reading rather than assuming."
+        ]
       }
     ],
     "quiz": [
@@ -546,6 +651,23 @@
       {
         "type": "prose",
         "text": "Your agent now signs and broadcasts transactions on Base through the Intents API, with keys held in the vault TEE and guardrails capping what a prompt injection could ever do."
+      },
+      {
+        "type": "prose",
+        "text": "What this gives you, and what it does not. This is the point where an agent stops reading and starts moving value, and the failure mode changes shape."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Onchain actions are irreversible. Every other mistake in this course can be rotated, revoked or re-issued; a broadcast transaction cannot.",
+          "Testnets are the whole point of the setup step. An agent that has never been exercised on a testnet is being debugged with real funds.",
+          "Guardrails are the safety net, not the framework. Recipient allowlists, per-transaction caps and daily limits live on the agent and apply regardless of which framework calls the API."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Before an onchain agent touches mainnet, write down what it should never be able to do and check that a guardrail expresses each item. If a rule cannot express it, it is not a constraint."
       }
     ],
     "quiz": [
@@ -651,6 +773,24 @@
         "type": "callout",
         "variant": "warn",
         "text": "Ejecting hands you a Dockerfile and docker-compose you own outright. From that point the credential-injection wiring is yours to maintain, so re-check it before shipping to production."
+      },
+      {
+        "type": "prose",
+        "text": "What this gives you, and what it does not. The container is a strong boundary for credentials and a weak one for behaviour."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The container never holds the agent key or a provider key. Credentials are injected by the host daemon over a socket mount, so the image can be shared without carrying secrets.",
+          "It does not sandbox what the agent decides to do. A containerised agent with vault access and network egress has the same trifecta profile as any other; isolation of the process is not isolation of its authority.",
+          "Ejecting transfers ownership. Once you have a Dockerfile of your own, the credential-injection wiring is yours to maintain, and it is the part most easily broken by a well-meaning refactor.",
+          "Modules widen the surface. Each composed module brings its own dependencies into the image, which is the supply chain concern in a different wrapper."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Containerisation answers where the credential lives. It does not answer what the agent may do with it, and conflating the two is how a hardened container ends up running an over-privileged agent."
       }
     ],
     "quiz": [
