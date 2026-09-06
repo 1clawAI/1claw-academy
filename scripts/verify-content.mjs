@@ -97,6 +97,13 @@ for (const l of lessons) {
       fail(ref(l), `bad callout variant "${b.variant}"`);
     if (b.type === "steps" && !b.steps?.length)
       fail(ref(l), "steps block has no steps");
+    if (b.type === "steps")
+      for (const st of b.steps ?? []) {
+        if (!st.text?.trim()) fail(ref(l), "step has no text");
+        // An empty string renders an empty code box; omit the key instead.
+        if ("code" in st && !st.code?.trim())
+          fail(ref(l), `step has an empty code block: "${st.text?.slice(0, 40)}"`);
+      }
     if (b.type === "code" && !b.code?.trim())
       fail(ref(l), "empty code block");
     if (b.type === "scenario") {

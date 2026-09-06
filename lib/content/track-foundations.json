@@ -51,8 +51,8 @@
       {
         "question": "What backs the encryption key for each 1Claw vault?",
         "options": [
-          "A browser cookie",
           "A password in a config file",
+          "A browser cookie",
           "A hardware security module (HSM)",
           "The agent's API key"
         ],
@@ -63,18 +63,18 @@
         "question": "By default, how much access does a new agent have?",
         "options": [
           "Access to all secrets tagged public",
+          "Full access to every vault",
           "Zero access until a human writes a policy",
-          "Read access to one vault",
-          "Full access to every vault"
+          "Read access to one vault"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "1Claw is zero-trust: agents get nothing until a human grants specific paths via a policy."
       },
       {
         "question": "Which prefix identifies a human's personal API key?",
         "options": [
-          "sk_",
           "jwt_",
+          "sk_",
           "ocv_",
           "1ck_"
         ],
@@ -157,34 +157,34 @@
       {
         "question": "How are secrets addressed inside a vault?",
         "options": [
-          "By numeric index",
           "By tag name",
           "By UUID only",
-          "By slash-separated paths like api-keys/stripe"
+          "By slash-separated paths like api-keys/stripe",
+          "By numeric index"
         ],
-        "correctIndex": 3,
+        "correctIndex": 2,
         "explanation": "Secrets live at slash-separated paths within a vault."
       },
       {
         "question": "In envelope encryption, what wraps the per-secret data encryption key (DEK)?",
         "options": [
-          "The user's password",
-          "The vault's HSM-backed key encryption key (KEK)",
           "The agent's JWT",
-          "Another DEK"
+          "The user's password",
+          "Another DEK",
+          "The vault's HSM-backed key encryption key (KEK)"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Each secret's DEK is wrapped by the vault KEK, which lives in the HSM."
       },
       {
         "question": "What happens when you PUT a new value to an existing secret path?",
         "options": [
           "It creates a second vault",
-          "It overwrites and deletes the old value",
+          "It creates a new version and keeps the old one in history",
           "It errors because the path exists",
-          "It creates a new version and keeps the old one in history"
+          "It overwrites and deletes the old value"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "Every write creates a new version; previous versions stay in history."
       }
     ],
@@ -269,32 +269,32 @@
       {
         "question": "Which prefix marks an agent API key?",
         "options": [
-          "ocv_",
-          "1ck_",
+          "eyJ",
           "agt_",
-          "eyJ"
+          "ocv_",
+          "1ck_"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Agent API keys start with ocv_; human personal keys start with 1ck_."
       },
       {
         "question": "How does an agent turn its ocv_ key into a usable API credential?",
         "options": [
-          "POSTs just the api_key to /v1/auth/api-key-token",
-          "Uses it directly as a permanent password",
+          "Emails it to the human each time",
           "POSTs agent_id and api_key to /v1/auth/agent-token for a short-lived JWT",
-          "Emails it to the human each time"
+          "Uses it directly as a permanent password",
+          "POSTs just the api_key to /v1/auth/api-key-token"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "The agent-token endpoint needs both agent_id and api_key; api-key-token is the human 1ck_ path."
       },
       {
         "question": "What happens to an agent's active tokens when a human changes its policy?",
         "options": [
           "They're automatically revoked and must be re-exchanged",
-          "Nothing, they keep working",
+          "They last 30 days longer",
           "They gain admin access",
-          "They last 30 days longer"
+          "Nothing, they keep working"
         ],
         "correctIndex": 0,
         "explanation": "Policy create/update/delete auto-revokes the agent's active JWTs, forcing a fresh exchange."
@@ -381,9 +381,9 @@
       {
         "question": "What Node version does the npm install of the CLI require?",
         "options": [
-          "Node 14+",
-          "Node 20+",
           "Node 16+",
+          "Node 20+",
+          "Node 14+",
           "Any version"
         ],
         "correctIndex": 1,
@@ -392,12 +392,12 @@
       {
         "question": "What does 1claw login use so you never type a password in the terminal?",
         "options": [
-          "A QR code scanner",
-          "A browser device flow",
           "A one-time SMS",
-          "An SSH key"
+          "An SSH key",
+          "A browser device flow",
+          "A QR code scanner"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "1claw login opens the browser, you approve there, and the CLI polls until confirmed."
       },
       {
@@ -410,6 +410,196 @@
         ],
         "correctIndex": 1,
         "explanation": "Set ONECLAW_API_KEY (or ONECLAW_TOKEN) to skip interactive login."
+      }
+    ]
+  },
+  {
+    "id": "start-local-no-account",
+    "title": "Start local: a vault with no account",
+    "summary": "Encrypt secrets on your own machine with 1claw local, before you sign up for anything.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "You do not need an account, a network, or a credit card to get value from 1Claw. The CLI ships a local encrypted vault that works entirely offline, and it is the right place for a developer to start: it solves the .env-file problem on your own laptop first, and everything you learn transfers to the hosted vault later."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The vault is a single encrypted file at ~/.config/1claw/local-vault.enc.",
+          "It is AES-256-GCM, with the key derived from your passphrase by scrypt.",
+          "The file is written with 0600 permissions, so only your user can read it.",
+          "Nothing leaves your machine unless you explicitly run a sync."
+        ]
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Create the vault. You will be prompted for a passphrase twice; it must be at least 8 characters.",
+            "code": "1claw local init",
+            "lang": "bash"
+          },
+          {
+            "text": "Add a secret. You are prompted for the value rather than passing it as an argument, which keeps it out of your shell history.",
+            "code": "1claw local add stripe/test-key",
+            "lang": "bash"
+          },
+          {
+            "text": "List what is stored. Names only, never values.",
+            "code": "1claw local list",
+            "lang": "bash"
+          },
+          {
+            "text": "Read one back.",
+            "code": "1claw local get stripe/test-key\n\n# or masked, when someone is looking over your shoulder\n1claw local get stripe/test-key --masked",
+            "lang": "bash"
+          },
+          {
+            "text": "Check the vault's state at any time.",
+            "code": "1claw local status",
+            "lang": "bash"
+          },
+          {
+            "text": "Remove a secret you no longer need.",
+            "code": "1claw local rm stripe/test-key",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Unlocking is deliberately slow. scrypt is configured with a large work factor, so each command takes a moment while it derives the key. That cost is what makes a stolen vault file expensive to brute force."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "The passphrase cannot be recovered. There is no reset, no support path, and no escrow: if you forget it, the only option is `1claw local destroy`, which deletes the vault so you can start over. Put the passphrase in your password manager before you add anything you care about."
+      },
+      {
+        "type": "prose",
+        "text": "This is the whole local story, and for a solo developer it may be all you ever need. The next two lessons cover the two things it cannot do: share a secret with a teammate, and give an agent scoped access. Both are what the hosted vault is for."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Where does the local vault store its data?",
+        "options": [
+          "In your system keychain",
+          "On 1Claw's servers, encrypted client-side",
+          "In a single encrypted file at ~/.config/1claw/local-vault.enc",
+          "In a hidden folder in the current project"
+        ],
+        "correctIndex": 2,
+        "explanation": "It is one AES-256-GCM file written with 0600 permissions. Nothing is transmitted anywhere until you explicitly run a sync."
+      },
+      {
+        "question": "You forget your local vault passphrase. What are your options?",
+        "options": [
+          "Reset it with your account email",
+          "Recover it through the dashboard",
+          "None; the only path is `1claw local destroy` and starting over",
+          "Support can decrypt it with the master key"
+        ],
+        "correctIndex": 2,
+        "explanation": "The passphrase is the only key material and it is never stored. destroy exists precisely because deletion is the only available recovery, which is why the passphrase belongs in a password manager."
+      },
+      {
+        "question": "Why does each local command take a noticeable moment?",
+        "options": [
+          "scrypt derives the key with a large work factor, which is what makes brute forcing the file expensive",
+          "It checks for updates over the network",
+          "It verifies the file against a remote checksum",
+          "It re-encrypts the whole vault on every read"
+        ],
+        "correctIndex": 0,
+        "explanation": "The delay is the security property. A fast key derivation would make an offline attack against a stolen vault file cheap."
+      }
+    ],
+    "kind": "lab"
+  },
+  {
+    "id": "bring-your-dotenv",
+    "title": "Bring your existing .env",
+    "summary": "Import the .env files you already have, then export them back on demand so your tooling never changes.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Nobody starts from an empty vault. You start with a handful of .env files scattered across projects, which is the exact problem worth solving, so the local vault imports them directly."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Look before you leap. A dry run shows what would be imported without writing anything.",
+            "code": "1claw local import .env --dry-run",
+            "lang": "bash"
+          },
+          {
+            "text": "Import for real. Existing entries are skipped rather than overwritten unless you say otherwise.",
+            "code": "1claw local import .env",
+            "lang": "bash"
+          },
+          {
+            "text": "If you do want to overwrite what is already there, be explicit about it.",
+            "code": "1claw local import .env --force",
+            "lang": "bash"
+          },
+          {
+            "text": "Export back to .env format when a tool needs a file. Without -o it writes to stdout, so you can pipe it.",
+            "code": "1claw local export\n\n# or straight to a file your tooling expects\n1claw local export -o .env",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Once a secret is in the vault, delete the .env from the project and add it to .gitignore. Importing without removing the original leaves you with two copies and no improvement."
+      },
+      {
+        "type": "prose",
+        "text": "The import and export pair is deliberately boring, and that is the point: it means adopting the vault does not require changing how any of your tools work. You keep the .env-shaped interface at the edges and stop keeping plaintext files around between runs."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "`1claw env run -- <command>` goes one step further: it resolves the values and injects them into a child process's environment, so nothing is ever written to disk at all."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What does `1claw local import .env --dry-run` do?",
+        "options": [
+          "Imports only the keys that do not already exist",
+          "Shows what would be imported without writing anything",
+          "Imports into a temporary vault for testing",
+          "Validates the .env syntax and exits"
+        ],
+        "correctIndex": 1,
+        "explanation": "It is a preview. Running it first is worth the habit on any file you have not read recently."
+      },
+      {
+        "question": "By default, what happens to a key that already exists in the vault?",
+        "options": [
+          "It is skipped, unless you pass --force",
+          "Both values are kept as separate versions",
+          "The import aborts with an error",
+          "It is overwritten with the .env value"
+        ],
+        "correctIndex": 0,
+        "explanation": "Skipping is the safe default, since the vault copy is more likely to be current than a file that has been sitting in a project directory."
+      },
+      {
+        "question": "What should you do with the .env file after importing it?",
+        "options": [
+          "Encrypt it with the same passphrase",
+          "Move it to a shared drive",
+          "Delete it and add it to .gitignore, or the import achieved nothing",
+          "Keep it as a backup"
+        ],
+        "correctIndex": 2,
+        "explanation": "Two copies is the sprawl problem the vault exists to remove. The value only improves once the plaintext original is gone."
       }
     ]
   },
@@ -482,9 +672,9 @@
       {
         "question": "What does 1claw secret list return?",
         "options": [
-          "Only the vault name",
           "Decrypted values for every secret",
           "The vault's KEK",
+          "Only the vault name",
           "Metadata only, no values"
         ],
         "correctIndex": 3,
@@ -493,12 +683,12 @@
       {
         "question": "The dashboard is best described as what?",
         "options": [
-          "A separate database",
-          "An offline-only tool",
+          "A replacement for HSMs",
           "A UI on top of the same API endpoints the CLI uses",
-          "A replacement for HSMs"
+          "A separate database",
+          "An offline-only tool"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "The dashboard at 1claw.co is a web UI over the same endpoints."
       }
     ],
@@ -507,6 +697,108 @@
         "trackId": "security-foundations",
         "lessonId": "envelope-encryption",
         "note": "what happens to the value at rest"
+      }
+    ]
+  },
+  {
+    "id": "from-local-to-cloud",
+    "title": "From local to cloud",
+    "summary": "Push your local vault to a hosted one when you need a second person, a second machine, or an agent.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The local vault has exactly three limits, and you hit them in a predictable order: you get a second machine, then a teammate, then an agent. All three need a vault that exists somewhere other than your laptop."
+      },
+      {
+        "type": "points",
+        "items": [
+          "A second machine needs the secret to exist off your disk.",
+          "A teammate needs sharing, access control and an audit trail.",
+          "An agent needs a scoped identity, which is the whole rest of this course."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Requires: a 1Claw account and a cloud vault. `npx @1claw/cli setup` creates one along with everything else in a single command."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Log in. The browser flow means no password is typed into your terminal.",
+            "code": "1claw login",
+            "lang": "bash"
+          },
+          {
+            "text": "Preview the move. Push is the default direction: local to cloud.",
+            "code": "1claw local sync --vault $VAULT_ID",
+            "lang": "bash"
+          },
+          {
+            "text": "Pull instead, to seed a fresh laptop from a vault that already exists.",
+            "code": "1claw local sync --vault $VAULT_ID --pull",
+            "lang": "bash"
+          },
+          {
+            "text": "Conflicts are skipped by default. Overwrite only when you are sure which side is authoritative.",
+            "code": "1claw local sync --vault $VAULT_ID --force",
+            "lang": "bash"
+          },
+          {
+            "text": "Confirm the cloud side has what you expect.",
+            "code": "1claw secret list --vault $VAULT_ID",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Sync skips conflicts rather than guessing. That is the right default and it means a sync can silently do less than you assumed, so read the summary rather than trusting the exit code."
+      },
+      {
+        "type": "prose",
+        "text": "Keeping the local vault after syncing is a reasonable choice. It works offline, it survives an outage, and it costs nothing. What changes is that the cloud vault becomes the authoritative copy once more than one person or machine depends on it."
+      },
+      {
+        "type": "prose",
+        "text": "From here the course is about the things only a hosted vault can do: policies that scope access per principal, agents as first-class identities with short-lived tokens, execution without ever handing over a credential, and an audit trail that answers who read what. The local vault got you started without a signup; the rest of this course is why teams outgrow it."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Which direction does `1claw local sync` move secrets by default?",
+        "options": [
+          "It prompts for a direction each time",
+          "Local to cloud; --pull reverses it",
+          "Bidirectional merge",
+          "Cloud to local"
+        ],
+        "correctIndex": 1,
+        "explanation": "Push is the default because the common first case is seeding a hosted vault from the laptop where the secrets already are."
+      },
+      {
+        "question": "What happens by default when a secret exists on both sides with different values?",
+        "options": [
+          "The conflict is skipped unless you pass --force",
+          "The sync aborts entirely",
+          "Both are kept as versions",
+          "The newer value wins"
+        ],
+        "correctIndex": 0,
+        "explanation": "Skipping avoids silently destroying a value. It also means a sync can do less than you expected, so the summary is worth reading."
+      },
+      {
+        "question": "What is the first thing the local vault cannot give you?",
+        "options": [
+          "Support for .env files",
+          "A way to list secrets",
+          "Encryption at rest",
+          "A secret that exists anywhere other than your own disk"
+        ],
+        "correctIndex": 3,
+        "explanation": "Local encryption is genuinely good. The limits are all about existing in more than one place: a second machine, a teammate, or an agent."
       }
     ]
   }

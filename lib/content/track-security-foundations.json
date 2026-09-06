@@ -13,6 +13,10 @@
         "text": "That asymmetry is the whole problem. A leaked password does not stop being valid. It stops being exclusive."
       },
       {
+        "type": "prose",
+        "text": "Three of the four properties below are the classic CIA triad: confidentiality, integrity and availability. Secrets management inverts the usual emphasis. Availability still matters, and a secret nobody can read is an outage, but the properties that dominate are confidentiality and two that the triad does not name at all: freshness and attribution."
+      },
+      {
         "type": "points",
         "items": [
           "Confidentiality: only intended parties know the value.",
@@ -54,9 +58,9 @@
         "question": "Why is a leaked credential more dangerous than a broken encryption algorithm in practice?",
         "options": [
           "Credentials are harder to rotate than algorithms",
-          "Encryption breaks are more common",
+          "Leaked credentials trigger automatic alerts",
           "A valid credential keeps working and looks legitimate to the system",
-          "Leaked credentials trigger automatic alerts"
+          "Encryption breaks are more common"
         ],
         "correctIndex": 2,
         "explanation": "A leaked credential does not stop being valid; it stops being exclusive. Its use looks like normal authorized traffic, which is exactly why it is hard to detect."
@@ -64,23 +68,23 @@
       {
         "question": "Which of the four leak modes does encryption at rest actually address?",
         "options": [
-          "Persistence and freshness",
           "Confidentiality of the stored value, but not sprawl, persistence, or scope",
           "Over-scope",
+          "Persistence and freshness",
           "All four"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Encryption protects the value where it is stored. Sprawl, persistence and over-scope are lifecycle and authorization problems that need different tools."
       },
       {
         "question": "A key is copied into a .env file, a CI secret, and a teammate's laptop. Which failure mode is this?",
         "options": [
-          "Observability gap",
           "Over-scope",
-          "Persistence",
-          "Sprawl: there is no single place to revoke it"
+          "Sprawl: there is no single place to revoke it",
+          "Observability gap",
+          "Persistence"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "Sprawl is about the number of copies. The danger is that revocation is no longer a single action, so you can never be confident the credential is actually dead."
       }
     ]
@@ -144,34 +148,34 @@
       {
         "question": "Why does envelope encryption make key rotation cheap?",
         "options": [
-          "The data is stored unencrypted",
-          "DEKs never need rotating",
           "Rotation is deferred until the next read",
-          "Rotating the KEK only requires re-wrapping small DEKs, not re-encrypting the data"
+          "Rotating the KEK only requires re-wrapping small DEKs, not re-encrypting the data",
+          "The data is stored unencrypted",
+          "DEKs never need rotating"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "The bulk data stays encrypted under its DEK. Only the small wrapped DEKs are re-encrypted under the new KEK, which is why rotation scales."
       },
       {
         "question": "What is the effect of deleting a wrapped DEK while keeping the ciphertext?",
         "options": [
-          "Nothing, the KEK can still decrypt it",
           "The DEK is regenerated on next read",
-          "The ciphertext becomes permanently unreadable: cryptographic erasure",
-          "The ciphertext is automatically deleted too"
+          "Nothing, the KEK can still decrypt it",
+          "The ciphertext is automatically deleted too",
+          "The ciphertext becomes permanently unreadable: cryptographic erasure"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Without the DEK there is no way back to the plaintext. Destroying the key is an effective and instant way to erase data you cannot easily overwrite."
       },
       {
         "question": "A single DEK is compromised. What is exposed?",
         "options": [
-          "Every secret under the same KEK",
-          "The KEK as well",
           "Nothing: DEKs are not sensitive",
-          "Exactly one secret, because each secret has its own DEK"
+          "Every secret under the same KEK",
+          "Exactly one secret, because each secret has its own DEK",
+          "The KEK as well"
         ],
-        "correctIndex": 3,
+        "correctIndex": 2,
         "explanation": "Per-secret DEKs limit the blast radius of a single key compromise to one value, which is the main security argument for the pattern."
       }
     ]
@@ -270,21 +274,21 @@
       {
         "question": "Why does each secret get its own DEK rather than sharing one?",
         "options": [
-          "It makes encryption faster",
           "A compromised DEK exposes exactly one secret",
-          "It allows a shorter key length",
-          "The KEK can only wrap one key at a time"
+          "It makes encryption faster",
+          "The KEK can only wrap one key at a time",
+          "It allows a shorter key length"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Per-secret DEKs bound the blast radius. One leaked DEK is one leaked secret, whereas a shared key would turn any single compromise into a full-store compromise."
       },
       {
         "question": "The IV was stored in plaintext next to the ciphertext. Is that a problem?",
         "options": [
-          "Yes, the IV must be kept as secret as the key",
+          "No, and it can safely be discarded after encrypting",
           "No, an IV is not secret, but losing it makes the ciphertext undecryptable",
           "Yes, it lets an attacker recover the DEK",
-          "No, and it can safely be discarded after encrypting"
+          "Yes, the IV must be kept as secret as the key"
         ],
         "correctIndex": 1,
         "explanation": "An IV needs to be unique, not confidential. It is stored alongside the ciphertext by design, but it is required for decryption, so losing it destroys the data as surely as losing the key."
@@ -339,10 +343,10 @@
       {
         "question": "What does a digital signature provide that encryption does not?",
         "options": [
+          "Confidentiality of the message",
           "Protection against replay",
-          "A smaller message size",
           "Proof of who produced the message and that it is unchanged",
-          "Confidentiality of the message"
+          "A smaller message size"
         ],
         "correctIndex": 2,
         "explanation": "Signatures give authenticity and integrity. They deliberately do not hide the message; encryption is the separate tool for confidentiality."
@@ -350,23 +354,23 @@
       {
         "question": "Why is a signature computed over a hash rather than the whole message?",
         "options": [
-          "It keeps the signature a fixed small size regardless of message length",
-          "It makes verification require the private key",
           "Hashes are encrypted more securely",
-          "It prevents replay attacks"
+          "It keeps the signature a fixed small size regardless of message length",
+          "It prevents replay attacks",
+          "It makes verification require the private key"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "Signing a fixed-length digest keeps signatures small and fast. It also means the hash function's collision resistance is part of the security of the scheme."
       },
       {
         "question": "Why is blind signing a 32-byte digest risky?",
         "options": [
           "Digests are easy to forge",
-          "You vouch for a message you cannot read",
           "It reveals the private key",
-          "It uses a weaker curve"
+          "It uses a weaker curve",
+          "You vouch for a message you cannot read"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "If you cannot reconstruct what produced the hash, you have no idea what you authorized. This is the root of a whole class of wallet-drain attacks."
       }
     ]
@@ -439,10 +443,10 @@
       {
         "question": "The signature was 64 bytes for a short message. What would it be for a 4GB file?",
         "options": [
-          "Proportional to the file size",
+          "Split into multiple signatures",
           "Still 64 bytes, because signing operates on a fixed-length hash",
-          "Rejected as too large to sign",
-          "Split into multiple signatures"
+          "Proportional to the file size",
+          "Rejected as too large to sign"
         ],
         "correctIndex": 1,
         "explanation": "The message is hashed to a fixed-length digest first, so signature size is constant. It is also why the hash function's collision resistance matters as much as the signing algorithm."
@@ -450,23 +454,23 @@
       {
         "question": "You verified the signature with public.pem. Could you have produced a signature with it?",
         "options": [
+          "Only with the original message present",
           "Yes, public keys can both sign and verify",
-          "No, signing requires the private key, which is what makes verification safe to delegate",
           "Only for messages under 64 bytes",
-          "Only with the original message present"
+          "No, signing requires the private key, which is what makes verification safe to delegate"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "The asymmetry is the whole point. Anyone can check, only the key holder can produce, which is what allows verification without sharing a secret."
       },
       {
         "question": "After tampering, verification failed. What did that demonstrate?",
         "options": [
-          "The message is encrypted by the signature",
           "Integrity: any modification is detectable by anyone holding the public key",
           "The private key had expired",
+          "The message is encrypted by the signature",
           "The tampered file was corrupt"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Signing gives integrity and authenticity. It gives no confidentiality at all, which is why you could still cat the message in plaintext."
       }
     ],
@@ -517,34 +521,34 @@
       {
         "question": "What does non-exportability actually prevent?",
         "options": [
-          "Audit logs from being tampered with",
-          "The key from being rotated",
           "Any unauthorized use of the key",
-          "An attacker taking the key material away for later or elsewhere"
+          "The key from being rotated",
+          "An attacker taking the key material away for later or elsewhere",
+          "Audit logs from being tampered with"
         ],
-        "correctIndex": 3,
+        "correctIndex": 2,
         "explanation": "The key cannot leave the hardware boundary, so it cannot be exfiltrated. It does not stop an attacker with valid API access from using the key while they have that access."
       },
       {
         "question": "Why keep old key versions after rotation?",
         "options": [
+          "Old versions are more secure",
           "Compliance forbids deletion",
           "To allow rollback of the rotation",
-          "Data encrypted under previous versions still needs to be decryptable",
-          "Old versions are more secure"
+          "Data encrypted under previous versions still needs to be decryptable"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Rotation creates a new version for new operations, while old versions remain available so previously encrypted data stays readable."
       },
       {
         "question": "In the envelope hierarchy, which key lives in the HSM?",
         "options": [
-          "Both, equally",
-          "The KEK",
           "The DEK",
-          "Neither: the HSM holds ciphertext"
+          "Both, equally",
+          "Neither: the HSM holds ciphertext",
+          "The KEK"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "The KEK is the long-lived root that never leaves hardware. DEKs are generated per secret and stored wrapped by it."
       }
     ]
@@ -595,21 +599,21 @@
       {
         "question": "Is the payload of a signed JWT confidential?",
         "options": [
-          "No: it is base64-encoded and readable by anyone holding the token",
-          "Yes, the signature encrypts it",
           "Only the claims marked private",
-          "Yes, if the algorithm is RS256"
+          "Yes, if the algorithm is RS256",
+          "Yes, the signature encrypts it",
+          "No: it is base64-encoded and readable by anyone holding the token"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "Signing provides integrity and authenticity, not confidentiality. Anyone with the token can decode and read every claim, so secrets must never be placed in one."
       },
       {
         "question": "Why must a verifier check the aud claim?",
         "options": [
           "A token minted for another service may otherwise be replayed against yours",
-          "Without it the signature cannot be verified",
+          "aud identifies the signing key",
           "aud determines the expiry",
-          "aud identifies the signing key"
+          "Without it the signature cannot be verified"
         ],
         "correctIndex": 0,
         "explanation": "A cryptographically valid token issued for a different audience will pass a naive signature check. Validating aud is what stops it being replayed against your service."
@@ -680,34 +684,34 @@
       {
         "question": "What did decoding the payload require?",
         "options": [
+          "The issuer's permission",
           "The public key from the JWKS",
           "Nothing but the token itself",
-          "The issuer's permission",
           "The signing key"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "A signed JWT is encoded, not encrypted. Anyone holding it can read every claim, which is why secrets must never be placed in one."
       },
       {
         "question": "Why does `base64 -d` often fail on a JWT segment?",
         "options": [
-          "JWTs use base64url with padding stripped, so it must be re-added",
           "The segments are compressed before encoding",
-          "The payload is encrypted",
-          "Each segment uses a different encoding"
+          "Each segment uses a different encoding",
+          "JWTs use base64url with padding stripped, so it must be re-added",
+          "The payload is encrypted"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "base64url swaps two characters and drops the trailing equals signs. Restoring the padding is what makes a standard decoder work."
       },
       {
         "question": "You decoded the token but cannot alter its claims. Why not?",
         "options": [
-          "The claims are checksummed by the client",
-          "Editing the payload breaks the signature, which you cannot recompute without the signing key",
           "The payload is write-protected",
-          "The exp claim locks the contents"
+          "The exp claim locks the contents",
+          "Editing the payload breaks the signature, which you cannot recompute without the signing key",
+          "The claims are checksummed by the client"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Integrity comes from the signature. You can read freely, but any modification is detectable by anyone with the public key."
       }
     ],
@@ -768,34 +772,34 @@
       {
         "question": "Why does the naive comparison get slower as more of the guess is correct?",
         "options": [
-          "Longer strings take longer to hash",
           "It returns at the first mismatch, so a longer correct prefix means more iterations",
-          "Python caches partial matches",
-          "The secret is re-read from memory each time"
+          "Longer strings take longer to hash",
+          "The secret is re-read from memory each time",
+          "Python caches partial matches"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Early return is the leak. The running time is a function of how much of the secret the attacker already has, which is exactly the information they are trying to obtain."
       },
       {
         "question": "What does an attacker gain from the timing difference?",
         "options": [
-          "Nothing without the private key",
-          "They can recover the token one byte at a time, turning an exponential search into a linear one",
+          "They can only detect that a token is wrong",
           "They learn the token's length only",
-          "They can only detect that a token is wrong"
+          "Nothing without the private key",
+          "They can recover the token one byte at a time, turning an exponential search into a linear one"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Guessing byte by byte reduces 256^20 possibilities to roughly 20 x 256 attempts. The search space collapses because each guess is scored independently."
       },
       {
         "question": "What makes compare_digest constant time?",
         "options": [
+          "It hashes both values first",
           "It is implemented in C, so it is faster",
           "It always examines every byte before returning, so the duration does not depend on the input",
-          "It hashes both values first",
           "It adds random delay to mask the real time"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Constant time means independent of the data, not fast. Adding random delay is a common and unreliable substitute, because averaging over many samples recovers the signal."
       }
     ],
@@ -852,37 +856,235 @@
       {
         "question": "Why is deny-by-default safer than deny-by-exception?",
         "options": [
-          "It is faster to evaluate",
-          "It requires fewer policies",
           "A forgotten rule refuses access rather than granting it",
-          "It logs more detail"
+          "It requires fewer policies",
+          "It logs more detail",
+          "It is faster to evaluate"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "Allowlists fail closed and denylists fail open. With deny-by-default the cost of an oversight is a support ticket, not a breach."
       },
       {
         "question": "In an engine that resolves conflicts by priority, what happens to a deny rule with a lower priority than an overlapping allow?",
         "options": [
-          "The deny wins regardless",
           "The allow wins and the deny has no effect",
-          "Both are ignored",
-          "The request errors"
+          "The request errors",
+          "The deny wins regardless",
+          "Both are ignored"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Under priority resolution, deny has no inherent advantage. A deny rule written on the assumption that 'deny always wins' can silently do nothing."
       },
       {
         "question": "What is the point of separating the decision point from the enforcement point?",
         "options": [
-          "It removes the need for authentication",
-          "Policy can be tested and shadow-run independently of the request path",
           "It allows denylists to be used safely",
+          "Policy can be tested and shadow-run independently of the request path",
+          "It removes the need for authentication",
           "It improves latency"
         ],
         "correctIndex": 1,
         "explanation": "Separating them lets you evaluate policies against real or historical inputs without those decisions affecting live traffic, which is exactly what shadow mode does."
       }
     ]
+  },
+  {
+    "id": "rbac-and-role-design",
+    "title": "RBAC and why roles stop scaling",
+    "summary": "Design roles properly, recognise role explosion before it happens, and understand why RBAC alone fails for agents.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Role-based access control is the model most developers meet first, and usually the one already in place wherever you work. Permissions attach to roles, roles attach to people, and nobody manages individual grants. It scales with headcount beautifully, and it is worth understanding exactly where it stops."
+      },
+      {
+        "type": "points",
+        "items": [
+          "A permission is an action on a resource: read a secret, deploy a service, approve a payment.",
+          "A role is a named bundle of permissions: on-call engineer, billing admin.",
+          "An assignment binds a principal to a role, usually for as long as they hold a job."
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "The reason RBAC won is administrative rather than technical. When someone changes teams you change one assignment, not forty grants, and when an auditor asks who can approve payments you read one role rather than reconstructing it."
+      },
+      {
+        "type": "prose",
+        "text": "Role explosion is the characteristic failure, and it arrives the same way every time. A role nearly fits someone, so a variant is created. Then a variant of the variant. Within two years there are more roles than people, each held by one person, and the model has quietly degraded into per-user grants with extra indirection."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The warning sign is roles whose names contain a team, a person, or a project.",
+          "The measurement is the ratio of roles to principals. Approaching one to one means the model has stopped working.",
+          "The cause is almost always that context is being encoded into role names, because the model has nowhere else to put it."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "That last point is what ABAC exists to fix. When the real rule is \"an on-call engineer, during their shift, from a managed device\", RBAC can only express it by making a role per combination. ABAC evaluates the attributes at request time and the roles stay stable."
+      },
+      {
+        "type": "prose",
+        "text": "For agents, RBAC breaks differently and more seriously. Roles model durable job functions, and an agent's justified access is narrow, short-lived and specific to a task. Giving an agent the deploy-bot role grants it whatever that role accumulates over time, from every future change made for reasons unrelated to it."
+      },
+      {
+        "type": "points",
+        "items": [
+          "A human's access is stable for months; an agent's is often justified for minutes.",
+          "A human holds one role across many tasks; an agent should hold different access per task.",
+          "A human can be asked why they used a permission; an agent used it because its input said so."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Use roles for people and scoped, expiring policies for agents. Reusing a human role for an agent is convenient on the first day and is how an agent ends up with the union of everything that role ever needed."
+      },
+      {
+        "type": "prose",
+        "text": "The models compose rather than compete. Most working systems are RBAC for coarse organisational structure, ABAC conditions for context, and per-principal policies for the machine identities that do not fit either."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What is the clearest sign of role explosion?",
+        "options": [
+          "Roles are being renamed frequently",
+          "The ratio of roles to principals approaches one to one",
+          "Users hold more than one role",
+          "Permissions are added to existing roles"
+        ],
+        "correctIndex": 1,
+        "explanation": "One role per person means you have per-user grants wearing role names. The usual cause is context being encoded into role names because the model cannot express it otherwise."
+      },
+      {
+        "question": "Why is RBAC a poor fit for agents specifically?",
+        "options": [
+          "Agents cannot be assigned roles technically",
+          "Roles model durable job functions, while an agent's justified access is narrow, short-lived and task-specific",
+          "Roles are too slow to evaluate per request",
+          "Agents need more permissions than any role provides"
+        ],
+        "correctIndex": 1,
+        "explanation": "An agent given a human role inherits everything that role accumulates over time, for reasons unrelated to the agent. Scoped, expiring policies match how agent access is actually justified."
+      },
+      {
+        "question": "The rule is \"an on-call engineer, during their shift, from a managed device\". Why does RBAC struggle?",
+        "options": [
+          "It cannot express negative permissions",
+          "It has nowhere to put context, so conditions become new roles",
+          "Roles cannot be time-limited at all",
+          "It only supports one role per user"
+        ],
+        "correctIndex": 1,
+        "explanation": "RBAC binds permissions to a name, not to circumstances. Encoding shift and device state as roles is the mechanism by which role explosion happens; ABAC evaluates those attributes at request time instead."
+      }
+    ]
+  },
+  {
+    "id": "lab-build-a-policy-engine",
+    "title": "Lab: build a policy engine and break it",
+    "summary": "Implement deny-by-default with priorities in fifteen lines, then watch a deny rule silently do nothing.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The previous lessons said that deny-by-default fails closed, and that priority rather than effect resolves overlapping rules. Both are easy to nod along to and easy to get wrong under deadline, so build the engine and let it bite you."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Write the engine. It is a matcher, a conflict rule, and a default, which is genuinely all a policy engine is at its core.",
+            "code": "cat > /tmp/policy.py <<'EOF'\nimport fnmatch\n\nPOLICIES = [\n    {\"name\": \"broad-read\", \"path\": \"app/**\",         \"effect\": \"allow\", \"priority\": 10},\n    {\"name\": \"no-billing\", \"path\": \"app/billing/**\", \"effect\": \"deny\",  \"priority\": 5},\n]\n\ndef decide(path, policies):\n    matches = [p for p in policies\n               if fnmatch.fnmatch(path, p[\"path\"].replace(\"**\", \"*\"))]\n    if not matches:\n        return \"DENY\", \"no policy matched (deny-by-default)\"\n    winner = max(matches, key=lambda p: p[\"priority\"])\n    return winner[\"effect\"].upper(), f'{winner[\"name\"]} (priority {winner[\"priority\"]})'\n\nfor path in [\"app/search/key\", \"app/billing/stripe\", \"other/thing\"]:\n    verdict, why = decide(path, POLICIES)\n    print(f\"{path:24} {verdict:6} <- {why}\")\nEOF\npython3 /tmp/policy.py",
+            "lang": "bash"
+          },
+          {
+            "text": "Read the middle line carefully. The deny rule matched, and lost.",
+            "code": "app/search/key           ALLOW  <- broad-read (priority 10)\napp/billing/stripe       ALLOW  <- broad-read (priority 10)\nother/thing              DENY   <- no policy matched (deny-by-default)",
+            "lang": "text"
+          },
+          {
+            "text": "Now raise the deny above the allow and run it again.",
+            "code": "cat >> /tmp/policy.py <<'EOF'\n\nprint(\"\\n--- raise the deny above the allow ---\")\nFIXED = [dict(p, priority=100) if p[\"name\"] == \"no-billing\" else p\n         for p in POLICIES]\nfor path in [\"app/search/key\", \"app/billing/stripe\"]:\n    verdict, why = decide(path, FIXED)\n    print(f\"{path:24} {verdict:6} <- {why}\")\nEOF\npython3 /tmp/policy.py",
+            "lang": "bash"
+          },
+          {
+            "text": "Same rules, same paths, different outcome. The script re-runs both cases, so you get the before and after together.",
+            "code": "app/search/key           ALLOW  <- broad-read (priority 10)\napp/billing/stripe       ALLOW  <- broad-read (priority 10)\nother/thing              DENY   <- no policy matched (deny-by-default)\n\n--- raise the deny above the allow ---\napp/search/key           ALLOW  <- broad-read (priority 10)\napp/billing/stripe       DENY   <- no-billing (priority 100)",
+            "lang": "text"
+          },
+          {
+            "text": "Clean up.",
+            "code": "rm /tmp/policy.py",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Two things happened, and the second is the one that ships to production."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The third path was denied by nothing at all. No rule mentioned other/thing, and the absence of a rule refused it. That is deny-by-default, and it is why an oversight becomes a support ticket rather than a breach.",
+          "The billing secret was allowed despite an explicit deny. The rule matched, it was correct, and it lost the comparison. Nothing errored, nothing warned, and a reviewer skimming the policy list sees a deny and assumes billing is protected."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "This is the single most transferable bug in this course. Some engines resolve conflicts by deny-always-wins and some by priority, and a deny rule written against the wrong assumption is not a weak control, it is no control at all while looking like one."
+      },
+      {
+        "type": "prose",
+        "text": "Before you write a deny rule in any system, find out which model it uses. Then test the rule against a path it should refuse, because a silently inert policy looks identical to a working one in every list, diff and review."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "The 1Claw policy engine resolves by priority, which is exactly the case this lab demonstrates. A deny needs a higher number than the allow it is carving into."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why was other/thing denied when no rule mentioned it?",
+        "options": [
+          "A hidden default-deny rule matched it",
+          "No policy matched, and the absence of a grant is a refusal",
+          "The path was malformed",
+          "fnmatch rejects unknown prefixes"
+        ],
+        "correctIndex": 1,
+        "explanation": "Deny-by-default means access requires a positive grant. An allowlist fails closed, which is why a forgotten rule produces a support ticket rather than an exposure."
+      },
+      {
+        "question": "Why did the deny on app/billing/** have no effect in the first run?",
+        "options": [
+          "The glob did not match the path",
+          "It matched but lost the priority comparison to the allow",
+          "Deny rules are evaluated before allow rules",
+          "It was defined after the allow in the list"
+        ],
+        "correctIndex": 1,
+        "explanation": "The rule matched and was correct. Under priority resolution, deny has no inherent advantage, so a lower number means the rule is silently inert."
+      },
+      {
+        "question": "What should you do before writing a deny rule in an unfamiliar system?",
+        "options": [
+          "Establish whether conflicts resolve by priority or by deny-always-wins, then test it against a path it should refuse",
+          "Give it the lowest priority so it cannot cause an outage",
+          "Write it as a narrow allow instead",
+          "Place it first in the policy list"
+        ],
+        "correctIndex": 0,
+        "explanation": "The two models produce opposite outcomes for the same rules, and a rule written against the wrong assumption fails silently. Testing a path it should refuse is the only way to tell from the outside."
+      }
+    ],
+    "kind": "lab"
   },
   {
     "id": "threshold-cryptography",
@@ -936,33 +1138,33 @@
         "question": "What do t-1 Shamir shares reveal about the secret?",
         "options": [
           "A partial reconstruction",
+          "Enough to brute force it",
           "The length of the secret",
-          "Nothing at all: the guarantee is information-theoretic",
-          "Enough to brute force it"
+          "Nothing at all: the guarantee is information-theoretic"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Below the threshold, the shares are consistent with every possible secret. The guarantee does not degrade with more computing power."
       },
       {
         "question": "What does threshold MPC provide that Shamir sharing alone does not?",
         "options": [
-          "Smaller shares",
           "Protection against lost shares",
-          "The complete key is never assembled, even momentarily",
-          "Faster signing"
+          "Faster signing",
+          "Smaller shares",
+          "The complete key is never assembled, even momentarily"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Shamir requires reconstruction to use the key, creating a moment where it exists whole. MPC produces the signature collaboratively so that moment never occurs."
       },
       {
         "question": "In a 2-of-3 split, what does n = 3 buy you?",
         "options": [
-          "Faster reconstruction",
-          "Higher security than 2-of-2",
+          "A lower threshold",
           "Availability: you can lose one share and still operate",
-          "A lower threshold"
+          "Higher security than 2-of-2",
+          "Faster reconstruction"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "The threshold t sets the security property; n provides redundancy so the loss of a single share is not fatal."
       }
     ]
@@ -1019,23 +1221,23 @@
       {
         "question": "With threshold two, why does a single share exclude no candidate secret?",
         "options": [
-          "The share is encrypted",
           "Exactly one line passes through one point for every possible value of f(0)",
+          "The share is encrypted",
           "The share is too short to be useful",
           "Random noise is added to each share"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "One point does not determine a line. For any candidate secret there is a line through the share with that constant term, so the share is consistent with all of them."
       },
       {
         "question": "Why does the guarantee not weaken as computers get faster?",
         "options": [
+          "Shares are rotated automatically",
           "The prime field is periodically increased",
           "The information is absent rather than merely hard to extract",
-          "Shares are rotated automatically",
           "The polynomial degree grows over time"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Information-theoretic security is not a computational bound. There is nothing to compute because the missing information was never in the share."
       },
       {
@@ -1043,8 +1245,8 @@
         "options": [
           "That reconstruction is fast",
           "That using the secret requires assembling it somewhere, which is the moment MPC eliminates",
-          "That three shares are needed to recover",
-          "That shares must be stored together"
+          "That shares must be stored together",
+          "That three shares are needed to recover"
         ],
         "correctIndex": 1,
         "explanation": "Reconstruction creates an instant where the complete secret exists in one place. Threshold MPC produces the signature collaboratively so that moment never occurs."
@@ -1107,24 +1309,213 @@
       {
         "question": "What does remote attestation prove?",
         "options": [
-          "That the code is free of bugs",
           "Which code and configuration are running inside the enclave",
+          "That the code is free of bugs",
           "That the data is encrypted at rest",
           "That the operator is trustworthy"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Attestation is a hardware-signed measurement of what was loaded. It says nothing about whether that code is correct: a faithfully attested buggy program is still buggy."
       },
       {
         "question": "Why is a TEE a good location for a traffic inspection proxy?",
         "options": [
-          "It makes inspection faster",
           "It removes the need for TLS",
-          "Traffic can be decrypted and inspected without the operator being able to observe it",
-          "It guarantees the traffic is safe"
+          "It makes inspection faster",
+          "It guarantees the traffic is safe",
+          "Traffic can be decrypted and inspected without the operator being able to observe it"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "The enclave can see plaintext to inspect it while the host operator cannot, which is what makes inspecting sensitive traffic acceptable."
+      }
+    ]
+  },
+  {
+    "id": "defense-in-depth",
+    "title": "Defense in depth and the weakest link",
+    "summary": "Layer controls so that no single failure is fatal, and learn which classic principles actually earn their place.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Every control in this track can fail. Keys leak, policies are misconfigured, enclaves have side channels, and people approve things they should not. Defense in depth is the design response: assume any one layer fails, and arrange the others so that failure is survivable rather than total."
+      },
+      {
+        "type": "prose",
+        "text": "It is easy to say and easy to fake. Three layers that all depend on the same assumption are one layer wearing three hats."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Independent layers fail for different reasons. A network control and a cryptographic control are genuinely independent; two network controls from the same vendor largely are not.",
+          "Each layer should be individually meaningful. A control that only helps when another has already failed is a fallback, and worth having, but do not count it twice.",
+          "Layers must not create a false sense of coverage. The most common harm from a weak layer is the stronger control that never got built because someone believed the problem was handled."
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Three older principles are worth knowing by name, because they are what the layering is made of."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Complete mediation. Every access is checked, every time, with no cached or implicit approval. A system that authorises once and then trusts a session indefinitely has a hole that widens with the session's lifetime.",
+          "Separation of duties. No single principal can complete a sensitive action alone. It is why a human approves what an agent proposes, and why the person who writes a policy should not be the only one who can approve widening it.",
+          "The weakest link. Attackers do not attack your strongest control; they go around it. Effort spent hardening something already strong is usually effort not spent on the part that will actually be attacked."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Complete mediation is the principle most often traded away for performance. Caching an authorization decision is exactly the optimisation that turns a revoked grant into one that stays live until the cache expires."
+      },
+      {
+        "type": "prose",
+        "text": "There is a real cost to layering, and pretending otherwise is how security teams lose credibility. Each layer adds latency, failure modes and operational burden, and a system with enough layers becomes one nobody fully understands. That is its own risk."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Prefer few strong, independent layers to many weak, correlated ones.",
+          "Every layer should have an owner who can explain what it stops and what it costs.",
+          "A layer nobody monitors is decorative; if its failure would be silent, it is not defending anything."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "A useful test: for each control, name the specific failure of another control that it covers. If the answer is vague, you probably have redundancy rather than depth."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What distinguishes real defense in depth from layering that only appears deep?",
+        "options": [
+          "The number of controls in the path",
+          "Whether the layers fail independently, for different reasons",
+          "Whether each layer is from a different vendor",
+          "Whether the layers are all enabled by default"
+        ],
+        "correctIndex": 1,
+        "explanation": "Three controls sharing an assumption fail together. Independence is the property that makes a second layer worth its cost."
+      },
+      {
+        "question": "What does complete mediation require?",
+        "options": [
+          "Every access is checked every time, with no implicit or cached approval",
+          "All accesses are logged for later review",
+          "Every principal is authenticated at least once",
+          "Access decisions are made by a central service"
+        ],
+        "correctIndex": 0,
+        "explanation": "It is the principle most often traded away for performance, and caching an authorization decision is precisely what keeps a revoked grant alive until the cache expires."
+      },
+      {
+        "question": "What is the most common harm caused by a weak security layer?",
+        "options": [
+          "The latency it adds",
+          "The stronger control that never got built because someone believed the problem was handled",
+          "The cost of licensing it",
+          "The false positives it generates"
+        ],
+        "correctIndex": 1,
+        "explanation": "A weak layer that is honestly described as weak is fine. The damage comes from counting it as coverage, which stops the real control from being funded."
+      }
+    ]
+  },
+  {
+    "id": "threat-modelling-with-stride",
+    "title": "Threat modelling with STRIDE",
+    "summary": "Use a checklist that has survived thirty years to find the threats you would otherwise have to be lucky to think of.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Every model in this course so far tells you what to do about a threat you already know about. Threat modelling is the step before that: enumerating threats systematically rather than relying on whoever is in the room having seen that failure before."
+      },
+      {
+        "type": "prose",
+        "text": "STRIDE is the oldest checklist still in wide use, and it earns its place by being memorable. Six categories, each the negation of a property you wanted."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Spoofing defeats authentication. Someone claims an identity that is not theirs.",
+          "Tampering defeats integrity. Data or code is modified in transit or at rest.",
+          "Repudiation defeats attribution. An actor denies having done something and you cannot prove otherwise.",
+          "Information disclosure defeats confidentiality. Data reaches someone it should not.",
+          "Denial of service defeats availability. A legitimate user cannot get the thing they need.",
+          "Elevation of privilege defeats authorization. Someone does something they were not permitted to do."
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "The method is mechanical, which is its strength. Draw the components and the flows between them, then walk each element against all six categories and ask what would go wrong. It surfaces the threats nobody would have volunteered, particularly repudiation and denial of service, which teams consistently skip."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Take a concrete flow: a developer's CI job reads a secret and deploys.",
+            "code": "CI runner  ->  1Claw API  ->  vault\n     |\n     +-------->  deploy target",
+            "lang": "text"
+          },
+          {
+            "text": "Walk it. Spoofing: could something other than your CI job present that credential? Tampering: could the deployed artifact be modified between build and deploy? Repudiation: if a bad deploy happens, can you prove which job did it?",
+            "lang": "text"
+          },
+          {
+            "text": "Keep going. Information disclosure: does the secret reach the build log? Denial of service: what happens if the API is unavailable during a deploy? Elevation: can a job on a feature branch reach production paths?",
+            "lang": "text"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Every one of those six questions maps to something earlier in this track: short-lived scoped credentials, signatures, audit logs, output masking, graceful degradation, and deny-by-default policy. The checklist is what makes you ask them all rather than the two you happened to think of."
+      },
+      {
+        "type": "prose",
+        "text": "STRIDE has real limits and it is worth naming them. It is oriented around a system diagram, so it finds threats to components you drew and says nothing about the ones you left out. It is weak on business-logic abuse, where every step is authorised and the sequence is the attack. And it predates agents entirely, which is why this course pairs it with the lethal trifecta and the OWASP agentic list rather than treating it as sufficient."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "The failure mode of any threat-modelling exercise is producing a document. The output that matters is a short list of changes someone owns, and a shorter list of risks you decided to accept on purpose."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Which security property does repudiation defeat?",
+        "options": [
+          "Confidentiality",
+          "Attribution",
+          "Availability",
+          "Authorization"
+        ],
+        "correctIndex": 1,
+        "explanation": "Repudiation means an actor can deny an action and you cannot prove otherwise, which is why audit trails and signatures are the countermeasures."
+      },
+      {
+        "question": "What is the main practical value of walking a checklist like STRIDE?",
+        "options": [
+          "It produces documentation auditors require",
+          "It surfaces threat categories nobody in the room would have volunteered",
+          "It ranks threats by likelihood",
+          "It replaces the need for penetration testing"
+        ],
+        "correctIndex": 1,
+        "explanation": "Teams reliably think of disclosure and elevation, and reliably skip repudiation and denial of service. The mechanical walk is what makes the coverage even."
+      },
+      {
+        "question": "What is STRIDE weakest at?",
+        "options": [
+          "Threats to components you did not draw, and business-logic abuse where each step is authorised",
+          "Cryptographic weaknesses",
+          "Network-level attacks",
+          "Insider threats"
+        ],
+        "correctIndex": 0,
+        "explanation": "It is diagram-oriented, so its coverage is bounded by what you modelled, and a sequence of individually permitted actions does not trip any of the six categories."
       }
     ]
   },
@@ -1191,23 +1582,23 @@
       {
         "question": "Which dimension of least privilege is most often overlooked?",
         "options": [
+          "Scope",
           "Time: grants that never expire",
           "Permission",
-          "Identity",
-          "Scope"
+          "Identity"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "Scope and permission get attention; duration is routinely ignored. A credential with no expiry converts a single leak into indefinite access."
       },
       {
         "question": "What does 'assume breach' change about how you design?",
         "options": [
-          "You log less to reduce exposure",
-          "You optimise for limiting what a compromise yields, not only for preventing it",
           "You stop investing in prevention",
-          "You require more passwords"
+          "You log less to reduce exposure",
+          "You require more passwords",
+          "You optimise for limiting what a compromise yields, not only for preventing it"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Prevention still matters, but the design goal becomes minimising blast radius, because the probability of some compromise over time approaches certainty."
       }
     ]

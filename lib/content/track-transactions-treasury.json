@@ -123,34 +123,34 @@
       {
         "question": "What does intents_api_enabled: true do besides granting the transaction endpoints?",
         "options": [
-          "It rotates the signing key nightly",
-          "It disables all guardrails",
           "It exports the private key to the agent",
-          "It blocks the agent from reading private_key or ssh_key via the secrets endpoint"
+          "It disables all guardrails",
+          "It blocks the agent from reading private_key or ssh_key via the secrets endpoint",
+          "It rotates the signing key nightly"
         ],
-        "correctIndex": 3,
+        "correctIndex": 2,
         "explanation": "The flag is two-sided: it grants transaction endpoints and blocks direct signing-key reads so keys are only usable through the proxy."
       },
       {
         "question": "What happens when simulate_first: true and the simulation reverts?",
         "options": [
-          "The API returns 422 and does not sign or broadcast",
-          "The tx is broadcast anyway",
           "The agent is deactivated",
-          "The value cap is raised"
+          "The API returns 422 and does not sign or broadcast",
+          "The value cap is raised",
+          "The tx is broadcast anyway"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "On a reverted simulation the API returns 422 and never signs or broadcasts."
       },
       {
         "question": "Which endpoint signs a transaction without broadcasting it?",
         "options": [
-          "POST /v1/agents/:id/transactions/sign",
           "POST /v1/agents/:id/transactions",
-          "POST /v1/agents/:id/signing-keys",
-          "GET /v1/agents/:id/transactions"
+          "GET /v1/agents/:id/transactions",
+          "POST /v1/agents/:id/transactions/sign",
+          "POST /v1/agents/:id/signing-keys"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "The /transactions/sign endpoint returns signed_tx for you to broadcast yourself, with guardrails still enforced."
       }
     ],
@@ -292,33 +292,33 @@
         "question": "Why does an agent get a 403 when calling a treasury wallet endpoint?",
         "options": [
           "The org is over quota",
-          "Treasury wallets are testnet only",
+          "Treasury endpoints enforce require_human",
           "The agent has no signing key",
-          "Treasury endpoints enforce require_human"
+          "Treasury wallets are testnet only"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "All treasury wallet endpoints enforce require_human, so agents receive a 403."
       },
       {
         "question": "In Delegated mode, where does the treasury private key live when an agent signs?",
         "options": [
           "It is returned in the response",
-          "It stays in __treasury-keys and signs via the Intents API",
+          "It moves to the Safe contract",
           "It is copied to the agent",
-          "It moves to the Safe contract"
+          "It stays in __treasury-keys and signs via the Intents API"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Delegated mode signs with the treasury key through the Intents API; the key never leaves __treasury-keys."
       },
       {
         "question": "What triggers a Safe proposal to execute automatically?",
         "options": [
+          "The daily limit resetting",
           "A single approve signature",
           "A human clicking export",
-          "Approve signatures reaching the Safe threshold",
-          "The daily limit resetting"
+          "Approve signatures reaching the Safe threshold"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "When approve signatures reach the Safe threshold, the proposal auto-executes and broadcasts."
       }
     ],
@@ -450,8 +450,8 @@
         "question": "Which network and asset do 1Claw x402 payments use?",
         "options": [
           "Base USDC (eip155:8453)",
-          "Ethereum mainnet ETH",
           "Polygon DAI",
+          "Ethereum mainnet ETH",
           "Solana USDC"
         ],
         "correctIndex": 0,
@@ -471,12 +471,12 @@
       {
         "question": "After the API returns 402, how does the client complete the request?",
         "options": [
-          "It waits for the quota to reset",
           "It upgrades the subscription tier",
+          "It signs the payment and retries with an X-PAYMENT header",
           "It switches to credits automatically",
-          "It signs the payment and retries with an X-PAYMENT header"
+          "It waits for the quota to reset"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "An x402 client pays the required amount on-chain and retries with the X-PAYMENT header."
       }
     ]
@@ -583,34 +583,34 @@
       {
         "question": "What do you need before creating embedded wallets?",
         "options": [
-          "A Pro+ plan and a platform app plt_ key",
           "A Safe multisig",
-          "Only an EOA private key",
-          "A Free plan and a 1ck_ key"
+          "A Free plan and a 1ck_ key",
+          "A Pro+ plan and a platform app plt_ key",
+          "Only an EOA private key"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Embedded wallets require a Pro or higher plan plus a platform app plt_ key."
       },
       {
         "question": "How does a user log in to get a wallet?",
         "options": [
-          "MetaMask connect",
-          "Seed phrase import",
+          "Password only",
           "Email OTP with sendEmailOtp and verifyEmailOtp",
-          "Password only"
+          "MetaMask connect",
+          "Seed phrase import"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "You send a code with sendEmailOtp and confirm it with verifyEmailOtp, which returns the wallet_address."
       },
       {
         "question": "Which two components does wallet-react provide for the widget?",
         "options": [
-          "OneclawClient and OneclawAuth",
-          "WalletKit and WalletButton",
           "ProviderRoot and WalletCard",
-          "OneclawWalletProvider and OneclawEmbeddedWallet"
+          "OneclawWalletProvider and OneclawEmbeddedWallet",
+          "WalletKit and WalletButton",
+          "OneclawClient and OneclawAuth"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "OneclawWalletProvider wraps the OneclawEmbeddedWallet component."
       }
     ]
@@ -725,9 +725,9 @@
       {
         "question": "What does enforcement \"log\" do?",
         "options": [
-          "Disables the guardrail entirely",
-          "Denies and logs the reason",
           "Logs every request to the audit trail",
+          "Denies and logs the reason",
+          "Disables the guardrail entirely",
           "Runs the rule in shadow mode, recording what it would deny without denying it"
         ],
         "correctIndex": 3,
@@ -736,23 +736,23 @@
       {
         "question": "You widen an agent's guardrail with a PATCH and get back a 202 with a pending_approval_id. Why?",
         "options": [
-          "The API is rate limiting you",
           "Widening edits queue behind a policy_change approval with step-up re-auth",
-          "The agent is suspended",
-          "The guardrail JSON was invalid"
+          "The guardrail JSON was invalid",
+          "The API is rate limiting you",
+          "The agent is suspended"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Since v0.56.2 widening access is itself a privileged change: it waits for an approval. Narrowing edits still apply immediately, because they only reduce access."
       },
       {
         "question": "How does tx_approval_policy differ from a hard spending cap?",
         "options": [
-          "A matching transaction returns 202 awaiting_approval instead of being refused",
-          "It applies only to non-EVM chains",
+          "It disables the daily limit",
           "It raises the cap automatically",
-          "It disables the daily limit"
+          "It applies only to non-EVM chains",
+          "A matching transaction returns 202 awaiting_approval instead of being refused"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "A hard cap refuses. An approval policy routes the transaction to a human, so legitimate large transfers can proceed with oversight rather than simply failing."
       }
     ],
@@ -875,34 +875,34 @@
       {
         "question": "With card_require_approval true, when does the x402 payment actually happen?",
         "options": [
-          "Immediately, and it is refunded if rejected",
           "At the end of the billing period",
-          "When the card monitor next runs",
-          "Only after a human approves the pending approval"
+          "Only after a human approves the pending approval",
+          "Immediately, and it is refunded if rejected",
+          "When the card monitor next runs"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "The order returns 202 awaiting_approval and creates a card row in that state. No payment is made until a human approves: rejecting simply marks the card rejected."
       },
       {
         "question": "Why is the reveal operation deliberately missing from the MCP tool set?",
         "options": [
-          "Because reveal is deprecated",
-          "To reduce the tool count",
+          "So a card number can never be written into a model's context window",
           "Because MCP does not support it technically",
-          "So a card number can never be written into a model's context window"
+          "Because reveal is deprecated",
+          "To reduce the tool count"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "order_card, list_cards and get_card_status are exposed, but reveal is omitted on purpose to keep PANs out of agent context. Humans reveal through re-authenticated paths."
       },
       {
         "question": "What does the Vault validate before signing the x402 payment authorization?",
         "options": [
-          "payTo allowlist, Base network, exact amount, and the pinned USDC contract",
-          "Nothing: the provider validates it",
           "Only that the agent has cards_enabled",
-          "Only the amount"
+          "Only the amount",
+          "Nothing: the provider validates it",
+          "payTo allowlist, Base network, exact amount, and the pinned USDC contract"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "That four-part check on the 402 challenge is the payment security boundary, and it is why a malicious challenge cannot redirect funds elsewhere."
       }
     ],
@@ -1022,8 +1022,8 @@
         "options": [
           "Only treasury wallets",
           "Treasury wallets, agent signing keys, and smart accounts",
-          "Only EVM chains",
-          "Only wallets with a non-zero balance"
+          "Only wallets with a non-zero balance",
+          "Only EVM chains"
         ],
         "correctIndex": 1,
         "explanation": "It is a unified aggregator across all three wallet types, with optional token balances and USD estimates."
@@ -1031,23 +1031,23 @@
       {
         "question": "Why does reading __treasury-keys directly return 403?",
         "options": [
-          "The vault does not exist yet",
-          "It requires a Business tier plan",
+          "Only agents may read it",
           "Private keys may only leave through the audited export endpoints",
-          "Only agents may read it"
+          "It requires a Business tier plan",
+          "The vault does not exist yet"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "Blocking direct reads means there is exactly one path to a private key: the export endpoint, which demands password re-auth and writes an audit record."
       },
       {
         "question": "Which MPC custody mode applies to a Business-tier org's treasury keys?",
         "options": [
-          "No MPC",
-          "Shamir 2-of-3 across multiple HSMs",
           "XOR 2-of-2",
-          "Client-custody 2-of-2"
+          "No MPC",
+          "Client-custody 2-of-2",
+          "Shamir 2-of-3 across multiple HSMs"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Custody is set automatically by tier: XOR 2-of-2 for Pro and Team, Shamir 2-of-3 multi-HSM for Business and Enterprise."
       }
     ],
@@ -1163,23 +1163,23 @@
       {
         "question": "Why does an agent's Bankr lease response omit the api_key field?",
         "options": [
+          "So the key never enters the agent's context: Shroud resolves it at request time",
           "Because the key is not generated yet",
           "To reduce response size",
-          "Because the agent lacks permission",
-          "So the key never enters the agent's context: Shroud resolves it at request time"
+          "Because the agent lacks permission"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "The lease gives the agent metadata only. Shroud resolves the actual key when the request is made, so the credential never reaches the model's context window."
       },
       {
         "question": "What must exist before an agent can lease a Bankr key?",
         "options": [
           "Business tier billing",
+          "A treasury wallet",
           "A signing key on Base",
-          "A policy on agents/{id}/bankr/* in the __agent-keys vault",
-          "A treasury wallet"
+          "A policy on agents/{id}/bankr/* in the __agent-keys vault"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Bankr vending is deny-by-default. Without an explicit policy on that path the lease is refused."
       },
       {
@@ -1302,9 +1302,9 @@
       {
         "question": "What does counterfactual provisioning mean here?",
         "options": [
-          "The Safe exists only in the database",
-          "The Safe address is derived and usable before any deployment transaction is sent",
           "The address changes after deployment",
+          "The Safe address is derived and usable before any deployment transaction is sent",
+          "The Safe exists only in the database",
           "The Safe is deployed immediately on creation"
         ],
         "correctIndex": 1,
@@ -1313,23 +1313,23 @@
       {
         "question": "Why do several Safe endpoints currently return 501?",
         "options": [
-          "On-chain deploy, cosign, passkey, timelock and 4337 are pending a Guard audit",
           "They were removed in v0.56",
+          "They are deprecated",
           "They require Enterprise tier",
-          "They are deprecated"
+          "On-chain deploy, cosign, passkey, timelock and 4337 are pending a Guard audit"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "The provisioning and migration foundation ships now; the on-chain execution paths are held back behind 501 until the Guard audit completes."
       },
       {
         "question": "What is the advantage of a Safe over a bare EOA for an agent?",
         "options": [
-          "It removes the need for signing keys",
-          "Guardrails can eventually be enforced on-chain rather than only by the Vault",
           "It works on non-EVM chains",
-          "It signs transactions faster"
+          "It signs transactions faster",
+          "It removes the need for signing keys",
+          "Guardrails can eventually be enforced on-chain rather than only by the Vault"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "An EOA is one key with no on-chain policy. A Safe with modules can enforce constraints at the chain level, so a compromised Vault path is not automatically a compromised wallet."
       }
     ],

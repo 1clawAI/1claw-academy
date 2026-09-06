@@ -113,34 +113,34 @@
       {
         "question": "What is stored in an audit event?",
         "options": [
-          "Only metadata such as path, action, actor, and timestamp",
-          "Nothing until export",
+          "The secret value and the metadata",
           "The private key hash",
-          "The secret value and the metadata"
+          "Only metadata such as path, action, actor, and timestamp",
+          "Nothing until export"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Audit events store metadata only; secret values are never logged."
       },
       {
         "question": "How does the log resist tampering at write time?",
         "options": [
-          "Events are encrypted with the org KEK",
           "It is read-only after 24 hours",
-          "Only admins can query it",
-          "Writes go through a SECURITY DEFINER function since vault_app cannot INSERT directly"
+          "Writes go through a SECURITY DEFINER function since vault_app cannot INSERT directly",
+          "Events are encrypted with the org KEK",
+          "Only admins can query it"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "vault_app has direct INSERT revoked, so all writes funnel through the trusted insert_audit_event function that enforces the chain."
       },
       {
         "question": "What links each event to the previous one?",
         "options": [
-          "A Stripe invoice ID",
-          "The actor's IP address",
           "prev_event_id plus a SHA-256 integrity_hash",
-          "A sequential integer ID"
+          "The actor's IP address",
+          "A sequential integer ID",
+          "A Stripe invoice ID"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "Each event carries prev_event_id and an integrity_hash, forming an append-only SHA-256 chain."
       }
     ],
@@ -276,12 +276,12 @@
       {
         "question": "What does vault binding (vault_ids) add on top of policies?",
         "options": [
-          "It rotates keys nightly",
-          "It disables audit logging",
           "It restricts which vaults the agent JWT works for regardless of policies",
-          "It grants access to every vault"
+          "It grants access to every vault",
+          "It disables audit logging",
+          "It rotates keys nightly"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "Vault binding is a second layer: even a too-broad policy cannot let the JWT reach vaults outside vault_ids."
       },
       {
@@ -289,21 +289,21 @@
         "options": [
           "There is no difference",
           "Deactivate is faster to type",
-          "Delete keeps the token valid",
-          "Deactivate preserves the records and audit trail"
+          "Deactivate preserves the records and audit trail",
+          "Delete keeps the token valid"
         ],
-        "correctIndex": 3,
+        "correctIndex": 2,
         "explanation": "Deactivating with --active false blocks access but preserves records and audit events; delete removes them."
       },
       {
         "question": "For a common set of secrets shared by all fleet agents, what layout is recommended?",
         "options": [
-          "One vault per secret",
           "A single wildcard policy on production",
-          "A shared vault with path-scoped policies",
-          "No policies at all"
+          "No policies at all",
+          "One vault per secret",
+          "A shared vault with path-scoped policies"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "A shared vault with path-based policies (api-keys/** shared, agents/{name}/** per-agent) scales cleanly."
       }
     ],
@@ -445,21 +445,21 @@
       {
         "question": "In a bootstrap template, how do you enable the Intents API on an agent?",
         "options": [
-          "intents: { enabled: true } (nested)",
           "scopes: [intents]",
           "enable_intents: 1",
+          "intents: { enabled: true } (nested)",
           "intents_api_enabled: true (flat)"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Templates use the nested intents: { enabled: true }; the flat intents_api_enabled is the direct agent-creation form."
       },
       {
         "question": "What must client_id be for Sign in with 1Claw?",
         "options": [
           "The app slug",
-          "The plt_ key",
+          "The user email",
           "The app UUID",
-          "The user email"
+          "The plt_ key"
         ],
         "correctIndex": 0,
         "explanation": "client_id is the app slug; passing the UUID returns Unknown client_id."
@@ -467,12 +467,12 @@
       {
         "question": "Why can't the platform read a bootstrapped user's signing keys?",
         "options": [
-          "They are deleted after bootstrap",
+          "The plt_ key cannot read signing keys across the org boundary",
           "Signing keys are never provisioned",
           "They are only on testnets",
-          "The plt_ key cannot read signing keys across the org boundary"
+          "They are deleted after bootstrap"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "Signing keys are provisioned server-side and the plt_ key cannot read them across the org boundary, keeping custody separated."
       }
     ],
@@ -589,23 +589,23 @@
       {
         "question": "When should you use sub-organizations rather than the Platform API?",
         "options": [
-          "When partitioning your own org into departments or subsidiaries",
           "When you want a second billing account only",
-          "When you need more API keys",
-          "When provisioning resources for your product's end users"
+          "When partitioning your own org into departments or subsidiaries",
+          "When provisioning resources for your product's end users",
+          "When you need more API keys"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "Sub-orgs partition your own organization. The Platform API is for provisioning on behalf of other people's users: a different problem with a different model."
       },
       {
         "question": "What happens when you delete a sub-org?",
         "options": [
+          "It is archived, preserving the audit trail",
           "Its users are deleted too",
-          "It is merged into the parent",
           "It is permanently destroyed with all records",
-          "It is archived, preserving the audit trail"
+          "It is merged into the parent"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "The DELETE endpoint archives the sub-org so historical activity stays auditable."
       }
     ],
@@ -702,34 +702,34 @@
       {
         "question": "Why does the brief's threat model settle the shape of the design before any product decision?",
         "options": [
-          "Regulators require a threat model first",
           "All three trifecta circles are present and none can be removed, so the design must assume injection succeeds",
+          "Regulators require a threat model first",
           "Healthcare data requires MPC by law",
           "Referral emails cannot be parsed safely"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "When no circle can be removed without destroying the product, prevention stops being the goal and limiting the consequence becomes it. That drives identity, credential handling and approval design."
       },
       {
         "question": "What is the strongest argument against merging the three agents into one?",
         "options": [
-          "Single-purpose agents are a best practice",
-          "It would put the settlement credential on the path that consumes untrusted email",
           "It would exceed the agent quota",
-          "Three audit trails are required by the regulator"
+          "Three audit trails are required by the regulator",
+          "Single-purpose agents are a best practice",
+          "It would put the settlement credential on the path that consumes untrusted email"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Naming the concrete consequence is what survives a follow-up meeting. Stating it as a principle invites an exception the first time it is inconvenient."
       },
       {
         "question": "What does the design actually change about the original contractor breach?",
         "options": [
-          "It prevents credentials from leaking",
           "It makes the leaked credential short-lived, narrowly scoped, attributable, and useless for reaching payments",
+          "It prevents credentials from leaking",
           "It removes the need for contractors to hold credentials",
           "It detects the leak faster"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "No design prevents a person from leaking a credential. The measure of the architecture is what an attacker gets when one inevitably leaks."
       }
     ],

@@ -101,12 +101,12 @@
       {
         "question": "What does an ocv_ prefixed key represent?",
         "options": [
-          "A user key",
-          "A JWT",
           "A platform key",
-          "An agent key"
+          "An agent key",
+          "A user key",
+          "A JWT"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "ocv_ keys are agent keys, while 1ck_ keys are user keys."
       }
     ],
@@ -229,23 +229,23 @@
       {
         "question": "How do you get the Bearer token for the hosted MCP server?",
         "options": [
-          "From npx @1claw/mcp",
           "It is the ocv_ key itself",
-          "By calling POST /v1/auth/agent-token with agent_id and api_key",
-          "From the dashboard settings page"
+          "From the dashboard settings page",
+          "From npx @1claw/mcp",
+          "By calling POST /v1/auth/agent-token with agent_id and api_key"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "You POST your agent_id and api_key to /v1/auth/agent-token and use the returned access_token."
       },
       {
         "question": "Which tool confirms the connection works?",
         "options": [
+          "create_vault",
           "get_env_bundle",
           "list_secrets",
-          "create_vault",
           "sign_message"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Asking the client to list secrets triggers list_secrets and verifies the setup."
       }
     ],
@@ -332,34 +332,34 @@
       {
         "question": "How does the agent avoid putting raw secret values in the prompt?",
         "options": [
-          "It encrypts the prompt",
-          "It uses a separate model",
+          "It disables logging",
           "It fetches secrets just in time via tools and the system prompt forbids echoing values",
-          "It disables logging"
+          "It encrypts the prompt",
+          "It uses a separate model"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "The LLM calls vault tools on demand and is instructed never to reveal raw secret values."
       },
       {
         "question": "Which package do the custom LangChain tools wrap?",
         "options": [
+          "oneclaw",
           "langchain-1claw",
           "@1claw/sdk",
-          "@1claw/mcp",
-          "oneclaw"
+          "@1claw/mcp"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "The tool func calls createClient from @1claw/sdk."
       },
       {
         "question": "What does npm run mcp do differently from npm start?",
         "options": [
-          "It uses Gemini only",
-          "It connects to the hosted 1Claw MCP server and loads all vault tools automatically",
           "It runs offline",
-          "It skips authentication"
+          "It uses Gemini only",
+          "It skips authentication",
+          "It connects to the hosted 1Claw MCP server and loads all vault tools automatically"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "The MCP client script connects to mcp.1claw.co and gets all 27+ tools without defining them by hand."
       }
     ],
@@ -458,22 +458,22 @@
         "question": "Why should verbose stay False in production?",
         "options": [
           "It slows the crew down",
+          "It breaks Gemini",
           "It disables the vault tool",
-          "CrewAI logs raw tool return values, which can print secrets",
-          "It breaks Gemini"
+          "CrewAI logs raw tool return values, which can print secrets"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "With verbose=True, CrewAI's executor prints the raw return value of every tool call, including secret values."
       },
       {
         "question": "How are the vault credentials retrieved?",
         "options": [
-          "At import time from a config file",
+          "At runtime using a scoped agent identity",
           "From a local .env only",
           "Copied into the prompt once",
-          "At runtime using a scoped agent identity"
+          "At import time from a config file"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "Credentials are fetched at runtime with a scoped agent identity, not baked into prompts or repos."
       }
     ],
@@ -560,32 +560,32 @@
       {
         "question": "What is the human 1ck_ key used for in this flow?",
         "options": [
-          "Setup only, to provision the vault, agent, and policy",
           "Signing transactions",
+          "Setup only, to provision the vault, agent, and policy",
           "Nothing: it is optional",
           "Runtime access for the character"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "The human key is used only during bootstrap and is never written to disk; the character runs on the agent ocv_ key."
       },
       {
         "question": "Which file does bootstrap write agent credentials to?",
         "options": [
           ".env",
+          ".env.elizaos",
           "secrets.json",
-          "character.json",
-          ".env.elizaos"
+          "character.json"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "Bootstrap writes ONECLAW_AGENT_API_KEY, ONECLAW_AGENT_ID, and ONECLAW_VAULT_ID to .env.elizaos with mode 600."
       },
       {
         "question": "Where do private signing keys live?",
         "options": [
           "In the HSM or TEE, never leaving it",
-          "In the character JSON",
+          "In the LLM context",
           "In .env.elizaos",
-          "In the LLM context"
+          "In the character JSON"
         ],
         "correctIndex": 0,
         "explanation": "Private signing keys never leave the HSM/TEE; the agent submits intents and 1Claw signs server-side."
@@ -674,34 +674,34 @@
       {
         "question": "Where are the signing keys stored with @1claw/agentkit?",
         "options": [
+          "In a .env file",
           "In the agent's process forever",
           "In the 1Claw Vault with HSM and MPC, never on disk",
-          "On the Base chain",
-          "In a .env file"
+          "On the Base chain"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Credentials resolve from the HSM-encrypted vault at boot and never touch disk; signing happens in a TEE."
       },
       {
         "question": "When should you pick @1claw/agentkit over mcp.base.org?",
         "options": [
+          "When you have no vault",
           "For Claude Desktop chat only",
-          "When the agent runs autonomously with no human per transaction",
           "When a human approves every transaction",
-          "When you have no vault"
+          "When the agent runs autonomously with no human per transaction"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "@1claw/agentkit is for autonomous agents with programmatic guardrails, while mcp.base.org suits human-in-the-loop use."
       },
       {
         "question": "What starter kit bootstraps a full onchain dApp with 1Claw?",
         "options": [
           "Base Wizard",
+          "Hardhat",
           "create-react-app",
-          "Scaffold-Agent",
-          "Hardhat"
+          "Scaffold-Agent"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Scaffold-Agent wires HSM-backed secrets and Intents API signing into a Scaffold-ETH 2 scaffold."
       }
     ],
@@ -798,33 +798,33 @@
         "question": "How does the container get credentials if it never receives the agent key?",
         "options": [
           "The container fetches them from the vault directly",
-          "They are passed as environment variables",
           "The host daemon injects them over a Unix-socket mount",
-          "They are baked into the image at build time"
+          "They are baked into the image at build time",
+          "They are passed as environment variables"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "Credential injection happens over a Unix-socket mount from the host daemon, the same trust boundary as local daemon mode, so nothing sensitive is ever inside the image or its environment."
       },
       {
         "question": "What does --local mode give up?",
         "options": [
-          "Only the chat UI",
           "The cloud account and the LLM, leaving only a few local slash commands",
           "Nothing: it is identical to cloud mode",
+          "Only the chat UI",
           "Only the MCP server"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "--local is fully offline: no cloud account and no LLM, with just /help, /secrets, /info and /proxy available."
       },
       {
         "question": "Which provider-key source requires no key at all?",
         "options": [
-          "The local CLI vault option",
-          "The cloud vault option",
           "All three require a key",
-          "1Claw LLM token billing via the Stripe AI Gateway"
+          "The cloud vault option",
+          "1Claw LLM token billing via the Stripe AI Gateway",
+          "The local CLI vault option"
         ],
-        "correctIndex": 3,
+        "correctIndex": 2,
         "explanation": "Token billing is the default and needs no provider key; you enable it for the org and Shroud routes through the Stripe AI Gateway."
       }
     ],

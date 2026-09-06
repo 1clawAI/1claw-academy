@@ -99,11 +99,11 @@
         "question": "What wraps the DEK before it is stored?",
         "options": [
           "The JWT signing key",
-          "Another DEK",
+          "The per-vault KEK inside the HSM",
           "The agent's ocv_ key",
-          "The per-vault KEK inside the HSM"
+          "Another DEK"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "Each vault has one KEK in KMS that wraps and unwraps that vault's DEKs."
       },
       {
@@ -120,10 +120,10 @@
       {
         "question": "How often do KEKs rotate automatically?",
         "options": [
-          "Every 30 days",
-          "Every 365 days",
           "Every 90 days",
-          "Never"
+          "Every 365 days",
+          "Never",
+          "Every 30 days"
         ],
         "correctIndex": 1,
         "explanation": "KEKs rotate on a 365-day period, the NIST SP 800-57 maximum for symmetric KEKs."
@@ -252,21 +252,21 @@
       {
         "question": "What does 1Claw store about your CMEK key?",
         "options": [
-          "The full key",
           "Only its SHA-256 fingerprint",
+          "The full key",
           "Nothing at all",
           "An encrypted copy in the HSM"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Only the SHA-256 fingerprint is stored so the vault can track which key was used."
       },
       {
         "question": "What algorithm does the client-side CMEK layer use?",
         "options": [
+          "Ed25519",
           "ChaCha20 only",
-          "RSA-2048",
           "AES-256-GCM",
-          "Ed25519"
+          "RSA-2048"
         ],
         "correctIndex": 2,
         "explanation": "CMEK encrypts values client-side with AES-256-GCM before the HSM layer is applied."
@@ -274,9 +274,9 @@
       {
         "question": "What protects a secret if the CMEK vault's database is stolen?",
         "options": [
-          "The IV alone",
-          "Nothing extra",
           "Only the fingerprint is needed to decrypt",
+          "Nothing extra",
+          "The IV alone",
           "It is doubly encrypted and useless without your key"
         ],
         "correctIndex": 3,
@@ -404,12 +404,12 @@
       {
         "question": "Which mode returns a client_share and needs X-Client-Share on reads?",
         "options": [
+          "Standard HSM only",
           "2of2_client_custody",
           "2of3_multi_hsm",
-          "CMEK",
-          "Standard HSM only"
+          "CMEK"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "The 2of2_client_custody XOR split gives you a client_share and requires it on every read."
       },
       {
@@ -417,8 +417,8 @@
         "options": [
           "Yes, once per year",
           "No, it is immutable",
-          "Only by support",
-          "Yes, anytime"
+          "Yes, anytime",
+          "Only by support"
         ],
         "correctIndex": 1,
         "explanation": "The custody mode is immutable once set on a vault."
@@ -426,12 +426,12 @@
       {
         "question": "Where are the shares stored in 2of3_multi_hsm?",
         "options": [
-          "On the client only",
           "Across GCP, AWS, and Azure",
           "In a single HSM",
-          "All on GCP"
+          "All on GCP",
+          "On the client only"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "2of3_multi_hsm distributes three Shamir shares across GCP KMS, AWS KMS, and Azure Key Vault."
       }
     ],
@@ -542,8 +542,8 @@
       {
         "question": "What is the format of the X-Shroud-Agent-Key header value?",
         "options": [
-          "vault_id:secret_path",
           "Just the ocv_ key",
+          "vault_id:secret_path",
           "A Bearer JWT",
           "agent_id:api_key"
         ],
@@ -553,8 +553,8 @@
       {
         "question": "At what prompt-injection score does Shroud hard-block regardless of config?",
         "options": [
-          "Above 0.5",
           "Above 0.7",
+          "Above 0.5",
           "Only at 1.0",
           "Above 0.9"
         ],
@@ -565,9 +565,9 @@
         "question": "What TEE technology runs the Shroud proxy?",
         "options": [
           "AMD SEV-SNP on confidential GKE",
+          "Apple Secure Enclave",
           "Intel SGX",
-          "AWS Nitro only",
-          "Apple Secure Enclave"
+          "AWS Nitro only"
         ],
         "correctIndex": 0,
         "explanation": "Shroud runs on GKE confidential nodes using AMD SEV-SNP."
@@ -696,9 +696,9 @@
         "question": "What does the audit log use to stay tamper-evident?",
         "options": [
           "Nightly backups",
-          "Row-level encryption only",
+          "A blockchain",
           "A SHA-256 hash chain",
-          "A blockchain"
+          "Row-level encryption only"
         ],
         "correctIndex": 2,
         "explanation": "Audit entries form a SHA-256 hash chain, and inserts go through a SECURITY DEFINER function."
@@ -707,22 +707,22 @@
         "question": "What happens the moment a honeytoken is read?",
         "options": [
           "The vault is locked",
-          "A critical verdict is recorded but the request proceeds",
+          "Nothing until a human reviews it",
           "The request is blocked immediately",
-          "Nothing until a human reviews it"
+          "A critical verdict is recorded but the request proceeds"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "The read is allowed to avoid tipping off the attacker, but a critical verdict blocks their next auth."
       },
       {
         "question": "What does DPoP protect against?",
         "options": [
-          "Weak passwords",
           "Use of a stolen JWT without the matching private key",
           "Slow token refresh",
+          "Weak passwords",
           "Database theft"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "DPoP binds a JWT to a client keypair, so a stolen token is useless without the private key."
       }
     ],
@@ -843,29 +843,29 @@
         "question": "In what order does an HFA policy resolve?",
         "options": [
           "Wallet policy only",
-          "Whichever was configured most recently",
           "User policy, then wallet spend policy, then defaults",
+          "Whichever was configured most recently",
           "Defaults, then wallet policy, then user policy"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "Resolution runs most specific first: the user's human_factor_auth_policies, then human_factor_auth on the wallet spend policy, then system defaults."
       },
       {
         "question": "Why prefetch GET /v1/treasury/wallets/auth-policy?",
         "options": [
           "To list pending approvals",
+          "To rotate the wallet key",
           "So the client knows which step-up to prompt for before the user acts",
-          "To cache wallet balances",
-          "To rotate the wallet key"
+          "To cache wallet balances"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Prefetching the effective policy lets the client show the right passkey or password prompt up front, instead of failing the send and retrying."
       },
       {
         "question": "A social-login user has no password set. What breaks if the HFA policy requires the password method?",
         "options": [
-          "Their account is locked",
           "Nothing: a password is generated for them",
+          "Their account is locked",
           "The policy silently falls back to no step-up",
           "They cannot satisfy the step-up until they enrol a passkey or TOTP"
         ],
@@ -986,21 +986,21 @@
       {
         "question": "What does OIDC federation let you remove?",
         "options": [
-          "TLS between services",
           "Static long-lived API keys at the service boundary",
           "The need for agent policies",
-          "The vault itself"
+          "The vault itself",
+          "TLS between services"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "The relying party validates a short-lived 1Claw-issued JWT against published JWKS, so there is no long-lived shared secret to store or rotate."
       },
       {
         "question": "An agent has federation_enabled true but federation_audiences empty. What happens?",
         "options": [
-          "Only the default audience is allowed",
+          "Every audience is allowed",
           "The agent cannot authenticate at all",
           "Every audience is denied",
-          "Every audience is allowed"
+          "Only the default audience is allowed"
         ],
         "correctIndex": 2,
         "explanation": "federation_audiences is an allowlist and empty means deny all. Federation is deny-by-default throughout."
@@ -1009,11 +1009,11 @@
         "question": "Which algorithms sign agent JWTs and federation tokens?",
         "options": [
           "EdDSA for both",
+          "HS256 for both",
           "RS256 for both",
-          "EdDSA for agent JWTs, RS256 for federation tokens",
-          "HS256 for both"
+          "EdDSA for agent JWTs, RS256 for federation tokens"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Agent JWTs use the EC_SIGN_ED25519 key (EdDSA); federation tokens use an HSM-backed RSA-2048 key (RS256), because external relying parties overwhelmingly expect RSA."
       }
     ],
