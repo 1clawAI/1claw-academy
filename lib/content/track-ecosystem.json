@@ -73,6 +73,30 @@
         "type": "callout",
         "variant": "tip",
         "text": "If you work in both languages, expect the pluralisation difference to bite once. client.vault in Python and client.vaults in TypeScript are both wrong, and both fail as attribute errors rather than anything descriptive."
+      },
+      {
+        "type": "scenario",
+        "situation": "A Python service fetches a database password at startup and needs it available to an ORM that reads DATABASE_URL. A colleague sets os.environ['DATABASE_URL'] right after the fetch, because the ORM expects it there.",
+        "question": "What is the consequence worth raising?",
+        "options": [
+          {
+            "text": "None. The value has to reach the ORM somehow, and the environment is the documented way.",
+            "feedback": "The ORM does need it, and putting it in os.environ is a decision with a scope you did not choose. It is now readable by every library in the process, including anything that dumps the environment on an unhandled exception."
+          },
+          {
+            "text": "The value becomes readable by every library in the process, and by anything that serialises the environment into an error report.",
+            "correct": true,
+            "feedback": "Correct. It is often still the right call, because the alternative is patching the ORM. The point is to make it deliberately, keep it out of argv, and check that your error reporter scrubs environment variables."
+          },
+          {
+            "text": "os.environ is not thread-safe, so concurrent writes can corrupt it.",
+            "feedback": "Not the issue here. A single write at startup is fine mechanically; the concern is reach rather than correctness."
+          },
+          {
+            "text": "The value will be inherited by child processes, which is the main risk.",
+            "feedback": "True and worth knowing, and it is a subset of the wider problem. The in-process exposure arrives first and is larger."
+          }
+        ]
       }
     ],
     "quiz": [
@@ -326,6 +350,30 @@
         "type": "callout",
         "variant": "tip",
         "text": "The safest LangChain tool for a vault is one that lists metadata rather than one that returns values. If the agent needs a credential to make a call, an Execution Intents binding does that without the value entering context."
+      },
+      {
+        "type": "scenario",
+        "situation": "You are giving a LangChain agent the ability to use a partner API key. Two designs are on the table: a get_secret tool that returns the key so the agent can build the call itself, or a call_partner_api tool that makes the request and returns only the result.",
+        "question": "Which do you build, and what is the deciding factor?",
+        "options": [
+          {
+            "text": "get_secret, because it is more flexible and the agent can use the key for calls you did not anticipate.",
+            "feedback": "That flexibility is precisely the problem. Anticipating the calls is the security control, and a key in the tool's return value is a key in the conversation, its history, and the provider's logs."
+          },
+          {
+            "text": "call_partner_api, because a tool that returns a secret has published it to the context while a tool that acts has not.",
+            "correct": true,
+            "feedback": "Correct. The deciding factor is what ends up in context. The action tool is less flexible and that constraint is the feature."
+          },
+          {
+            "text": "get_secret, but redact the value from the transcript afterwards.",
+            "feedback": "Redaction runs after the model has already seen the value, and it cannot unsee it or un-send it to the provider. It is a backstop for values you know about, not a substitute for not returning them."
+          },
+          {
+            "text": "Either, as long as the agent is only reachable by trusted users.",
+            "feedback": "Trusted users still paste untrusted documents. The injection arrives through the content the agent processes, not through who is talking to it."
+          }
+        ]
       }
     ],
     "quiz": [
@@ -440,6 +488,30 @@
         "type": "callout",
         "variant": "warn",
         "text": "Give each crew member the narrowest toolset that lets it do its job, even when the framework makes sharing the default. The convenience of a shared toolset is exactly the excessive-functionality root cause."
+      },
+      {
+        "type": "scenario",
+        "situation": "A three-agent crew shares one toolset because the framework makes that the default. You add a fourth agent to draft customer emails, and it inherits vault access it has no use for.",
+        "question": "What is the right response?",
+        "options": [
+          {
+            "text": "Leave it. The agent has no reason to call the vault tools, so they will go unused.",
+            "feedback": "The agent has no reason to; an injection in a customer email might. Unused capability is still capability, and this is exactly OWASP's excessive functionality root cause."
+          },
+          {
+            "text": "Give each crew member only the tools its job needs, even though sharing is the framework's default.",
+            "correct": true,
+            "feedback": "Correct. Convenience defaults are where excessive functionality comes from, and the email drafter is the one member processing text from outside the organisation."
+          },
+          {
+            "text": "Keep the shared toolset but add a system prompt telling the email agent not to use the vault tools.",
+            "feedback": "An instruction in a prompt is a preference expressed to a component that takes instructions from whatever is in its context, including the email it was asked to draft."
+          },
+          {
+            "text": "Move the email agent into a separate crew with the same tools.",
+            "feedback": "This relocates the problem without changing it. The separation that matters is which tools the agent can reach, not which crew object holds it."
+          }
+        ]
       }
     ],
     "quiz": [
@@ -553,6 +625,30 @@
           "Registering an action does not authorise it. The agent's policies and guardrails still apply, so an action can be present and consistently refused.",
           "Multi-chain signing is included. That raises the stakes: an elizaOS agent with signing actions needs the same transaction guardrails as any other signing agent.",
           "The context provider shapes what the model sees. What it injects becomes part of the prompt, so it is worth reading rather than assuming."
+        ]
+      },
+      {
+        "type": "scenario",
+        "situation": "You install the elizaOS plugin on an agent that answers questions in a public Discord. The plugin registers its multi-chain signing actions along with the vault ones, and someone points out the agent now has signing actions available.",
+        "question": "How worried should you be, and what do you check?",
+        "options": [
+          {
+            "text": "Not worried. Registering an action does not authorise it, so the guardrails still decide.",
+            "feedback": "The first half is right and the conclusion is too comfortable. The action being present means the only thing standing between a public Discord and a transaction is configuration you have not yet verified."
+          },
+          {
+            "text": "Check what the agent is actually authorised to sign, because registration is not authorisation but the guardrails are now the only control.",
+            "correct": true,
+            "feedback": "Correct. The plugin makes the capability reachable; the agent's policies, transaction guardrails and approval thresholds decide what happens. Verify them rather than assuming, because this agent reads untrusted input by design."
+          },
+          {
+            "text": "Very worried. Uninstall the plugin, since signing actions have no place on a public-facing agent.",
+            "feedback": "Defensible as a default and it discards the vault functionality you installed it for. The plugin is composed of parts; the question is which the agent is authorised to use."
+          },
+          {
+            "text": "Not worried, because Discord messages cannot contain valid transaction parameters.",
+            "feedback": "They can contain anything. The agent constructs the parameters, and the message only has to persuade it to."
+          }
         ]
       }
     ],
@@ -668,6 +764,30 @@
         "type": "callout",
         "variant": "warn",
         "text": "Before an onchain agent touches mainnet, write down what it should never be able to do and check that a guardrail expresses each item. If a rule cannot express it, it is not a constraint."
+      },
+      {
+        "type": "scenario",
+        "situation": "An onchain agent has worked on a testnet for two weeks. The team wants to move it to mainnet on Friday afternoon, arguing that the code is identical and only the RPC endpoint changes.",
+        "question": "What is the substantive objection?",
+        "options": [
+          {
+            "text": "Mainnet RPC endpoints behave differently and the code will need changes.",
+            "feedback": "Usually it does not, and arguing a technical difference that may not appear loses the point when it turns out fine."
+          },
+          {
+            "text": "The code is identical and the consequences are not: testnet mistakes are free and reversible by refunding, mainnet transactions are irreversible.",
+            "correct": true,
+            "feedback": "Correct. Everything else in this course can be rotated, revoked or reissued. A broadcast transaction cannot, which is why the guardrails should be written and tested before the first mainnet call rather than after."
+          },
+          {
+            "text": "Two weeks is not long enough to test an agent.",
+            "feedback": "Arbitrary, and it invites a negotiation about the number. The duration matters less than whether the guardrails have been exercised."
+          },
+          {
+            "text": "Friday deploys are bad practice.",
+            "feedback": "A reasonable operational instinct that has nothing to do with the agent, and it will be overruled by anyone who wants to ship."
+          }
+        ]
       }
     ],
     "quiz": [
@@ -791,6 +911,30 @@
         "type": "callout",
         "variant": "warn",
         "text": "Containerisation answers where the credential lives. It does not answer what the agent may do with it, and conflating the two is how a hardened container ends up running an over-privileged agent."
+      },
+      {
+        "type": "scenario",
+        "situation": "Your team runs `1claw eject` to get a Dockerfile they can customise, then adds a build step that copies the agent key into the image so the container can start without the host daemon.",
+        "question": "What have they given up?",
+        "options": [
+          {
+            "text": "Nothing important; the image is stored in a private registry.",
+            "feedback": "A private registry is an access control on the image, not on the credential inside it. Anyone who can pull the image, and every layer cache and CI runner that touched it, now has the key."
+          },
+          {
+            "text": "The property the container design existed to provide: the credential is now baked into an artifact that gets copied, cached and shared.",
+            "correct": true,
+            "feedback": "Correct. Injection over the host socket is what kept the key out of the image. Ejecting hands you ownership of that wiring, and this change quietly removed it while everything still worked."
+          },
+          {
+            "text": "Only the ability to rotate the key without rebuilding.",
+            "feedback": "A real cost and the smaller one. The larger issue is how many copies of the key now exist and in how many places."
+          },
+          {
+            "text": "Nothing, provided the image is rebuilt whenever the key rotates.",
+            "feedback": "Rebuilding keeps the key current and does not reduce its distribution. Every historical layer still contains a key that was valid when it was built."
+          }
+        ]
       }
     ],
     "quiz": [
