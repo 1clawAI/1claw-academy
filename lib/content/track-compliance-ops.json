@@ -119,7 +119,7 @@
           "Nothing until export"
         ],
         "correctIndex": 2,
-        "explanation": "Audit events store metadata only; secret values are never logged."
+        "explanation": "Metadata only: path, action, actor, timestamp. If values were logged the audit trail would become a second copy of every secret, in a store with weaker controls and broader read access."
       },
       {
         "question": "How does the log resist tampering at write time?",
@@ -141,7 +141,7 @@
           "A Stripe invoice ID"
         ],
         "correctIndex": 0,
-        "explanation": "Each event carries prev_event_id and an integrity_hash, forming an append-only SHA-256 chain."
+        "explanation": "prev_event_id plus a SHA-256 integrity_hash, which is the hash-chain construction. It does not prevent tampering; it makes tampering detectable, and that is what turns a list of events into evidence."
       }
     ],
     "concepts": [
@@ -417,7 +417,7 @@
           "A shared vault with path-scoped policies"
         ],
         "correctIndex": 3,
-        "explanation": "A shared vault with path-based policies (api-keys/** shared, agents/{name}/** per-agent) scales cleanly."
+        "explanation": "One shared vault with path-scoped policies: api-keys/** shared, agents/{name}/** per agent. A vault per agent multiplies the KEKs and the administration without narrowing anything the paths could not."
       }
     ],
     "concepts": [
@@ -575,7 +575,7 @@
           "The plt_ key"
         ],
         "correctIndex": 0,
-        "explanation": "client_id is the app slug; passing the UUID returns Unknown client_id."
+        "explanation": "The app slug, not the UUID. Passing the UUID returns Unknown client_id, which reads like a misconfiguration rather than a wrong identifier, so it is worth recognising."
       },
       {
         "question": "Why can't the platform read a bootstrapped user's signing keys?",

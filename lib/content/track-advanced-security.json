@@ -104,7 +104,7 @@
           "Another DEK"
         ],
         "correctIndex": 1,
-        "explanation": "Each vault has one KEK in KMS that wraps and unwraps that vault's DEKs."
+        "explanation": "The per-vault KEK, inside the HSM. One KEK per vault rather than one per system is what keeps a compromise scoped to a single vault instead of the whole store."
       },
       {
         "question": "What FIPS level is the production HSM?",
@@ -115,7 +115,7 @@
           "140-3 Level 4"
         ],
         "correctIndex": 2,
-        "explanation": "Production KMS keys use HSM protection at FIPS 140-2 Level 3."
+        "explanation": "FIPS 140-2 Level 3, which requires tamper-evidence and identity-based operator authentication. It is the level most compliance regimes ask for by name, so it is worth being able to state."
       },
       {
         "question": "How often do KEKs rotate automatically?",
@@ -126,7 +126,7 @@
           "Every 30 days"
         ],
         "correctIndex": 1,
-        "explanation": "KEKs rotate on a 365-day period, the NIST SP 800-57 maximum for symmetric KEKs."
+        "explanation": "Every 365 days, which is the NIST SP 800-57 maximum for a symmetric KEK rather than an arbitrary interval. Old versions stay available, because data encrypted under them still needs to be readable."
       }
     ],
     "concepts": [
@@ -273,7 +273,7 @@
       {
         "type": "callout",
         "variant": "warn",
-        "text": "Requires Business or Enterprise plan."
+        "text": "Requires a Business or Enterprise plan. CMEK changes who can decrypt your data, so it is gated at the tier where that trade is usually a contractual requirement rather than a preference."
       },
       {
         "type": "steps",
@@ -383,7 +383,7 @@
           "RSA-2048"
         ],
         "correctIndex": 2,
-        "explanation": "CMEK encrypts values client-side with AES-256-GCM before the HSM layer is applied."
+        "explanation": "AES-256-GCM, applied client-side before the value is ever sent. GCM authenticates as well as encrypts, so a tampered ciphertext fails to decrypt rather than producing plausible garbage."
       },
       {
         "question": "What protects a secret if the CMEK vault's database is stolen?",
@@ -394,7 +394,7 @@
           "It is doubly encrypted and useless without your key"
         ],
         "correctIndex": 3,
-        "explanation": "Each secret carries two independent encryption layers, so a backup yields only doubly-encrypted blobs."
+        "explanation": "Two independent layers, so a stolen backup yields doubly-encrypted blobs. The provider cannot decrypt it either, which is the trade you accepted: no provider access also means no provider recovery."
       }
     ],
     "concepts": [
@@ -435,7 +435,7 @@
       {
         "type": "callout",
         "variant": "info",
-        "text": "Requires Pro or higher plan."
+        "text": "Requires a Pro or higher plan. Custody mode is also immutable once set on a vault, so create a throwaway vault to experiment with rather than deciding on a real one."
       },
       {
         "type": "steps",
@@ -524,7 +524,7 @@
           "CMEK"
         ],
         "correctIndex": 1,
-        "explanation": "The 2of2_client_custody XOR split gives you a client_share and requires it on every read."
+        "explanation": "2of2_client_custody splits by XOR and hands you one share, which must be presented as X-Client-Share on every read. That is the strongest trust property available and the least forgiving: lose the share and the secret is gone."
       },
       {
         "question": "Can a vault's MPC custody mode be changed after it is set?",
@@ -535,7 +535,7 @@
           "Only by support"
         ],
         "correctIndex": 1,
-        "explanation": "The custody mode is immutable once set on a vault."
+        "explanation": "Immutable once set, which is why the mode should be chosen deliberately rather than during a spike. Changing your mind means creating a new vault and migrating the secrets into it."
       },
       {
         "question": "Where are the shares stored in 2of3_multi_hsm?",
@@ -546,7 +546,7 @@
           "On the client only"
         ],
         "correctIndex": 0,
-        "explanation": "2of3_multi_hsm distributes three Shamir shares across GCP KMS, AWS KMS, and Azure Key Vault."
+        "explanation": "Three Shamir shares across GCP KMS, AWS KMS and Azure Key Vault. Spreading them across providers is the point: no single vendor, subpoena or outage reaches a complete key."
       }
     ],
     "concepts": [
@@ -662,7 +662,7 @@
           "agent_id:api_key"
         ],
         "correctIndex": 3,
-        "explanation": "The value is exactly agent_id:api_key, with the agent's ocv_ key on the right."
+        "explanation": "Exactly agent_id:api_key, with the ocv_ key on the right. Shroud uses it to authenticate the agent before deciding what the request is allowed to reach."
       },
       {
         "question": "At what prompt-injection score does Shroud hard-block regardless of config?",
@@ -673,7 +673,7 @@
           "Above 0.9"
         ],
         "correctIndex": 3,
-        "explanation": "Scores above 0.9 are always blocked, even if the agent's threshold is higher."
+        "explanation": "Above 0.9 is always blocked, whatever the agent's configured threshold. A hard ceiling exists so that a permissive per-agent setting cannot disable the control entirely."
       },
       {
         "question": "What TEE technology runs the Shroud proxy?",
@@ -684,7 +684,7 @@
           "AWS Nitro only"
         ],
         "correctIndex": 0,
-        "explanation": "Shroud runs on GKE confidential nodes using AMD SEV-SNP."
+        "explanation": "AMD SEV-SNP on confidential GKE nodes, which encrypts VM memory so the host operator cannot read it. That is what makes inspecting sensitive prompts acceptable rather than merely centralised."
       }
     ],
     "concepts": [

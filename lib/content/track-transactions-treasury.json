@@ -140,7 +140,7 @@
           "The tx is broadcast anyway"
         ],
         "correctIndex": 1,
-        "explanation": "On a reverted simulation the API returns 422 and never signs or broadcasts."
+        "explanation": "A reverted simulation returns 422 and nothing is signed or broadcast. Simulation is the cheapest warning available, which is why routing failures to a policy beats logging them and proceeding."
       },
       {
         "question": "Which endpoint signs a transaction without broadcasting it?",
@@ -151,7 +151,7 @@
           "POST /v1/agents/:id/signing-keys"
         ],
         "correctIndex": 2,
-        "explanation": "The /transactions/sign endpoint returns signed_tx for you to broadcast yourself, with guardrails still enforced."
+        "explanation": "The /transactions/sign endpoint returns signed_tx for you to broadcast yourself, and the guardrails still apply. Separating signing from broadcast is useful when you need to batch or time the submission."
       }
     ],
     "concepts": [
@@ -425,7 +425,7 @@
           "Treasury wallets are testnet only"
         ],
         "correctIndex": 1,
-        "explanation": "All treasury wallet endpoints enforce require_human, so agents receive a 403."
+        "explanation": "Treasury endpoints enforce require_human, so an agent gets a 403 by design rather than by misconfiguration. Treasury wallets are the human side of the system; agents get signing keys instead."
       },
       {
         "question": "In Delegated mode, where does the treasury private key live when an agent signs?",
@@ -447,7 +447,7 @@
           "Approve signatures reaching the Safe threshold"
         ],
         "correctIndex": 3,
-        "explanation": "When approve signatures reach the Safe threshold, the proposal auto-executes and broadcasts."
+        "explanation": "It executes once approve signatures reach the Safe threshold. That is separation of duties enforced on-chain: no single signer can move funds, and the threshold is the control."
       }
     ],
     "concepts": [
@@ -594,7 +594,7 @@
           "1500 wei of ETH"
         ],
         "correctIndex": 1,
-        "explanation": "Amounts are atomic units and USDC has 6 decimals, so 1500 is 0.0015 USDC."
+        "explanation": "Atomic units. USDC has 6 decimals, so 1500 is 0.0015 USDC. Reading this field as a decimal amount is a thousandfold error in whichever direction hurts most."
       },
       {
         "question": "After the API returns 402, how does the client complete the request?",
@@ -605,7 +605,7 @@
           "It waits for the quota to reset"
         ],
         "correctIndex": 1,
-        "explanation": "An x402 client pays the required amount on-chain and retries with the X-PAYMENT header."
+        "explanation": "The client pays on-chain and retries with an X-PAYMENT header carrying the proof. Validate the challenge before paying: payTo, network, amount and asset contract all have to match."
       }
     ]
   },
@@ -717,7 +717,7 @@
           "Only an EOA private key"
         ],
         "correctIndex": 2,
-        "explanation": "Embedded wallets require a Pro or higher plan plus a platform app plt_ key."
+        "explanation": "A Pro or higher plan and a platform app plt_ key. That key is platform-wide, which is why it belongs on your server and never in a browser bundle."
       },
       {
         "question": "How does a user log in to get a wallet?",
@@ -739,7 +739,7 @@
           "OneclawClient and OneclawAuth"
         ],
         "correctIndex": 1,
-        "explanation": "OneclawWalletProvider wraps the OneclawEmbeddedWallet component."
+        "explanation": "They serve different purposes rather than nesting. OneclawEmbeddedWallet is standalone and takes appId; OneclawWalletProvider plus the useOneclawWallet hook is the lower-level route when you are building custom wallet UI."
       }
     ]
   },

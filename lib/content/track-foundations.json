@@ -57,7 +57,7 @@
           "The agent's API key"
         ],
         "correctIndex": 2,
-        "explanation": "Each vault has its own HSM-backed key encryption key."
+        "explanation": "The KEK for each vault is generated inside a hardware security module and never leaves it. That is what turns a database breach into an inconvenience: the ciphertext is there and the key to it is not."
       },
       {
         "question": "By default, how much access does a new agent have?",
@@ -79,7 +79,7 @@
           "1ck_"
         ],
         "correctIndex": 3,
-        "explanation": "Human personal API keys start with 1ck_; agent keys start with ocv_."
+        "explanation": "Prefixes are not cosmetic. 1ck_ is a human personal key and ocv_ is an agent key, and the two authenticate through different endpoints with different lifetimes, so the prefix tells you which model applies."
       }
     ],
     "concepts": [
@@ -163,7 +163,7 @@
           "By numeric index"
         ],
         "correctIndex": 2,
-        "explanation": "Secrets live at slash-separated paths within a vault."
+        "explanation": "Paths look like a filesystem because policies are written as globs over them. A path scheme chosen for readability, like api-keys/stripe, is also the thing that makes api-keys/** a meaningful grant later."
       },
       {
         "question": "In envelope encryption, what wraps the per-secret data encryption key (DEK)?",
@@ -174,7 +174,7 @@
           "The vault's HSM-backed key encryption key (KEK)"
         ],
         "correctIndex": 3,
-        "explanation": "Each secret's DEK is wrapped by the vault KEK, which lives in the HSM."
+        "explanation": "The KEK wraps the DEK, and only the wrapped form is stored. That indirection is what makes rotation cheap and cryptographic erasure possible: you re-encrypt or destroy a small key rather than the data."
       },
       {
         "question": "What happens when you PUT a new value to an existing secret path?",
@@ -185,7 +185,7 @@
           "It overwrites and deletes the old value"
         ],
         "correctIndex": 1,
-        "explanation": "Every write creates a new version; previous versions stay in history."
+        "explanation": "Writes are additive rather than destructive, which is what makes rotation safe. The old version stays readable while consumers migrate, and you disable it once the audit log shows nothing is still using it."
       }
     ],
     "concepts": [
@@ -275,7 +275,7 @@
           "1ck_"
         ],
         "correctIndex": 2,
-        "explanation": "Agent API keys start with ocv_; human personal keys start with 1ck_."
+        "explanation": "ocv_ marks an agent and 1ck_ marks a human. The distinction matters because an agent exchanges its key for a short-lived JWT, while a human key works directly as a bearer token."
       },
       {
         "question": "How does an agent turn its ocv_ key into a usable API credential?",
@@ -286,7 +286,7 @@
           "POSTs just the api_key to /v1/auth/api-key-token"
         ],
         "correctIndex": 1,
-        "explanation": "The agent-token endpoint needs both agent_id and api_key; api-key-token is the human 1ck_ path."
+        "explanation": "The exchange is the point: the long-lived ocv_ key stays wherever you put it and the thing used on the wire is a short-lived JWT. Note the endpoints differ by principal, so api-key-token is the human path."
       },
       {
         "question": "What happens to an agent's active tokens when a human changes its policy?",
@@ -297,7 +297,7 @@
           "Nothing, they keep working"
         ],
         "correctIndex": 0,
-        "explanation": "Policy create/update/delete auto-revokes the agent's active JWTs, forcing a fresh exchange."
+        "explanation": "Changing a policy revokes the agent's active tokens, so a narrowed scope takes effect immediately rather than whenever the current token happens to expire. Without it, revocation would be delayed by the token's lifetime."
       }
     ],
     "concepts": [
@@ -387,7 +387,7 @@
           "Any version"
         ],
         "correctIndex": 1,
-        "explanation": "npm install -g @1claw/cli requires Node 20 or newer."
+        "explanation": "Node 20 or newer for the npm install. Homebrew bundles its own runtime, so it is the simpler route if your system Node is older or you would rather not manage it."
       },
       {
         "question": "What does 1claw login use so you never type a password in the terminal?",
@@ -398,7 +398,7 @@
           "A QR code scanner"
         ],
         "correctIndex": 2,
-        "explanation": "1claw login opens the browser, you approve there, and the CLI polls until confirmed."
+        "explanation": "The browser device flow means the credential is never typed into a terminal, never lands in shell history, and never appears in a screen recording. The CLI polls until you approve."
       },
       {
         "question": "Which env var lets the CLI run non-interactively with a personal API key in CI?",
@@ -409,7 +409,7 @@
           "CLAW_SESSION"
         ],
         "correctIndex": 1,
-        "explanation": "Set ONECLAW_API_KEY (or ONECLAW_TOKEN) to skip interactive login."
+        "explanation": "ONECLAW_API_KEY (or ONECLAW_TOKEN) skips the interactive flow, which is what CI needs. The other options are distractors: none of them exist."
       }
     ]
   },
@@ -610,7 +610,7 @@
     "blocks": [
       {
         "type": "prose",
-        "text": "Now that the CLI is authenticated, storing and reading a secret is three commands. This is the everyday human workflow."
+        "text": "Now that the CLI is authenticated, storing and reading a secret is three commands. This is the everyday human workflow, and it is worth noticing what the vault gives you that the local one from two lessons ago could not: the secret now exists somewhere other than your laptop, with an access decision and an audit record attached to every read."
       },
       {
         "type": "steps",
@@ -648,13 +648,22 @@
         ]
       },
       {
+        "type": "prose",
+        "text": "Give some thought to the path. Policies are globs over paths, so the scheme you pick now decides what you can grant later. Grouping by provider, as in api-keys/openai and api-keys/stripe, means api-keys/** is a meaningful grant. Grouping by application instead means the same glob hands an agent everything that application uses. Neither is wrong; they simply make different grants easy."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Avoid putting the environment at the end of a path, as in stripe/key/prod. Anything scoped to stripe/** then reaches production, and the only way to carve it out is a deny rule someone has to remember to write. Put the distinguishing part where a glob can stop at it."
+      },
+      {
         "type": "callout",
         "variant": "tip",
         "text": "Prefer clicking? In the dashboard at 1claw.co, go to Vaults then Create vault, then Secrets then Add secret at a path like api-keys/openai. It hits the same endpoints as the CLI."
       },
       {
         "type": "prose",
-        "text": "You have a real vault with a stored secret you can read on demand. From here you can grant an agent access or wire secrets into your app."
+        "text": "You have a vault with a stored secret you can read on demand, and every one of those reads is now attributable. The next lesson syncs your local vault into this one; after that the course turns to the thing only a hosted vault can do, which is give something other than you a scoped, revocable way in."
       }
     ],
     "quiz": [
@@ -667,7 +676,7 @@
           "1claw whoami"
         ],
         "correctIndex": 1,
-        "explanation": "1claw secret set <path> --value ... --type ... stores a secret."
+        "explanation": "The verb is set, not put. It takes the path as a positional argument and the value either positionally, via --value, or from stdin, which keeps it out of your shell history."
       },
       {
         "question": "What does 1claw secret list return?",
@@ -678,7 +687,7 @@
           "Metadata only, no values"
         ],
         "correctIndex": 3,
-        "explanation": "Listing returns paths, types, and versions but never the secret values."
+        "explanation": "Listing returns paths, types and versions and never values. That separation is what lets you grant an agent the ability to discover what exists without the ability to read it."
       },
       {
         "question": "The dashboard is best described as what?",
@@ -689,7 +698,7 @@
           "An offline-only tool"
         ],
         "correctIndex": 1,
-        "explanation": "The dashboard at 1claw.co is a web UI over the same endpoints."
+        "explanation": "The dashboard calls the same endpoints as the CLI and the SDK. Nothing is available only through the UI, which is why anything you do by hand can later be scripted."
       }
     ],
     "concepts": [

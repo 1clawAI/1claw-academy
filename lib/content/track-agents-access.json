@@ -101,7 +101,7 @@
           "POST /v1/auth/agent-token"
         ],
         "correctIndex": 3,
-        "explanation": "POST /v1/auth/agent-token takes the credentials in the body and returns a short-lived access_token."
+        "explanation": "POST /v1/auth/agent-token takes agent_id and api_key in the body and returns a short-lived access_token. The long-lived key stays at rest and the short-lived token is what travels."
       },
       {
         "question": "What two keypairs does 1Claw auto-generate for a new agent?",
@@ -112,7 +112,7 @@
           "secp256k1 and Ed25519"
         ],
         "correctIndex": 0,
-        "explanation": "Every agent gets an Ed25519 signing keypair and a P-256 ECDH keypair at creation."
+        "explanation": "An Ed25519 signing keypair and a P-256 ECDH keypair, both stored in a dedicated __agent-keys vault. They exist so agent-to-agent messaging can be authenticated and encrypted without you provisioning anything."
       }
     ],
     "concepts": [
@@ -257,7 +257,7 @@
           "Full read on all vaults"
         ],
         "correctIndex": 2,
-        "explanation": "1Claw is safe-by-default: no scopes and no policies means the JWT grants nothing."
+        "explanation": "Zero access with empty scopes. Creating an identity grants nothing on its own, which is why the public enrollment endpoint is not the open door it first appears to be."
       },
       {
         "question": "In a policy pattern, what does ** match?",
@@ -268,7 +268,7 @@
           "Nothing: it is a literal"
         ],
         "correctIndex": 2,
-        "explanation": "* matches one segment while ** matches zero or more segments (any depth)."
+        "explanation": "* matches one segment, ** matches zero or more at any depth. The difference decides whether app/* reaches app/billing/stripe, and getting it wrong widens a grant silently rather than erroring."
       },
       {
         "question": "What happens to active JWTs when an agent's policy changes?",
@@ -433,7 +433,7 @@
       {
         "type": "callout",
         "variant": "info",
-        "text": "Pick one of the two enrollment methods below."
+        "text": "Two enrollment methods follow. Pick one: the email path suits a human who is not at their terminal, and the approval-URL path suits one who is."
       },
       {
         "type": "steps",
@@ -518,7 +518,7 @@
           "T3"
         ],
         "correctIndex": 3,
-        "explanation": "T1 is informational, T2 requires biometric, and T3 requires passkey plus TOTP."
+        "explanation": "T3 requires passkey plus TOTP. The tiers exist so that low-value approvals stay cheap: making every decision require the strongest factor produces reflexive approval, which is worse than a weaker factor used attentively."
       },
       {
         "question": "What can an agent submit with name only and no email?",
@@ -650,7 +650,7 @@
           "Decrypted values"
         ],
         "correctIndex": 1,
-        "explanation": "list_secrets returns metadata and never secret values; use get_secret for a value."
+        "explanation": "Metadata only: paths, types and versions, never values. That split is what lets an agent discover what exists without being able to read it, and get_secret is separately policy-checked."
       }
     ],
     "concepts": [

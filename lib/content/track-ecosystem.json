@@ -109,7 +109,7 @@
           "py1claw"
         ],
         "correctIndex": 1,
-        "explanation": "The SDK installs with pip install oneclaw."
+        "explanation": "pip install oneclaw. Note the package is oneclaw while the CLI and JS packages are published under the @1claw scope, so the naming differs by ecosystem convention."
       },
       {
         "question": "Which call retrieves a single secret by path?",
@@ -120,7 +120,7 @@
           "client.secrets.get(vault_id, path)"
         ],
         "correctIndex": 3,
-        "explanation": "The README shows client.secrets.get(vault_id, path) returning the value under secret.data['value']."
+        "explanation": "client.secrets.get(vault_id, path), with the value under secret.data['value']. Like the TypeScript SDK it returns an envelope, so read the field off data rather than treating the result as the value."
       },
       {
         "question": "What does an ocv_ prefixed key represent?",
@@ -131,7 +131,7 @@
           "A JWT"
         ],
         "correctIndex": 1,
-        "explanation": "ocv_ keys are agent keys, while 1ck_ keys are user keys."
+        "explanation": "ocv_ is an agent key and 1ck_ is a human key. The prefix tells you which authentication model applies: agents exchange for a short-lived JWT, humans use the key directly as a bearer token."
       }
     ],
     "concepts": [
@@ -248,7 +248,7 @@
           "ONECLAW_TOKEN"
         ],
         "correctIndex": 2,
-        "explanation": "Only ONECLAW_AGENT_API_KEY is required; agent ID and vault are auto-discovered from the token exchange."
+        "explanation": "Only ONECLAW_AGENT_API_KEY. The agent id and vault are discovered during the token exchange, which is why stdio needs one value where the hosted path needs three."
       },
       {
         "question": "How do you get the Bearer token for the hosted MCP server?",
@@ -259,7 +259,7 @@
           "By calling POST /v1/auth/agent-token with agent_id and api_key"
         ],
         "correctIndex": 3,
-        "explanation": "You POST your agent_id and api_key to /v1/auth/agent-token and use the returned access_token."
+        "explanation": "POST agent_id and api_key to /v1/auth/agent-token and use the returned access_token. It expires in about fifteen minutes, which is exactly why an IDE should use stdio and let the server refresh instead."
       },
       {
         "question": "Which tool confirms the connection works?",
@@ -270,7 +270,7 @@
           "sign_message"
         ],
         "correctIndex": 2,
-        "explanation": "Asking the client to list secrets triggers list_secrets and verifies the setup."
+        "explanation": "list_secrets returns metadata, so it proves the connection and the policy work without exposing a value. It is the right first call precisely because a failure is informative and a success is harmless."
       }
     ],
     "concepts": [
@@ -397,7 +397,7 @@
           "@1claw/mcp"
         ],
         "correctIndex": 2,
-        "explanation": "The tool func calls createClient from @1claw/sdk."
+        "explanation": "The tools wrap @1claw/sdk via createClient. Note these are tools you write: the published langchain-1claw package ships ready-made ones if you would rather not maintain your own."
       },
       {
         "question": "What does npm run mcp do differently from npm start?",
@@ -524,7 +524,7 @@
           "oneclaw"
         ],
         "correctIndex": 1,
-        "explanation": "You pip install 1claw-crewai-tools but import from oneclaw_crewai."
+        "explanation": "You pip install 1claw-crewai-tools and import oneclaw_crewai. Distribution name and import name differ, which is common in Python and a reliable source of a first-run ImportError."
       },
       {
         "question": "Why should verbose stay False in production?",
@@ -673,7 +673,7 @@
           "character.json"
         ],
         "correctIndex": 1,
-        "explanation": "Bootstrap writes ONECLAW_AGENT_API_KEY, ONECLAW_AGENT_ID, and ONECLAW_VAULT_ID to .env.elizaos with mode 600."
+        "explanation": ".env.elizaos, written with mode 600 so only your user can read it. It holds ONECLAW_AGENT_API_KEY, ONECLAW_AGENT_ID and ONECLAW_VAULT_ID, so it belongs in .gitignore before anything else happens."
       },
       {
         "question": "Where do private signing keys live?",
@@ -811,7 +811,7 @@
           "When the agent runs autonomously with no human per transaction"
         ],
         "correctIndex": 3,
-        "explanation": "@1claw/agentkit is for autonomous agents with programmatic guardrails, while mcp.base.org suits human-in-the-loop use."
+        "explanation": "When the agent runs autonomously, because then the guardrails have to be programmatic. mcp.base.org suits a human-in-the-loop flow where a person reviews each transaction, which is a different control model rather than a lesser one."
       },
       {
         "question": "What starter kit bootstraps a full onchain dApp with 1Claw?",
@@ -822,7 +822,7 @@
           "Scaffold-Agent"
         ],
         "correctIndex": 3,
-        "explanation": "Scaffold-Agent wires HSM-backed secrets and Intents API signing into a Scaffold-ETH 2 scaffold."
+        "explanation": "Scaffold-Agent, which wires HSM-backed secrets and Intents API signing into a Scaffold-ETH 2 project. It is a starting point rather than a dependency: the guardrails still need setting for your case."
       }
     ],
     "concepts": [
