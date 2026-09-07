@@ -233,6 +233,21 @@
             "lang": "bash"
           },
           {
+            "text": "Before erasing anything, rotate the KEK. Take a fingerprint of the ciphertext, unwrap the DEK with the old KEK, generate a new KEK, and re-wrap the same DEK under it.",
+            "code": "shasum -a 256 secret.enc\n\nopenssl enc -d -aes-256-cbc \\\n  -K \"$(cat kek.hex)\" -iv \"$(cat wiv.hex)\" \\\n  -in dek.wrapped -out dek.plain\n\nopenssl rand -hex 32 > kek2.hex\nopenssl enc -aes-256-cbc \\\n  -K \"$(cat kek2.hex)\" -iv \"$(cat wiv.hex)\" \\\n  -in dek.plain -out dek.wrapped2",
+            "lang": "bash"
+          },
+          {
+            "text": "Now fingerprint the ciphertext again, and compare the sizes of what rotation actually rewrote.",
+            "code": "shasum -a 256 secret.enc\nwc -c secret.enc dek.wrapped2",
+            "lang": "bash"
+          },
+          {
+            "text": "Identical hash. You rotated the root of the hierarchy and the encrypted data was never opened, read or rewritten: rotation touched 80 bytes of wrapped key and left the ciphertext alone. On a real vault that is the difference between re-encrypting a small key and re-encrypting a database.",
+            "code": "<hash>  secret.enc     (before)\n<hash>  secret.enc     (after, identical)\n\n      16 secret.enc\n      80 dek.wrapped2\n      96 total",
+            "lang": "text"
+          },
+          {
             "text": "Now do cryptographic erasure. Delete only the wrapped DEK and try again.",
             "code": "rm dek.wrapped dek.recovered\n\nopenssl enc -d -aes-256-cbc \\\n  -K \"$(cat kek.hex)\" -iv \"$(cat wiv.hex)\" \\\n  -in dek.wrapped -out dek.recovered\n# -> Can't open \"dek.wrapped\" for reading, No such file or directory",
             "lang": "bash"
@@ -418,11 +433,30 @@
             "lang": "bash"
           },
           {
+            "text": "One more check, and it is the one that matters later. Generate a second, unrelated keypair and verify the original signature against it.",
+            "code": "openssl genpkey -algorithm ed25519 -out other.pem\nopenssl pkey -in other.pem -pubout -out other.pub\n\nopenssl pkeyutl -verify -pubin -inkey other.pub \\\n  -rawin -in msg.txt -sigfile msg.sig",
+            "lang": "bash"
+          },
+          {
+            "text": "It fails, which is correct and is not the interesting part. The interesting part is what that implies.",
+            "code": "Signature Verification Failure",
+            "lang": "text"
+          },
+          {
             "text": "Clean up.",
             "code": "cd /tmp && rm -rf siglab",
             "lang": "bash"
           }
         ]
+      },
+      {
+        "type": "prose",
+        "text": "A signature carries no indication of which key produced it. Verification answers \"was this signed by the key I am holding\", and it can only answer that because you chose which key to check against. Choose the wrong one and a perfectly genuine signature is rejected; fail to pin down which one is correct and you will eventually accept a genuine signature from the wrong signer."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "That is the whole problem the next lessons keep returning to. A JWT names its key in the kid header and its intended recipient in aud, and a verifier that checks the signature without checking those is asking the wrong question correctly."
       },
       {
         "type": "prose",

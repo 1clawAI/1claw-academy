@@ -565,11 +565,30 @@
             "lang": "bash"
           },
           {
+            "text": "Last check, and the one worth remembering. Encrypt the same file a second time with the same passphrase, then compare the two results.",
+            "code": "openssl enc -aes-256-cbc -pbkdf2 -iter 200000 \\\n  -pass pass:correct-horse -in plain.env -out vault2.enc\n\nshasum -a 256 vault.enc vault2.enc\ncmp vault.enc vault2.enc",
+            "lang": "bash"
+          },
+          {
+            "text": "Same content, same passphrase, completely different bytes.",
+            "code": "<hash-a>  vault.enc\n<hash-b>  vault2.enc\nvault.enc vault2.enc differ: char 9, line 1",
+            "lang": "text"
+          },
+          {
             "text": "Clean up.",
             "code": "cd /tmp && rm -rf vlab",
             "lang": "bash"
           }
         ]
+      },
+      {
+        "type": "prose",
+        "text": "The random salt is what makes those bytes differ, and the consequence is larger than it looks. Two vaults holding identical content are indistinguishable from two vaults holding nothing in common, so an observer who can see your encrypted files cannot tell which of them are copies, which have changed, or which two users share a password."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "The reverse is the failure to recognise: a format that produces identical ciphertext for identical input is leaking equality. That is how ECB-mode images famously stay legible, and it is why deterministic encryption is a deliberate trade rather than a default."
       },
       {
         "type": "prose",
