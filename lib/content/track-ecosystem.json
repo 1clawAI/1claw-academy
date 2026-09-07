@@ -143,6 +143,95 @@
     ]
   },
   {
+    "id": "lab-the-error-your-catch-block-missed",
+    "title": "Lab: handle an error that never throws",
+    "summary": "Wrap an SDK call in try/except, watch it fail anyway, and find where the error actually was.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Every SDK in this course returns { data, error, meta } rather than raising. The lesson said to check error before reading data. This is what happens when you do the thing that feels more careful instead."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Call an endpoint you are not permitted to read, wrapped in the handler most people write.",
+            "code": "cat > /tmp/env.py <<'EOF'\ndef get_secret(path):\n    if path.startswith(\"prod/\"):\n        return {\"data\": None,\n                \"error\": {\"type\": \"forbidden\",\n                          \"message\": \"no policy grants this path\"}}\n    return {\"data\": {\"value\": \"sk-live-9f2a\"}, \"error\": None}\n\nprint(\"the handler that looks careful:\")\ntry:\n    resp = get_secret(\"prod/db/root\")\n    value = resp[\"data\"][\"value\"]\n    print(\"  got:\", value)\nexcept Exception as e:\n    print(f\"  caught: {type(e).__name__}: {e}\")\n\nprint(\"\\nwhat the call actually returned:\")\nresp = get_secret(\"prod/db/root\")\nprint(\"  error:\", resp[\"error\"])\nprint(\"  data: \", resp[\"data\"])\n\nprint(\"\\nthe check that works:\")\nresp = get_secret(\"prod/db/root\")\nif resp[\"error\"]:\n    print(\"  handled:\", resp[\"error\"][\"message\"])\nEOF\npython3 /tmp/env.py",
+            "lang": "bash"
+          },
+          {
+            "text": "The exception you caught is not the error that occurred.",
+            "code": "the handler that looks careful:\n  caught: TypeError: 'NoneType' object is not subscriptable\n\nwhat the call actually returned:\n  error: {'type': 'forbidden', 'message': 'no policy grants this path'}\n  data:  None\n\nthe check that works:\n  handled: no policy grants this path",
+            "lang": "text"
+          },
+          {
+            "text": "Clean up.",
+            "code": "rm /tmp/env.py",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "A permissions problem arrived as a TypeError about NoneType, several lines away from the call that failed, with the real message sitting untouched in a field nobody read."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The try/except did catch something, which is what makes this so durable. Your error handling appears to work and your logs fill with type errors that describe the symptom rather than the cause.",
+          "The same shape hides retryable conditions. A 402 payment-required or an approval-required response is a value in error, so code that only handles exceptions treats both as an unexpected crash.",
+          "It is worse in TypeScript, where resp.data is typed as possibly null and the compiler will tell you, right up until someone adds a non-null assertion to make the build pass."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Check error first on every call. It is more verbose than optimistic destructuring and it is the difference between a log line naming your actual problem and one describing where your program happened to fall over."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "If you want the exception-style ergonomics, write one wrapper that raises on error and use it everywhere. What does not work is a codebase where some calls check and others do not."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why did the try block catch a TypeError rather than a permissions error?",
+        "options": [
+          "The SDK converts errors to TypeErrors",
+          "The call returned normally with error populated and data None, so the crash came from indexing None",
+          "The exception was raised asynchronously",
+          "The path was malformed"
+        ],
+        "correctIndex": 1,
+        "explanation": "Nothing was raised by the call. The exception came from your own code touching data, several steps after the real failure."
+      },
+      {
+        "question": "What else does this pattern hide?",
+        "options": [
+          "Network timeouts",
+          "Retryable conditions like 402 payment-required or approval-required, which arrive as values in error",
+          "Authentication failures only",
+          "Rate limits only"
+        ],
+        "correctIndex": 1,
+        "explanation": "Those are meaningful states with specific handling. Code that only handles exceptions treats all of them as an unexpected crash."
+      },
+      {
+        "question": "What is the recommended fix?",
+        "options": [
+          "Check error before reading data on every call, or write one wrapper that raises and use it everywhere",
+          "Wrap every call in a broader try/except",
+          "Assert non-null on data",
+          "Log the whole response object"
+        ],
+        "correctIndex": 0,
+        "explanation": "Either discipline works. What fails is a codebase where some call sites check the envelope and others assume it succeeded."
+      }
+    ],
+    "kind": "lab"
+  },
+  {
     "id": "lab-log-the-whole-response",
     "title": "Lab: print a secret without meaning to",
     "summary": "Log an SDK response the way everyone does during debugging, and read the value back out of your own log.",

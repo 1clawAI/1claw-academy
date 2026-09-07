@@ -414,6 +414,100 @@
     ]
   },
   {
+    "id": "lab-who-else-can-read-this",
+    "title": "Lab: find out who else can read your config",
+    "summary": "Check the permissions on a file you just created, and on the directory it sits in.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Before encryption, before vaults, before any of it, there is a plainer question about a secret on disk: which accounts on this machine can open it. The answer is usually decided by a setting nobody chose deliberately."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Create a config file the ordinary way and look at what the system gave it.",
+            "code": "mkdir -p /tmp/permlab && cd /tmp/permlab\nprintf 'STRIPE_KEY=sk-live-9f2a\\n' > cfg.env\nls -l cfg.env",
+            "lang": "bash"
+          },
+          {
+            "text": "On most systems that is -rw-r--r--, which is world-readable. Check the umask that decided it.",
+            "code": "umask\n# 022 -> new files are 644, readable by every account on the box",
+            "lang": "bash"
+          },
+          {
+            "text": "Restrict it, and confirm.",
+            "code": "chmod 600 cfg.env\nls -l cfg.env\n# -rw-------",
+            "lang": "bash"
+          },
+          {
+            "text": "Now check the directory, which people forget. A file nobody can read is still listed by anyone who can traverse the directory, and filenames leak too.",
+            "code": "ls -ld .\nchmod 700 .\nls -ld .",
+            "lang": "bash"
+          },
+          {
+            "text": "Clean up.",
+            "code": "cd /tmp && rm -rf permlab",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Nothing here is exotic. A default umask of 022 means every file you create is readable by every account on the machine, and on a shared build agent, a jump host, or a container with more than one user, that is a real set of people."
+      },
+      {
+        "type": "points",
+        "items": [
+          "600 on the file is the baseline for anything holding a credential. The 1Claw local vault writes its file that way for exactly this reason.",
+          "700 on the directory matters separately. Permissions on a file do not stop someone listing the directory and learning that stripe-prod.env exists.",
+          "Backups, editors and archive tools frequently create siblings with default permissions. A carefully chmodded file next to a world-readable cfg.env.swp has achieved nothing."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "This is the failure that survives every other control. Encrypting a secret at rest in your vault does not help when the copy you exported for local development is sitting at 644 in your home directory."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "A default umask of 022 produces what permissions on a new file?",
+        "options": [
+          "600, owner only",
+          "644, readable by every account on the machine",
+          "755, executable by all",
+          "666, writable by all"
+        ],
+        "correctIndex": 1,
+        "explanation": "022 masks the write bit for group and other, leaving read. On any machine with more than one account that is a meaningful set of readers."
+      },
+      {
+        "question": "Why does the directory mode matter separately from the file mode?",
+        "options": [
+          "It controls whether the file can be encrypted",
+          "Directory traversal lets others list filenames, and a filename can be informative on its own",
+          "It determines the umask",
+          "It sets the default mode for new files"
+        ],
+        "correctIndex": 1,
+        "explanation": "stripe-prod.env tells an observer what exists and where, even if they cannot open it. Restricting the file without the directory answers only half the question."
+      },
+      {
+        "question": "What most often undoes a careful chmod?",
+        "options": [
+          "The file being moved",
+          "Siblings created by editors, backups or archive tools with default permissions",
+          "Changing the file's owner",
+          "Reading the file"
+        ],
+        "correctIndex": 1,
+        "explanation": "A .swp, a .bak or an extracted archive lands with the default mode. The protected file is fine and the copy beside it is not."
+      }
+    ],
+    "kind": "lab"
+  },
+  {
     "id": "start-local-no-account",
     "title": "Start local: a vault with no account",
     "summary": "Encrypt secrets on your own machine with 1claw local, before you sign up for anything.",
@@ -729,6 +823,95 @@
         "explanation": "Two copies is the sprawl problem the vault exists to remove. The value only improves once the plaintext original is gone."
       }
     ]
+  },
+  {
+    "id": "lab-the-child-process-can-see-it",
+    "title": "Lab: watch a secret cross into a process you did not write",
+    "summary": "Put a credential in the environment, spawn something, and see what it inherits.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The previous lesson put a secret in an environment variable and called it better than a file, which it is. This lab is about the cost that comes with it, and it is a cost people are consistently surprised by."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Set a credential in the environment and spawn a child process that you did not write.",
+            "code": "cat > /tmp/inherit.py <<'EOF'\nimport os, subprocess\n\nprint(\"parent has API_TOKEN:\", bool(os.environ.get(\"API_TOKEN\")))\n\nchild = subprocess.run(\n    [\"python3\", \"-c\",\n     \"import os; print('child sees:', os.environ.get('API_TOKEN'))\"],\n    capture_output=True, text=True)\nprint(child.stdout.strip())\nEOF\nAPI_TOKEN=sk-live-INHERITED python3 /tmp/inherit.py",
+            "lang": "bash"
+          },
+          {
+            "text": "The child never asked for it and received it anyway.",
+            "code": "parent has API_TOKEN: True\nchild sees: sk-live-INHERITED",
+            "lang": "text"
+          },
+          {
+            "text": "Clean up.",
+            "code": "rm /tmp/inherit.py",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Environment variables are inherited by default. That is the whole mechanism, and it is why the environment is convenient: you set it once and everything downstream can use it. The consequence is that everything downstream can use it."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Every subprocess inherits your whole environment: a build step, a linter, a test runner, an npm postinstall script, a crash reporter.",
+          "So does anything they spawn, all the way down. There is no depth limit and no audit trail.",
+          "Anything that serialises the environment into a bug report ships the credential with it, which is how secrets reach error trackers without any log line naming them."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Pass an explicit env to a subprocess rather than inheriting the whole one. In Python that is subprocess.run(..., env={...}); most languages have the equivalent, and almost nobody uses it."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "This is also the honest limit of `1claw env run`. It keeps the value off disk, which is a real improvement, and the process it starts still hands the value to everything it spawns."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why did the child process see the token?",
+        "options": [
+          "The parent passed it as an argument",
+          "Environment variables are inherited by child processes by default",
+          "It read the parent's memory",
+          "Both processes share a config file"
+        ],
+        "correctIndex": 1,
+        "explanation": "Inheritance is the default and it is why the environment is convenient. The child did not ask and had no way to decline."
+      },
+      {
+        "question": "How deep does that inheritance go?",
+        "options": [
+          "One level",
+          "All the way down: anything spawned by anything you spawned",
+          "Only to processes you own",
+          "Only within the same shell"
+        ],
+        "correctIndex": 1,
+        "explanation": "Each process passes its environment to its own children, with no depth limit and no record of who received it."
+      },
+      {
+        "question": "What is the practical mitigation?",
+        "options": [
+          "Pass an explicit environment to subprocesses instead of inheriting the whole one",
+          "Use a longer variable name",
+          "Unset the variable after the first read",
+          "Set the variable in a subshell"
+        ],
+        "correctIndex": 0,
+        "explanation": "Most languages let you specify exactly what a child receives. It is rarely used, which is why one careless dependency can end up holding your credential."
+      }
+    ],
+    "kind": "lab"
   },
   {
     "id": "lab-leak-into-git",

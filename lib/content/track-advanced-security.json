@@ -790,6 +790,95 @@
     ]
   },
   {
+    "id": "lab-what-attestation-measures",
+    "title": "Lab: change one line and fail attestation",
+    "summary": "Compute a measurement, verify it, then add a harmless comment and watch the enclave refuse to be trusted.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The TEE lesson said attestation proves which code is running and does not prove that code is correct. Both halves of that sentence become obvious once you compute a measurement yourself."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Measure some enclave code, pin the expected value, then try three builds against it.",
+            "code": "cat > /tmp/att.py <<'EOF'\nimport hashlib\nmeasure = lambda code: hashlib.sha256(code.encode()).hexdigest()[:16]\n\nGOOD = \"def handle(req): return inspect(req)\"\nEXPECTED = measure(GOOD)\nprint(f\"expected measurement: {EXPECTED}\\n\")\n\nbuilds = [\n    (\"unchanged\",      GOOD),\n    (\"added a comment\", GOOD + \"\\n# log timings to /tmp\"),\n    (\"attacker build\",  \"def handle(req): send(req, 'attacker'); return inspect(req)\"),\n]\nfor name, code in builds:\n    m = measure(code)\n    print(f\"  {name:16} {m}  {'ACCEPT' if m == EXPECTED else 'REJECT'}\")\nEOF\npython3 /tmp/att.py",
+            "lang": "bash"
+          },
+          {
+            "text": "The attacker build is refused, and so is the comment.",
+            "code": "expected measurement: b8462090a54460e2\n\n  unchanged        b8462090a54460e2  ACCEPT\n  added a comment  af45f9826b9edea7  REJECT\n  attacker build   f8d52695a828d60d  REJECT",
+            "lang": "text"
+          },
+          {
+            "text": "Clean up.",
+            "code": "rm /tmp/att.py",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "The mechanism cannot tell the difference between those two rejections, and that is the correct behaviour rather than a limitation. A measurement answers one question exactly: is this bit-for-bit the thing I expected."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Attestation is an equality check against a value you chose. Everything depends on that expected value being right, and nothing about the hardware helps you decide what it should be.",
+          "It says nothing about whether the code is any good. A carefully attested enclave running a flawed program is flawed with a signature attached.",
+          "Every legitimate deployment changes the measurement, so the expected value has to be updated with each release. That update is the moment the whole scheme can be quietly subverted."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "That last point is where attestation goes wrong in practice. Nobody attacks the hardware; they get a new expected value accepted, through a build pipeline that publishes it or a process where updating it is routine and unreviewed."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "The useful question is not whether attestation is enabled. It is who decides the expected measurement, how that decision is reviewed, and what would happen if someone changed it."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why was the harmless comment rejected?",
+        "options": [
+          "Comments are stripped before measurement",
+          "A measurement is a bit-for-bit equality check, so any change produces a different value",
+          "The comment referenced /tmp",
+          "Only signed comments are permitted"
+        ],
+        "correctIndex": 1,
+        "explanation": "It answers exactly one question: is this identical to what I expected. It has no notion of a change being harmless."
+      },
+      {
+        "question": "What does a valid attestation not tell you?",
+        "options": [
+          "Which code is running",
+          "Whether that code is correct or free of flaws",
+          "Whether the hardware supports SEV-SNP",
+          "Whether memory is encrypted"
+        ],
+        "correctIndex": 1,
+        "explanation": "A faithfully attested enclave running a flawed program is flawed with a signature attached. Attestation is about identity, not quality."
+      },
+      {
+        "question": "Where does attestation usually fail in practice?",
+        "options": [
+          "Hardware side channels",
+          "In how the expected measurement gets updated on each release",
+          "In the signature algorithm",
+          "In memory encryption"
+        ],
+        "correctIndex": 1,
+        "explanation": "Every legitimate deploy changes the measurement, so updating the expected value is routine. Routine and unreviewed is exactly where an attacker prefers to work."
+      }
+    ],
+    "kind": "lab"
+  },
+  {
     "id": "zero-trust-and-risk-engine",
     "title": "Zero trust and the risk engine",
     "summary": "Plant a honeytoken canary so any read trips a critical verdict and revokes sessions.",

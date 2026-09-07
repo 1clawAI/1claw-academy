@@ -163,6 +163,95 @@
     ]
   },
   {
+    "id": "lab-the-zero-value-transaction",
+    "title": "Lab: pass every value cap and lose everything",
+    "summary": "Send a transaction worth nothing, then watch it move funds you never approved again.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The signing lesson listed unlimited ERC-20 approvals among the things a value cap does not catch. This is that in fifteen lines, and the reason it deserves a lab is that the dangerous transaction looks like the safest one you will sign all day."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Model an allowance and a guardrail that caps the value moved by any single transaction.",
+            "code": "cat > /tmp/appr.py <<'EOF'\nMAX_UINT = 2**256 - 1\nallowance = {}\nMAX_TX_VALUE = 100          # the guardrail\n\ndef submit(name, value, effect):\n    if value > MAX_TX_VALUE:\n        return f\"  {name}: DENIED (value {value} over cap {MAX_TX_VALUE})\"\n    effect()\n    return f\"  {name}: ALLOWED (value {value})\"\n\nprint(submit(\"approve(0xDex, MAX_UINT)\", 0,\n             lambda: allowance.__setitem__(\"0xDex\", MAX_UINT)))\n\ndef transfer_from(spender, amount):\n    if allowance.get(spender, 0) < amount:\n        return f\"  DENIED (allowance {allowance.get(spender, 0)})\"\n    allowance[spender] -= amount\n    return f\"  moved {amount:,}\"\n\nprint(\"\\nlater, with no further approval from you and no new signature:\")\nprint(transfer_from(\"0xDex\", 1_000_000))\nprint(transfer_from(\"0xDex\", 5_000_000_000))\nEOF\npython3 /tmp/appr.py",
+            "lang": "bash"
+          },
+          {
+            "text": "The approval carried zero value, so every value-based control waved it through.",
+            "code": "  approve(0xDex, MAX_UINT): ALLOWED (value 0)\n\nlater, with no further approval from you and no new signature:\n  moved 1,000,000\n  moved 5,000,000,000",
+            "lang": "text"
+          },
+          {
+            "text": "Clean up.",
+            "code": "rm /tmp/appr.py",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "A per-transaction value cap asks how much this transaction moves. An approval moves nothing; it grants standing authority for someone else to move funds later, without another signature from you and without another transaction for your guardrails to inspect."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The dangerous parameter is the allowance amount, which is data inside the call rather than the transaction's value. A guardrail that only reads value will never see it.",
+          "MAX_UINT is the default in a great deal of tooling, because it saves users a second approval later. Convenience is why it is everywhere.",
+          "Revoking means sending another transaction to set the allowance to zero, and until you do, the grant survives the agent being deleted, its keys being rotated and its policies being revoked."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "This is why the extended guardrails call out unlimited approval blocking specifically. It is not a variation of a value cap, it is a different check reading a different field, and the transaction it catches is the one that looks harmless."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "When reviewing what an agent may sign, ask what each call grants as well as what it moves. Approvals, permits, delegations and setApprovalForAll all move nothing and give away everything."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why did the value cap allow the approval?",
+        "options": [
+          "The cap only applies to native transfers",
+          "An approval moves nothing, so its value is zero and the cap has nothing to act on",
+          "The allowance was below the cap",
+          "Approvals are exempt by protocol"
+        ],
+        "correctIndex": 1,
+        "explanation": "The cap reads the transaction's value. The dangerous quantity is the allowance amount, which is data inside the call and not the value being moved."
+      },
+      {
+        "question": "What survives deleting the agent and rotating its keys?",
+        "options": [
+          "Nothing; both revoke the approval",
+          "The on-chain allowance, until a further transaction sets it to zero",
+          "The agent's audit log only",
+          "The approval, for 24 hours"
+        ],
+        "correctIndex": 1,
+        "explanation": "The grant lives on-chain against the spender, not against the agent's credentials. Revoking requires another transaction."
+      },
+      {
+        "question": "What question catches this class of transaction?",
+        "options": [
+          "What does this call grant, as well as what does it move",
+          "Is the recipient allowlisted",
+          "Is the value below the cap",
+          "Has the transaction been simulated"
+        ],
+        "correctIndex": 0,
+        "explanation": "Approvals, permits, delegations and setApprovalForAll all move nothing and grant a great deal, so a review that only asks about movement misses all of them."
+      }
+    ],
+    "kind": "lab"
+  },
+  {
     "id": "lab-blind-signing",
     "title": "Lab: sign something you cannot read",
     "summary": "Build a typed payload, watch a guardrail catch a drain, then hand the same guardrail a raw digest and watch it wave the drain through.",
@@ -608,6 +697,95 @@
         "explanation": "The client pays on-chain and retries with an X-PAYMENT header carrying the proof. Validate the challenge before paying: payTo, network, amount and asset contract all have to match."
       }
     ]
+  },
+  {
+    "id": "lab-off-by-a-million",
+    "title": "Lab: send a trillion dollars by mistake",
+    "summary": "Convert amounts between human and atomic units, get the decimals wrong in both directions, and read what you actually sent.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The x402 lesson mentioned that amounts are atomic units and that USDC has six decimals. That is a one-line fact with a very wide blast radius, because getting it wrong does not error, it succeeds at the wrong magnitude."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Write the conversion both ways and make three attempts at sending 1.5 USDC.",
+            "code": "cat > /tmp/units.py <<'EOF'\nDECIMALS = {\"ETH\": 18, \"USDC\": 6}\nto_atomic = lambda amount, sym: int(amount * 10 ** DECIMALS[sym])\nfmt       = lambda atomic, sym: atomic / 10 ** DECIMALS[sym]\n\nprint(\"intent: send 1.5 USDC\\n\")\n\ncorrect = to_atomic(1.5, \"USDC\")\nprint(f\"  correct:            {correct:>22}  -> {fmt(correct, 'USDC')} USDC\")\n\nnaive = int(1.5)                        # forgot to convert at all\nprint(f\"  human value passed: {naive:>22}  -> {fmt(naive, 'USDC')} USDC\")\n\nwrong = to_atomic(1.5, \"ETH\")           # reused the ETH decimals\nprint(f\"  18 decimals on USDC:{wrong:>22}  -> {fmt(wrong, 'USDC'):,.0f} USDC\")\nEOF\npython3 /tmp/units.py",
+            "lang": "bash"
+          },
+          {
+            "text": "Two of the three succeed and neither sends what you meant.",
+            "code": "intent: send 1.5 USDC\n\n  correct:                          1500000  -> 1.5 USDC\n  human value passed:                     1  -> 1e-06 USDC\n  18 decimals on USDC:  1500000000000000000  -> 1,500,000,000,000 USDC",
+            "lang": "text"
+          },
+          {
+            "text": "Clean up.",
+            "code": "rm /tmp/units.py",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Neither mistake is a crash. One sends dust, which you notice eventually and which costs a fee; the other attempts to send one and a half trillion USDC, which fails on balance rather than on validation and which would not fail at all if the balance were large enough."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Decimals vary per token, not per chain. USDC uses 6, ETH uses 18, WBTC uses 8, and hardcoding one of them is how a working integration breaks on the second asset.",
+          "A value cap denominated in atomic units has the same problem. A guardrail written for 18 decimals is a thousand billion times looser when applied to a 6-decimal token.",
+          "Float arithmetic makes it worse. 0.1 + 0.2 is not 0.3, and converting a float to atomic units can round into the wrong integer, which is why production code uses integer or decimal types throughout."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Read the amount back in human units before signing and compare it to what you intended. It is one line and it catches every one of these, which is why simulation and typed-data guardrails matter: they let a human or a policy see the amount in a form that can be checked."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "This is also why the x402 challenge validation pins the asset contract rather than the symbol. Two tokens can both call themselves USDC and use different decimals."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why is passing the human amount straight through so hard to catch?",
+        "options": [
+          "It raises a validation error",
+          "It succeeds and sends dust, which costs a fee and looks like a different bug",
+          "It is rejected by the RPC node",
+          "It rounds up to the intended amount"
+        ],
+        "correctIndex": 1,
+        "explanation": "Neither failure mode crashes. Sending dust looks like a transfer that did not arrive, which sends people looking in entirely the wrong place."
+      },
+      {
+        "question": "What goes wrong when a value cap is written in atomic units for the wrong token?",
+        "options": [
+          "The cap is rejected at configuration time",
+          "A cap written for 18 decimals is a thousand billion times looser on a 6-decimal token",
+          "The cap applies per chain instead of per token",
+          "Nothing; caps are denominated in USD"
+        ],
+        "correctIndex": 1,
+        "explanation": "Decimals are a property of the token. A guardrail assuming one token's decimals silently stops constraining another."
+      },
+      {
+        "question": "Why does x402 challenge validation pin the asset contract rather than the symbol?",
+        "options": [
+          "Symbols are longer to compare",
+          "Any token can claim a symbol, and two tokens called USDC can use different decimals",
+          "Contracts are cheaper to verify",
+          "Symbols are not returned in the challenge"
+        ],
+        "correctIndex": 1,
+        "explanation": "The symbol is a label anyone can choose. The contract address is the identity, and decimals follow the contract."
+      }
+    ],
+    "kind": "lab"
   },
   {
     "id": "embedded-wallets-and-wallet-react",

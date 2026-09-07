@@ -1211,6 +1211,95 @@
     ]
   },
   {
+    "id": "lab-how-deep-does-it-go",
+    "title": "Lab: watch a delegation chain run away",
+    "summary": "Let agents delegate onward and see what the depth limit is actually stopping.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The delegation lesson listed max_depth among the controls without saying much about what a runaway chain costs. Twenty lines make the failure legible."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Model delegation records and a depth counter carried along the chain.",
+            "code": "cat > /tmp/depth.py <<'EOF'\nDELEGATIONS = {(\"a\",\"b\"): {\"max_depth\": 2},\n               (\"b\",\"c\"): {\"max_depth\": 2},\n               (\"c\",\"d\"): {\"max_depth\": 2}}\n\ndef delegate(frm, to, depth):\n    d = DELEGATIONS.get((frm, to))\n    if not d:\n        return f\"  {frm}->{to} DENIED (no delegation record)\"\n    if depth > d[\"max_depth\"]:\n        return f\"  {frm}->{to} DENIED (depth {depth} over max_depth {d['max_depth']})\"\n    return f\"  {frm}->{to} ok at depth {depth}\"\n\nprint(\"a asks b, which asks c, which asks d:\")\nfor (frm, to), depth in [((\"a\",\"b\"),1), ((\"b\",\"c\"),2), ((\"c\",\"d\"),3)]:\n    print(delegate(frm, to, depth))\nEOF\npython3 /tmp/depth.py",
+            "lang": "bash"
+          },
+          {
+            "text": "Every hop was individually authorised. The third was refused for how far it was from the original request.",
+            "code": "a asks b, which asks c, which asks d:\n  a->b ok at depth 1\n  b->c ok at depth 2\n  c->d DENIED (depth 3 over max_depth 2)",
+            "lang": "text"
+          },
+          {
+            "text": "Clean up.",
+            "code": "rm /tmp/depth.py",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Notice what the limit is not doing. Every delegation in that chain was created by a human and every hop was permitted, so this is not catching an unauthorised call. It is bounding how far an instruction can travel from whoever originally made it."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Each hop carries the previous agent's context forward, so text that entered at a is being acted on at d, three interpretations later.",
+          "Accountability thins with distance. At depth three the question of who asked for this has three plausible answers and no single owner.",
+          "Without a limit the chain is bounded only by the delegation graph, and a cycle in that graph is unbounded."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "The X-Delegation-Depth header is what carries the count, which means it has to be propagated. An agent implementation that forgets to forward it resets the depth to zero at every hop and turns the limit off without anything appearing to fail."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Two hops is enough for most legitimate designs. If you find yourself needing five, the shape of the problem is usually wrong: a coordinator calling three specialists directly is easier to reason about than a chain that passes the task along."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What is max_depth actually preventing?",
+        "options": [
+          "Unauthorised delegations",
+          "How far an instruction can travel from whoever originally made it",
+          "Too many agents in one organisation",
+          "Concurrent delegations"
+        ],
+        "correctIndex": 1,
+        "explanation": "Every hop in the chain was authorised. The limit bounds distance from the original request, which is where accountability and context integrity degrade."
+      },
+      {
+        "question": "What happens if an implementation forgets to forward X-Delegation-Depth?",
+        "options": [
+          "The request is rejected",
+          "The depth resets to zero at every hop, disabling the limit while nothing appears to fail",
+          "The delegation record is invalidated",
+          "The chain is capped at one hop"
+        ],
+        "correctIndex": 1,
+        "explanation": "The count is carried in the header. Losing it silently removes the control, which is the most dangerous kind of failure because nothing errors."
+      },
+      {
+        "question": "What does each hop carry with it?",
+        "options": [
+          "Only the task description",
+          "The previous agent's context, so text that entered at the first hop is acted on several interpretations later",
+          "A fresh, empty context",
+          "The original user's credentials"
+        ],
+        "correctIndex": 1,
+        "explanation": "That is why an injection at the start of a chain is worse than one at the end: it gets re-interpreted at every subsequent hop."
+      }
+    ],
+    "kind": "lab"
+  },
+  {
     "id": "agent-discovery-a2a",
     "title": "Agent discovery and A2A",
     "summary": "Publish an agent card to the public directory so other agents can find it over A2A and MCP.",

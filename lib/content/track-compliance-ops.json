@@ -266,6 +266,95 @@
     "kind": "lab"
   },
   {
+    "id": "lab-the-log-rolled-over",
+    "title": "Lab: answer a question your log is too young to answer",
+    "summary": "Set a retention window, then ask about a period that falls outside it and watch an empty result look like an answer.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The audit lab showed how to prove a log is complete and unmodified. This one is about the other half of that claim, which is the period it covers, and it is the half people discover during an audit rather than before one."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Set a retention window and ask two questions across it.",
+            "code": "cat > /tmp/ret.py <<'EOF'\nimport datetime\n\nRETENTION_DAYS = 90\ntoday  = datetime.date(2026, 9, 7)\ncutoff = today - datetime.timedelta(days=RETENTION_DAYS)\n\nevents = [{\"date\": datetime.date(2026, 2, 14), \"actor\": \"mallory\", \"target\": \"prod/db/root\"},\n          {\"date\": datetime.date(2026, 7,  2), \"actor\": \"deploy\",  \"target\": \"app/config\"}]\nkept = [e for e in events if e[\"date\"] >= cutoff]\n\nprint(f\"today {today}, retention {RETENTION_DAYS}d, cutoff {cutoff}\")\nprint(f\"events still in the log: {len(kept)} of {len(events)}\\n\")\n\nfor label, start, end in [(\"Q3 (Jul-Sep)\", datetime.date(2026,7,1), datetime.date(2026,9,30)),\n                          (\"Q1 (Jan-Mar)\", datetime.date(2026,1,1), datetime.date(2026,3,31))]:\n    hits = [e for e in kept if start <= e[\"date\"] <= end and e[\"target\"] == \"prod/db/root\"]\n    covered = start >= cutoff\n    print(f\"  {label}: {len(hits)} matching event(s)   log covers this period: {covered}\")\nEOF\npython3 /tmp/ret.py",
+            "lang": "bash"
+          },
+          {
+            "text": "Both queries returned zero for prod/db/root. Only one of those zeros means anything.",
+            "code": "today 2026-09-07, retention 90d, cutoff 2026-06-09\nevents still in the log: 1 of 2\n\n  Q3 (Jul-Sep): 0 matching event(s)   log covers this period: True\n  Q1 (Jan-Mar): 0 matching event(s)   log covers this period: False",
+            "lang": "text"
+          },
+          {
+            "text": "Clean up.",
+            "code": "rm /tmp/ret.py",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "There was a read of prod/db/root in February. It is not in the answer because it is not in the log, and a query that returns nothing looks identical whether the event never happened or the record was aged out."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Negative assurance needs three things, not two: no matching event, a log that is complete and unmodified, and a retention window that actually covers the period in question.",
+          "Default retention is usually months and regulators usually ask about years, which is a mismatch you want to discover before the request rather than during it.",
+          "Any query tool should report the window it searched alongside the result. An empty result set with no stated coverage is not an answer."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Check your retention against the longest period anyone could ask about, not against the period you expect to investigate. Incident questions look back weeks; compliance questions look back years."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "This is also why exporting the audit log to durable storage matters. Platform retention is an operational setting; your obligation to answer is not, and the two are set by different people."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Both queries returned zero. Why is only one of them informative?",
+        "options": [
+          "The Q1 query used the wrong date range",
+          "The log does not cover Q1, so zero means no records rather than no events",
+          "Q1 events are archived separately",
+          "The Q3 result was cached"
+        ],
+        "correctIndex": 1,
+        "explanation": "An empty result looks the same whether nothing happened or nothing was kept. Without stated coverage the zero carries no information."
+      },
+      {
+        "question": "What does complete negative assurance require?",
+        "options": [
+          "No matching event, plus completeness, plus a retention window covering the period",
+          "No matching event and a tamper-evident log",
+          "A signed attestation from the provider",
+          "An access policy showing it was not permitted"
+        ],
+        "correctIndex": 0,
+        "explanation": "The audit lab established the first two. Coverage is the third, and it is the one that fails quietly because it is a setting rather than a property of the data."
+      },
+      {
+        "question": "Why export the audit log to durable storage?",
+        "options": [
+          "Platform retention is an operational setting while your obligation to answer is not, and different people set them",
+          "To improve query performance",
+          "Because the platform log is not tamper-evident",
+          "To reduce storage costs"
+        ],
+        "correctIndex": 0,
+        "explanation": "A retention default chosen for operational convenience has no relationship to the period a regulator will ask about."
+      }
+    ],
+    "kind": "lab"
+  },
+  {
     "id": "agent-fleet-management",
     "title": "Agent fleet management",
     "summary": "Provision agents at scale, scope their vaults, then rotate a key and deactivate an agent.",
