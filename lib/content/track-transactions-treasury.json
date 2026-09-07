@@ -123,34 +123,34 @@
       {
         "question": "What does intents_api_enabled: true do besides granting the transaction endpoints?",
         "options": [
-          "It exports the private key to the agent",
           "It disables all guardrails",
-          "It blocks the agent from reading private_key or ssh_key via the secrets endpoint",
-          "It rotates the signing key nightly"
+          "It exports the private key to the agent",
+          "It rotates the signing key nightly",
+          "It blocks the agent from reading private_key or ssh_key via the secrets endpoint"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "The flag is two-sided: it grants transaction endpoints and blocks direct signing-key reads so keys are only usable through the proxy."
       },
       {
         "question": "What happens when simulate_first: true and the simulation reverts?",
         "options": [
+          "The value cap is raised",
           "The agent is deactivated",
           "The API returns 422 and does not sign or broadcast",
-          "The value cap is raised",
           "The tx is broadcast anyway"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "A reverted simulation returns 422 and nothing is signed or broadcast. Simulation is the cheapest warning available, which is why routing failures to a policy beats logging them and proceeding."
       },
       {
         "question": "Which endpoint signs a transaction without broadcasting it?",
         "options": [
-          "POST /v1/agents/:id/transactions",
           "GET /v1/agents/:id/transactions",
           "POST /v1/agents/:id/transactions/sign",
+          "POST /v1/agents/:id/transactions",
           "POST /v1/agents/:id/signing-keys"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "The /transactions/sign endpoint returns signed_tx for you to broadcast yourself, and the guardrails still apply. Separating signing from broadcast is useful when you need to batch or time the submission."
       }
     ],
@@ -257,34 +257,34 @@
       {
         "question": "Why can a guardrail not inspect a raw digest?",
         "options": [
-          "Digests are encrypted with the signing key",
-          "A hash is one-way, so the recipient and value are not recoverable from it",
           "The digest arrives after the guardrail runs",
-          "Guardrails only support EVM chains"
+          "Guardrails only support EVM chains",
+          "A hash is one-way, so the recipient and value are not recoverable from it",
+          "Digests are encrypted with the signing key"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "It is a property of hashing rather than a limitation of the implementation. No engineering effort recovers the preimage, which is exactly why the hash is useful and exactly why it is opaque."
       },
       {
         "question": "The guardrail allowed the drain in the second run. What failed?",
         "options": [
-          "The allowlist was misconfigured",
           "Nothing failed; the guardrail had nothing to inspect and correctly reported that",
           "The digest was computed incorrectly",
+          "The allowlist was misconfigured",
           "The value cap was too high"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Every component behaved correctly. That is what makes blind signing dangerous: there is no error to notice and no alert to fire."
       },
       {
         "question": "You enable raw signing for a legitimate ERC-1271 flow. What must you do?",
         "options": [
-          "Nothing; the flow is legitimate so the risk is accepted",
-          "Rebuild the validation elsewhere: recipient allowlists, value caps and approval above a threshold",
+          "Restrict it to testnets",
           "Rotate the signing key more frequently",
-          "Restrict it to testnets"
+          "Rebuild the validation elsewhere: recipient allowlists, value caps and approval above a threshold",
+          "Nothing; the flow is legitimate so the risk is accepted"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Enabling raw signing moves the burden of validation to whoever builds the hash. The compensating controls have to exist somewhere, and you should be able to name where."
       }
     ],
@@ -419,34 +419,34 @@
       {
         "question": "Why does an agent get a 403 when calling a treasury wallet endpoint?",
         "options": [
-          "The org is over quota",
-          "Treasury endpoints enforce require_human",
+          "Treasury wallets are testnet only",
           "The agent has no signing key",
-          "Treasury wallets are testnet only"
+          "The org is over quota",
+          "Treasury endpoints enforce require_human"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Treasury endpoints enforce require_human, so an agent gets a 403 by design rather than by misconfiguration. Treasury wallets are the human side of the system; agents get signing keys instead."
       },
       {
         "question": "In Delegated mode, where does the treasury private key live when an agent signs?",
         "options": [
-          "It is returned in the response",
-          "It moves to the Safe contract",
+          "It stays in __treasury-keys and signs via the Intents API",
           "It is copied to the agent",
-          "It stays in __treasury-keys and signs via the Intents API"
+          "It moves to the Safe contract",
+          "It is returned in the response"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "Delegated mode signs with the treasury key through the Intents API; the key never leaves __treasury-keys."
       },
       {
         "question": "What triggers a Safe proposal to execute automatically?",
         "options": [
+          "Approve signatures reaching the Safe threshold",
           "The daily limit resetting",
           "A single approve signature",
-          "A human clicking export",
-          "Approve signatures reaching the Safe threshold"
+          "A human clicking export"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "It executes once approve signatures reach the Safe threshold. That is separation of duties enforced on-chain: no single signer can move funds, and the threshold is the control."
       }
     ],
@@ -577,12 +577,12 @@
       {
         "question": "Which network and asset do 1Claw x402 payments use?",
         "options": [
-          "Base USDC (eip155:8453)",
           "Polygon DAI",
+          "Base USDC (eip155:8453)",
           "Ethereum mainnet ETH",
           "Solana USDC"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "The accepts[] entry uses network eip155:8453 with USDC on Base, settled via the Coinbase CDP facilitator."
       },
       {
@@ -599,12 +599,12 @@
       {
         "question": "After the API returns 402, how does the client complete the request?",
         "options": [
-          "It upgrades the subscription tier",
           "It signs the payment and retries with an X-PAYMENT header",
-          "It switches to credits automatically",
-          "It waits for the quota to reset"
+          "It upgrades the subscription tier",
+          "It waits for the quota to reset",
+          "It switches to credits automatically"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "The client pays on-chain and retries with an X-PAYMENT header carrying the proof. Validate the challenge before paying: payTo, network, amount and asset contract all have to match."
       }
     ]
@@ -711,34 +711,34 @@
       {
         "question": "What do you need before creating embedded wallets?",
         "options": [
-          "A Safe multisig",
-          "A Free plan and a 1ck_ key",
+          "Only an EOA private key",
           "A Pro+ plan and a platform app plt_ key",
-          "Only an EOA private key"
+          "A Free plan and a 1ck_ key",
+          "A Safe multisig"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "A Pro or higher plan and a platform app plt_ key. That key is platform-wide, which is why it belongs on your server and never in a browser bundle."
       },
       {
         "question": "How does a user log in to get a wallet?",
         "options": [
-          "Password only",
           "Email OTP with sendEmailOtp and verifyEmailOtp",
+          "Password only",
           "MetaMask connect",
           "Seed phrase import"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "You send a code with sendEmailOtp and confirm it with verifyEmailOtp, which returns the wallet_address."
       },
       {
         "question": "Which two components does wallet-react provide for the widget?",
         "options": [
-          "ProviderRoot and WalletCard",
           "OneclawWalletProvider and OneclawEmbeddedWallet",
           "WalletKit and WalletButton",
+          "ProviderRoot and WalletCard",
           "OneclawClient and OneclawAuth"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "They serve different purposes rather than nesting. OneclawEmbeddedWallet is standalone and takes appId; OneclawWalletProvider plus the useOneclawWallet hook is the lower-level route when you are building custom wallet UI."
       }
     ]
@@ -854,8 +854,8 @@
         "question": "What does enforcement \"log\" do?",
         "options": [
           "Logs every request to the audit trail",
-          "Denies and logs the reason",
           "Disables the guardrail entirely",
+          "Denies and logs the reason",
           "Runs the rule in shadow mode, recording what it would deny without denying it"
         ],
         "correctIndex": 3,
@@ -864,23 +864,23 @@
       {
         "question": "You widen an agent's guardrail with a PATCH and get back a 202 with a pending_approval_id. Why?",
         "options": [
-          "Widening edits queue behind a policy_change approval with step-up re-auth",
           "The guardrail JSON was invalid",
           "The API is rate limiting you",
+          "Widening edits queue behind a policy_change approval with step-up re-auth",
           "The agent is suspended"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Since v0.56.2 widening access is itself a privileged change: it waits for an approval. Narrowing edits still apply immediately, because they only reduce access."
       },
       {
         "question": "How does tx_approval_policy differ from a hard spending cap?",
         "options": [
-          "It disables the daily limit",
-          "It raises the cap automatically",
+          "A matching transaction returns 202 awaiting_approval instead of being refused",
           "It applies only to non-EVM chains",
-          "A matching transaction returns 202 awaiting_approval instead of being refused"
+          "It raises the cap automatically",
+          "It disables the daily limit"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "A hard cap refuses. An approval policy routes the transaction to a human, so legitimate large transfers can proceed with oversight rather than simply failing."
       }
     ],
@@ -1003,34 +1003,34 @@
       {
         "question": "With card_require_approval true, when does the x402 payment actually happen?",
         "options": [
-          "At the end of the billing period",
-          "Only after a human approves the pending approval",
+          "When the card monitor next runs",
           "Immediately, and it is refunded if rejected",
-          "When the card monitor next runs"
+          "Only after a human approves the pending approval",
+          "At the end of the billing period"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "The order returns 202 awaiting_approval and creates a card row in that state. No payment is made until a human approves: rejecting simply marks the card rejected."
       },
       {
         "question": "Why is the reveal operation deliberately missing from the MCP tool set?",
         "options": [
-          "So a card number can never be written into a model's context window",
           "Because MCP does not support it technically",
           "Because reveal is deprecated",
+          "So a card number can never be written into a model's context window",
           "To reduce the tool count"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "order_card, list_cards and get_card_status are exposed, but reveal is omitted on purpose to keep PANs out of agent context. Humans reveal through re-authenticated paths."
       },
       {
         "question": "What does the Vault validate before signing the x402 payment authorization?",
         "options": [
-          "Only that the agent has cards_enabled",
+          "payTo allowlist, Base network, exact amount, and the pinned USDC contract",
           "Only the amount",
           "Nothing: the provider validates it",
-          "payTo allowlist, Base network, exact amount, and the pinned USDC contract"
+          "Only that the agent has cards_enabled"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "That four-part check on the 402 challenge is the payment security boundary, and it is why a malicious challenge cannot redirect funds elsewhere."
       }
     ],
@@ -1046,6 +1046,95 @@
         "note": "why reveal is absent from MCP"
       }
     ]
+  },
+  {
+    "id": "lab-charged-twice",
+    "title": "Lab: get charged three times for one order",
+    "summary": "Retry a request the way every HTTP client does, then add the one header that makes the retry safe.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The payment cards lesson said an Idempotency-Key is required on order, and required is easy to read as bureaucratic. This shows what the header is actually preventing, which is the most ordinary failure in distributed systems: a response that never arrived."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Model a charge endpoint with and without idempotency, then retry the way a client does after a timeout.",
+            "code": "cat > /tmp/idem.py <<'EOF'\ncharges, seen = [], {}\n\ndef charge(amount, key=None):\n    if key is not None:\n        if key in seen:\n            return f\"replayed, no new charge (total {sum(charges)})\"\n        seen[key] = True\n    charges.append(amount)\n    return f\"charged {amount} (total {sum(charges)})\"\n\nprint(\"no key: the response timed out twice, so the client retried twice\")\nfor _ in range(3):\n    print(\"  \", charge(25))\n\ncharges.clear(); seen.clear()\nprint(\"\\nwith a key: same three attempts\")\nfor _ in range(3):\n    print(\"  \", charge(25, key=\"order-abc-123\"))\nEOF\npython3 /tmp/idem.py",
+            "lang": "bash"
+          },
+          {
+            "text": "Three attempts, one order, and a seventy-five dollar difference.",
+            "code": "no key: the response timed out twice, so the client retried twice\n   charged 25 (total 25)\n   charged 25 (total 50)\n   charged 25 (total 75)\n\nwith a key: same three attempts\n   charged 25 (total 25)\n   replayed, no new charge (total 25)\n   replayed, no new charge (total 25)",
+            "lang": "text"
+          },
+          {
+            "text": "Clean up.",
+            "code": "rm /tmp/idem.py",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "The client was not buggy. A timeout tells you the response did not arrive and tells you nothing about whether the server acted, so retrying is the correct behaviour and the only safe way to do it is to make the second attempt recognisable as the same request."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The key must be generated by the caller and reused across retries of one logical operation. Generating a fresh key per attempt is the same as having none.",
+          "1Claw scopes replay protection to a 24-hour window and compares a hash of the body, so the same key with a different body is a conflict rather than a silent replay.",
+          "This is why an agent doing anything irreversible needs a stable key: an agent that retries on error is an agent that will eventually retry a purchase."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "The dangerous version of this bug is invisible in testing, because it only appears when a response is lost. It shows up first in production, during an incident, when everything is already timing out."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "The same reasoning covers bootstrap and spend-policy writes, which take the same header for the same reason. Anywhere a retry could duplicate an effect, the key is what makes the retry safe."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why did the client retry at all?",
+        "options": [
+          "It was misconfigured",
+          "It ignored the first response",
+          "The endpoint returned a 5xx",
+          "A timeout says the response did not arrive and says nothing about whether the server acted"
+        ],
+        "correctIndex": 3,
+        "explanation": "Retrying on a timeout is correct behaviour. The problem is not the retry, it is that the second request was indistinguishable from a new one."
+      },
+      {
+        "question": "What happens if the client generates a fresh key per attempt?",
+        "options": [
+          "The attempts are merged automatically",
+          "The server rejects it",
+          "It is equivalent to having no key at all",
+          "Only the first attempt is charged"
+        ],
+        "correctIndex": 2,
+        "explanation": "The key identifies the logical operation, not the attempt. A new key per attempt makes every retry a distinct request, which is exactly the situation the header exists to avoid."
+      },
+      {
+        "question": "Why is this especially important for agents?",
+        "options": [
+          "Agent tokens expire mid-request",
+          "Agents cannot read HTTP status codes",
+          "Agents retry on error, so an agent that retries a purchase will eventually duplicate it",
+          "Agents cannot generate UUIDs"
+        ],
+        "correctIndex": 2,
+        "explanation": "Automatic retry is normal agent behaviour and irreversible actions are exactly where it is dangerous. A stable key is what makes an autonomous retry safe."
+      }
+    ],
+    "kind": "lab"
   },
   {
     "id": "portfolio-and-treasury-ops",
@@ -1148,34 +1237,34 @@
       {
         "question": "What does GET /v1/portfolio aggregate?",
         "options": [
+          "Only EVM chains",
           "Only treasury wallets",
           "Treasury wallets, agent signing keys, and smart accounts",
-          "Only wallets with a non-zero balance",
-          "Only EVM chains"
+          "Only wallets with a non-zero balance"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "It is a unified aggregator across all three wallet types, with optional token balances and USD estimates."
       },
       {
         "question": "Why does reading __treasury-keys directly return 403?",
         "options": [
           "Only agents may read it",
-          "Private keys may only leave through the audited export endpoints",
           "It requires a Business tier plan",
-          "The vault does not exist yet"
+          "The vault does not exist yet",
+          "Private keys may only leave through the audited export endpoints"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Blocking direct reads means there is exactly one path to a private key: the export endpoint, which demands password re-auth and writes an audit record."
       },
       {
         "question": "Which MPC custody mode applies to a Business-tier org's treasury keys?",
         "options": [
-          "XOR 2-of-2",
           "No MPC",
+          "Shamir 2-of-3 across multiple HSMs",
           "Client-custody 2-of-2",
-          "Shamir 2-of-3 across multiple HSMs"
+          "XOR 2-of-2"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "Custody is set automatically by tier: XOR 2-of-2 for Pro and Team, Shamir 2-of-3 multi-HSM for Business and Enterprise."
       }
     ],
@@ -1291,23 +1380,23 @@
       {
         "question": "Why does an agent's Bankr lease response omit the api_key field?",
         "options": [
-          "So the key never enters the agent's context: Shroud resolves it at request time",
           "Because the key is not generated yet",
+          "Because the agent lacks permission",
           "To reduce response size",
-          "Because the agent lacks permission"
+          "So the key never enters the agent's context: Shroud resolves it at request time"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "The lease gives the agent metadata only. Shroud resolves the actual key when the request is made, so the credential never reaches the model's context window."
       },
       {
         "question": "What must exist before an agent can lease a Bankr key?",
         "options": [
-          "Business tier billing",
           "A treasury wallet",
-          "A signing key on Base",
-          "A policy on agents/{id}/bankr/* in the __agent-keys vault"
+          "Business tier billing",
+          "A policy on agents/{id}/bankr/* in the __agent-keys vault",
+          "A signing key on Base"
         ],
-        "correctIndex": 3,
+        "correctIndex": 2,
         "explanation": "Bankr vending is deny-by-default. Without an explicit policy on that path the lease is refused."
       },
       {
@@ -1430,31 +1519,31 @@
       {
         "question": "What does counterfactual provisioning mean here?",
         "options": [
+          "The Safe is deployed immediately on creation",
           "The address changes after deployment",
           "The Safe address is derived and usable before any deployment transaction is sent",
-          "The Safe exists only in the database",
-          "The Safe is deployed immediately on creation"
+          "The Safe exists only in the database"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "The address is computed deterministically up front, so you can fund and reference the account without paying deployment gas until it is actually needed."
       },
       {
         "question": "Why do several Safe endpoints currently return 501?",
         "options": [
-          "They were removed in v0.56",
-          "They are deprecated",
+          "On-chain deploy, cosign, passkey, timelock and 4337 are pending a Guard audit",
           "They require Enterprise tier",
-          "On-chain deploy, cosign, passkey, timelock and 4337 are pending a Guard audit"
+          "They were removed in v0.56",
+          "They are deprecated"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "The provisioning and migration foundation ships now; the on-chain execution paths are held back behind 501 until the Guard audit completes."
       },
       {
         "question": "What is the advantage of a Safe over a bare EOA for an agent?",
         "options": [
+          "It removes the need for signing keys",
           "It works on non-EVM chains",
           "It signs transactions faster",
-          "It removes the need for signing keys",
           "Guardrails can eventually be enforced on-chain rather than only by the Vault"
         ],
         "correctIndex": 3,

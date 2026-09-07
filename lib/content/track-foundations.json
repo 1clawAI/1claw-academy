@@ -51,34 +51,34 @@
       {
         "question": "What backs the encryption key for each 1Claw vault?",
         "options": [
-          "A password in a config file",
-          "A browser cookie",
+          "The agent's API key",
           "A hardware security module (HSM)",
-          "The agent's API key"
+          "A browser cookie",
+          "A password in a config file"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "The KEK for each vault is generated inside a hardware security module and never leaves it. That is what turns a database breach into an inconvenience: the ciphertext is there and the key to it is not."
       },
       {
         "question": "By default, how much access does a new agent have?",
         "options": [
-          "Access to all secrets tagged public",
-          "Full access to every vault",
+          "Read access to one vault",
           "Zero access until a human writes a policy",
-          "Read access to one vault"
+          "Access to all secrets tagged public",
+          "Full access to every vault"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "1Claw is zero-trust: agents get nothing until a human grants specific paths via a policy."
       },
       {
         "question": "Which prefix identifies a human's personal API key?",
         "options": [
-          "jwt_",
-          "sk_",
+          "1ck_",
           "ocv_",
-          "1ck_"
+          "jwt_",
+          "sk_"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "Prefixes are not cosmetic. 1ck_ is a human personal key and ocv_ is an agent key, and the two authenticate through different endpoints with different lifetimes, so the prefix tells you which model applies."
       }
     ],
@@ -157,34 +157,34 @@
       {
         "question": "How are secrets addressed inside a vault?",
         "options": [
-          "By tag name",
-          "By UUID only",
           "By slash-separated paths like api-keys/stripe",
-          "By numeric index"
+          "By numeric index",
+          "By UUID only",
+          "By tag name"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "Paths look like a filesystem because policies are written as globs over them. A path scheme chosen for readability, like api-keys/stripe, is also the thing that makes api-keys/** a meaningful grant later."
       },
       {
         "question": "In envelope encryption, what wraps the per-secret data encryption key (DEK)?",
         "options": [
-          "The agent's JWT",
           "The user's password",
-          "Another DEK",
-          "The vault's HSM-backed key encryption key (KEK)"
+          "The vault's HSM-backed key encryption key (KEK)",
+          "The agent's JWT",
+          "Another DEK"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "The KEK wraps the DEK, and only the wrapped form is stored. That indirection is what makes rotation cheap and cryptographic erasure possible: you re-encrypt or destroy a small key rather than the data."
       },
       {
         "question": "What happens when you PUT a new value to an existing secret path?",
         "options": [
           "It creates a second vault",
-          "It creates a new version and keeps the old one in history",
+          "It overwrites and deletes the old value",
           "It errors because the path exists",
-          "It overwrites and deletes the old value"
+          "It creates a new version and keeps the old one in history"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Writes are additive rather than destructive, which is what makes rotation safe. The old version stays readable while consumers migrate, and you disable it once the audit log shows nothing is still using it."
       }
     ],
@@ -269,21 +269,21 @@
       {
         "question": "Which prefix marks an agent API key?",
         "options": [
-          "eyJ",
           "agt_",
           "ocv_",
-          "1ck_"
+          "1ck_",
+          "eyJ"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "ocv_ marks an agent and 1ck_ marks a human. The distinction matters because an agent exchanges its key for a short-lived JWT, while a human key works directly as a bearer token."
       },
       {
         "question": "How does an agent turn its ocv_ key into a usable API credential?",
         "options": [
-          "Emails it to the human each time",
+          "POSTs just the api_key to /v1/auth/api-key-token",
           "POSTs agent_id and api_key to /v1/auth/agent-token for a short-lived JWT",
           "Uses it directly as a permanent password",
-          "POSTs just the api_key to /v1/auth/api-key-token"
+          "Emails it to the human each time"
         ],
         "correctIndex": 1,
         "explanation": "The exchange is the point: the long-lived ocv_ key stays wherever you put it and the thing used on the wire is a short-lived JWT. Note the endpoints differ by principal, so api-key-token is the human path."
@@ -291,12 +291,12 @@
       {
         "question": "What happens to an agent's active tokens when a human changes its policy?",
         "options": [
-          "They're automatically revoked and must be re-exchanged",
           "They last 30 days longer",
+          "They're automatically revoked and must be re-exchanged",
           "They gain admin access",
           "Nothing, they keep working"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "Changing a policy revokes the agent's active tokens, so a narrowed scope takes effect immediately rather than whenever the current token happens to expire. Without it, revocation would be delayed by the token's lifetime."
       }
     ],
@@ -381,23 +381,23 @@
       {
         "question": "What Node version does the npm install of the CLI require?",
         "options": [
-          "Node 16+",
-          "Node 20+",
           "Node 14+",
-          "Any version"
+          "Any version",
+          "Node 20+",
+          "Node 16+"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Node 20 or newer for the npm install. Homebrew bundles its own runtime, so it is the simpler route if your system Node is older or you would rather not manage it."
       },
       {
         "question": "What does 1claw login use so you never type a password in the terminal?",
         "options": [
-          "A one-time SMS",
           "An SSH key",
-          "A browser device flow",
-          "A QR code scanner"
+          "A one-time SMS",
+          "A QR code scanner",
+          "A browser device flow"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "The browser device flow means the credential is never typed into a terminal, never lands in shell history, and never appears in a screen recording. The CLI polls until you approve."
       },
       {
@@ -485,10 +485,10 @@
       {
         "question": "Where does the local vault store its data?",
         "options": [
-          "In your system keychain",
+          "In a hidden folder in the current project",
           "On 1Claw's servers, encrypted client-side",
           "In a single encrypted file at ~/.config/1claw/local-vault.enc",
-          "In a hidden folder in the current project"
+          "In your system keychain"
         ],
         "correctIndex": 2,
         "explanation": "It is one AES-256-GCM file written with 0600 permissions. Nothing is transmitted anywhere until you explicitly run a sync."
@@ -496,26 +496,135 @@
       {
         "question": "You forget your local vault passphrase. What are your options?",
         "options": [
-          "Reset it with your account email",
           "Recover it through the dashboard",
-          "None; the only path is `1claw local destroy` and starting over",
-          "Support can decrypt it with the master key"
+          "Support can decrypt it with the master key",
+          "Reset it with your account email",
+          "None; the only path is `1claw local destroy` and starting over"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "The passphrase is the only key material and it is never stored. destroy exists precisely because deletion is the only available recovery, which is why the passphrase belongs in a password manager."
       },
       {
         "question": "Why does each local command take a noticeable moment?",
         "options": [
-          "scrypt derives the key with a large work factor, which is what makes brute forcing the file expensive",
-          "It checks for updates over the network",
+          "It re-encrypts the whole vault on every read",
           "It verifies the file against a remote checksum",
-          "It re-encrypts the whole vault on every read"
+          "scrypt derives the key with a large work factor, which is what makes brute forcing the file expensive",
+          "It checks for updates over the network"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "The delay is the security property. A fast key derivation would make an offline attack against a stolen vault file cheap."
       }
     ]
+  },
+  {
+    "id": "lab-is-it-really-encrypted",
+    "title": "Lab: check that the vault file is opaque",
+    "summary": "Take the claim that the local vault is encrypted at rest and verify it yourself with strings, xxd and a wrong passphrase.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Two lessons ago you created a local vault and were told the file is encrypted with a passphrase-derived key. That is a claim about a file on your disk, and claims about files on your disk can be checked rather than believed."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "This uses openssl on a file you create, so it works whether or not you set up a local vault. The construction is the same shape: a passphrase, a key derivation, and an authenticated cipher."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Write a plaintext env file and encrypt it with a passphrase.",
+            "code": "mkdir -p /tmp/vlab && cd /tmp/vlab\nprintf 'STRIPE_KEY=sk-live-9f2a\\nDB_PASSWORD=prod-pw-42\\n' > plain.env\nopenssl enc -aes-256-cbc -pbkdf2 -iter 200000 \\\n  -pass pass:correct-horse -in plain.env -out vault.enc",
+            "lang": "bash"
+          },
+          {
+            "text": "Look at the plaintext file the way anyone with read access would.",
+            "code": "strings plain.env",
+            "lang": "bash"
+          },
+          {
+            "text": "Now do the same to the encrypted one. Count the matches rather than trusting your eyes.",
+            "code": "strings vault.enc | grep -c 'sk-live\\|prod-pw'\n# -> 0",
+            "lang": "bash"
+          },
+          {
+            "text": "Look at the actual bytes. The Salted__ header is the only thing that is not ciphertext.",
+            "code": "xxd vault.enc | head -2",
+            "lang": "bash"
+          },
+          {
+            "text": "Try a wrong passphrase. It fails rather than returning garbage, because the padding check catches it.",
+            "code": "openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \\\n  -pass pass:wrong-guess -in vault.enc\n# -> bad decrypt",
+            "lang": "bash"
+          },
+          {
+            "text": "And the right one.",
+            "code": "openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \\\n  -pass pass:correct-horse -in vault.enc",
+            "lang": "bash"
+          },
+          {
+            "text": "Clean up.",
+            "code": "cd /tmp && rm -rf vlab",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Three things worth taking from a check that took two minutes."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The salt is stored in the clear at the start of the file, and it is not secret. It exists so that the same passphrase produces a different key for every file, which is what stops one precomputed table from opening all of them.",
+          "The iteration count is the cost you pay on every unlock and the cost an attacker pays on every guess. 200000 here, and a deliberately large scrypt work factor in the real local vault, are the same idea.",
+          "A wrong passphrase produced an error rather than plausible-looking wrong output. That is the integrity check doing its job, and it is why authenticated modes are preferred."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "None of this protects a file someone can read while it is unlocked, or a passphrase in your shell history. Encryption at rest answers exactly one question: what an attacker gets from the file alone."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "The salt sits in the clear at the start of the file. Is that a weakness?",
+        "options": [
+          "Yes, it lets an attacker skip the key derivation",
+          "Yes, it should be stored separately",
+          "No, because it is hashed",
+          "No: it is not secret, and it makes the same passphrase derive a different key per file"
+        ],
+        "correctIndex": 3,
+        "explanation": "A salt defeats precomputation. Its job is uniqueness rather than secrecy, which is why every mainstream format stores it alongside the ciphertext."
+      },
+      {
+        "question": "What is the iteration count actually buying?",
+        "options": [
+          "Stronger ciphertext",
+          "A longer key",
+          "Cost per guess: you pay it once per unlock, an attacker pays it on every attempt",
+          "Protection against a lost passphrase"
+        ],
+        "correctIndex": 2,
+        "explanation": "It makes the key derivation deliberately slow, which is negligible for one legitimate unlock and expensive across a brute-force search."
+      },
+      {
+        "question": "A wrong passphrase produced 'bad decrypt' rather than garbage. Why does that matter?",
+        "options": [
+          "It confirms the file is not corrupt",
+          "The integrity check detects the wrong key instead of returning plausible-looking wrong data",
+          "It means the passphrase was close",
+          "It proves the salt was correct"
+        ],
+        "correctIndex": 1,
+        "explanation": "Silent garbage on a wrong key is how corrupted data gets written back as though it were valid. Detecting the failure is the property authenticated modes provide."
+      }
+    ],
+    "kind": "lab"
   },
   {
     "id": "bring-your-dotenv",
@@ -572,8 +681,8 @@
         "options": [
           "Imports only the keys that do not already exist",
           "Shows what would be imported without writing anything",
-          "Imports into a temporary vault for testing",
-          "Validates the .env syntax and exits"
+          "Validates the .env syntax and exits",
+          "Imports into a temporary vault for testing"
         ],
         "correctIndex": 1,
         "explanation": "It is a preview. Running it first is worth the habit on any file you have not read recently."
@@ -581,26 +690,129 @@
       {
         "question": "By default, what happens to a key that already exists in the vault?",
         "options": [
-          "It is skipped, unless you pass --force",
           "Both values are kept as separate versions",
           "The import aborts with an error",
+          "It is skipped, unless you pass --force",
           "It is overwritten with the .env value"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Skipping is the safe default, since the vault copy is more likely to be current than a file that has been sitting in a project directory."
       },
       {
         "question": "What should you do with the .env file after importing it?",
         "options": [
-          "Encrypt it with the same passphrase",
           "Move it to a shared drive",
-          "Delete it and add it to .gitignore, or the import achieved nothing",
-          "Keep it as a backup"
+          "Keep it as a backup",
+          "Encrypt it with the same passphrase",
+          "Delete it and add it to .gitignore, or the import achieved nothing"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Two copies is the sprawl problem the vault exists to remove. The value only improves once the plaintext original is gone."
       }
     ]
+  },
+  {
+    "id": "lab-leak-into-git",
+    "title": "Lab: delete a secret and watch it survive",
+    "summary": "Commit a .env, remove it, add a .gitignore, then read the secret straight back out of the repository.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The previous lesson told you to delete the .env after importing it. This lab is why that instruction has a second half, and why the second half is the one people skip."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Make a throwaway repository and commit a .env, exactly as it happens by accident.",
+            "code": "mkdir -p /tmp/gitlab && cd /tmp/gitlab\ngit init -q . && git config user.email you@example.com && git config user.name You\nprintf 'STRIPE_KEY=sk-live-9f2a-LEAKED\\n' > .env\ngit add .env && git commit -qm \"add config\"",
+            "lang": "bash"
+          },
+          {
+            "text": "Notice the mistake and do the obvious cleanup: remove the file, add a .gitignore, commit.",
+            "code": "git rm -q .env\nprintf '.env\\n' > .gitignore\ngit add .gitignore && git commit -qm \"remove secret, add gitignore\"\nls -a",
+            "lang": "bash"
+          },
+          {
+            "text": "The working tree is clean. The secret is not gone.",
+            "code": "git log -p --all | grep -o 'sk-live[^ ]*'",
+            "lang": "bash"
+          },
+          {
+            "text": "Read it directly out of the earlier commit, which is what anyone who clones the repository can do.",
+            "code": "git show HEAD~1:.env\n# -> STRIPE_KEY=sk-live-9f2a-LEAKED",
+            "lang": "bash"
+          },
+          {
+            "text": "Clean up.",
+            "code": "cd /tmp && rm -rf gitlab",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Deleting a file removes it from the current commit and from nothing else. Git is designed to preserve history, and it did its job perfectly."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Anyone who has ever cloned or forked the repository already has the secret, and nothing you do to your copy reaches theirs.",
+          "Rewriting history with filter-repo or BFG changes the object graph and does not un-distribute what was pushed, and it does not touch a fork.",
+          "On a hosted platform the old objects may remain reachable by commit SHA long after the branch is rewritten."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "The only response that actually works is rotation. Treat a committed secret as burned from the moment it is pushed, rotate it, and clean the history afterwards as tidying rather than as the fix."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Add .env to .gitignore in your project template rather than after the first mistake. A gitignore added in commit two protects nothing that happened in commit one."
+      },
+      {
+        "type": "prose",
+        "text": "This is the fourth way a secret escapes that this course has shown you and none of them involved an attacker doing anything clever: a build log, a process table, a plaintext file, and now version control that is faithfully doing what it was built to do."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "You deleted the .env and committed. Why is the secret still exposed?",
+        "options": [
+          "The .gitignore only applies to new files",
+          "The delete was not pushed",
+          "Git preserves history, so earlier commits still contain the file",
+          "The file is cached in the index"
+        ],
+        "correctIndex": 2,
+        "explanation": "Deleting removes the file from the current commit and from nothing else. Anyone who can read the repository can read any earlier commit."
+      },
+      {
+        "question": "What is the only response that reliably works?",
+        "options": [
+          "Force-pushing over the branch",
+          "Making the repository private",
+          "Rewriting history with filter-repo",
+          "Rotating the credential, then cleaning history as tidying"
+        ],
+        "correctIndex": 3,
+        "explanation": "History rewriting does not reach clones, forks or objects still addressable by SHA on the host. Once pushed, treat the secret as burned."
+      },
+      {
+        "question": "When should .env go into .gitignore?",
+        "options": [
+          "Immediately after the first accidental commit",
+          "In the project template, before the first commit",
+          "Once the repository is made public",
+          "Only if the file contains production values"
+        ],
+        "correctIndex": 1,
+        "explanation": "A gitignore added in commit two protects nothing that happened in commit one, which is exactly when the mistake is made."
+      }
+    ],
+    "kind": "lab"
   },
   {
     "id": "first-vault-and-secret",
@@ -680,12 +892,12 @@
       {
         "question": "What does 1claw secret list return?",
         "options": [
-          "Decrypted values for every secret",
-          "The vault's KEK",
           "Only the vault name",
-          "Metadata only, no values"
+          "Metadata only, no values",
+          "Decrypted values for every secret",
+          "The vault's KEK"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "Listing returns paths, types and versions and never values. That separation is what lets you grant an agent the ability to discover what exists without the ability to read it."
       },
       {
@@ -778,23 +990,23 @@
       {
         "question": "Which direction does `1claw local sync` move secrets by default?",
         "options": [
+          "Bidirectional merge",
           "It prompts for a direction each time",
           "Local to cloud; --pull reverses it",
-          "Bidirectional merge",
           "Cloud to local"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Push is the default because the common first case is seeding a hosted vault from the laptop where the secrets already are."
       },
       {
         "question": "What happens by default when a secret exists on both sides with different values?",
         "options": [
+          "The newer value wins",
           "The conflict is skipped unless you pass --force",
           "The sync aborts entirely",
-          "Both are kept as versions",
-          "The newer value wins"
+          "Both are kept as versions"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "Skipping avoids silently destroying a value. It also means a sync can do less than you expected, so the summary is worth reading."
       },
       {

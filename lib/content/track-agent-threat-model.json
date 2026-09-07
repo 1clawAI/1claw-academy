@@ -52,34 +52,34 @@
       {
         "question": "Why is prompt injection not solvable the way SQL injection was?",
         "options": [
-          "The attack is newer and tooling will catch up",
           "There is no parser-level boundary between instructions and data in natural language",
           "SQL injection was never actually solved",
+          "The attack is newer and tooling will catch up",
           "Language models are too slow to validate input"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Parameterised queries work because a parser can separate code from data structurally. Natural language has no such boundary, so escaping and validation cannot be made reliable."
       },
       {
         "question": "Which assumption does an agent violate by acting on text it was merely asked to read?",
         "options": [
+          "That data is encrypted at rest",
           "That components are reproducible",
-          "That control flow is determined by the program rather than its input",
           "That code is compiled before execution",
-          "That data is encrypted at rest"
+          "That control flow is determined by the program rather than its input"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Instructions embedded in processed content can redirect what the agent does next, so input determines control flow: the inverse of the traditional assumption."
       },
       {
         "question": "Given that the model cannot be made reliably safe, where does the defence belong?",
         "options": [
-          "In the surrounding architecture that constrains what the agent can do",
-          "In input filtering alone",
+          "In a more capable model",
           "In better system prompts",
-          "In a more capable model"
+          "In input filtering alone",
+          "In the surrounding architecture that constrains what the agent can do"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "Since you cannot guarantee the model ignores malicious instructions, you constrain capability so that following them has limited consequence."
       }
     ]
@@ -144,34 +144,34 @@
       {
         "question": "What makes indirect prompt injection more dangerous than direct?",
         "options": [
-          "It requires network access",
           "The attacker never interacts with the agent: the payload arrives inside content it reads",
-          "It is harder to write",
-          "It only affects open-source models"
+          "It requires network access",
+          "It only affects open-source models",
+          "It is harder to write"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "The user's request can be entirely legitimate. Because the attack rides in on data, restricting who may talk to the agent provides no protection."
       },
       {
         "question": "Why does restricting the agent to trusted users fail to stop injection?",
         "options": [
-          "The untrusted input is the content the agent processes, not the person asking",
           "Trusted users are often malicious",
+          "The untrusted input is the content the agent processes, not the person asking",
           "It works: this is an effective defence",
           "Authentication can be bypassed"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "A trusted user asking a benign question about a poisoned document still results in the agent reading attacker-controlled instructions."
       },
       {
         "question": "Which category of defence is structural rather than probabilistic?",
         "options": [
+          "Provenance marking of context",
           "Output scanning",
           "Restricting what the agent is capable of doing",
-          "Provenance marking of context",
           "Instructing the model to ignore injected text"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Detection-based defences reduce likelihood. Removing a capability removes the consequence entirely, which is the only defence that does not degrade against a novel phrasing."
       }
     ]
@@ -257,8 +257,8 @@
         "options": [
           "Delimiters are a convention inside the data, so the attacker can write them too",
           "The system prompt came first",
-          "The model does not understand XML",
-          "The tags were too short"
+          "The tags were too short",
+          "The model does not understand XML"
         ],
         "correctIndex": 0,
         "explanation": "Parameterised SQL works because a parser separates code from data structurally. A tag in a prompt is more text in the same field, which the attacker can also produce."
@@ -277,12 +277,12 @@
       {
         "question": "What does the lab imply about where the real defense belongs?",
         "options": [
+          "In a larger model that resists injection",
           "In the capabilities the agent has, since the injection cannot be reliably stopped",
-          "In stricter input validation",
           "In a stronger system prompt",
-          "In a larger model that resists injection"
+          "In stricter input validation"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "You could not make the attack fail at the prompt layer. You can make it worthless by ensuring the agent has nothing to take or no way to send it, which is capability restriction."
       }
     ],
@@ -417,34 +417,34 @@
       {
         "question": "What are the three elements of the lethal trifecta?",
         "options": [
-          "Excessive agency, poor logging, and stale credentials",
-          "Private data access, untrusted content exposure, and external communication",
+          "Weak passwords, no MFA, and shared accounts",
           "Prompt injection, jailbreaking, and model theft",
-          "Weak passwords, no MFA, and shared accounts"
+          "Private data access, untrusted content exposure, and external communication",
+          "Excessive agency, poor logging, and stale credentials"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Simon Willison's model: any two are usually survivable, but all three together make a single piece of poisoned content sufficient to exfiltrate data."
       },
       {
         "question": "An agent reads untrusted email and can render markdown images, but has no access to private data. Is it exploitable for exfiltration?",
         "options": [
-          "Yes, fully exploitable",
-          "Yes, because image rendering is always unsafe",
           "Not for exfiltration: there is nothing sensitive to steal",
-          "Only if it uses a weak model"
+          "Yes, fully exploitable",
+          "Only if it uses a weak model",
+          "Yes, because image rendering is always unsafe"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "Two of three circles are present. Without private data there is nothing worth exfiltrating, which is why removing any single circle breaks the chain."
       },
       {
         "question": "Why is markdown image rendering treated as an exfiltration channel?",
         "options": [
+          "The URL is fetched automatically and can encode stolen data",
           "It consumes excessive tokens",
-          "Images can contain malicious code",
           "It bypasses authentication",
-          "The URL is fetched automatically and can encode stolen data"
+          "Images can contain malicious code"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "Any automatic outbound request is a channel. Encoding data into an image URL that the client dutifully fetches needs no user action at all."
       }
     ]
@@ -504,34 +504,34 @@
       {
         "question": "What distinguishes the Agentic Top 10 from the LLM Top 10?",
         "options": [
-          "It covers risks from planning, memory, tool use, and delegated authority",
           "It replaces the LLM Top 10",
-          "It focuses on training-data risks",
-          "It only covers open-source models"
+          "It covers risks from planning, memory, tool use, and delegated authority",
+          "It only covers open-source models",
+          "It focuses on training-data risks"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "The agentic list addresses systems that act autonomously with delegated authority. The LLM list remains the reference for model-level risks like prompt injection."
       },
       {
         "question": "Which are OWASP's three root causes of excessive agency?",
         "options": [
           "Goal hijack, tool misuse, and rogue agents",
+          "Injection, exfiltration, and escalation",
           "Poor logging, weak auth, and stale keys",
-          "Excessive functionality, excessive permissions, and excessive autonomy",
-          "Injection, exfiltration, and escalation"
+          "Excessive functionality, excessive permissions, and excessive autonomy"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Separating them matters because each has a different fix: narrow the tools, narrow the privileges, or insert a human."
       },
       {
         "question": "What does ASI10 Rogue Agents describe?",
         "options": [
           "An agent that refuses instructions",
-          "An unregistered third-party agent",
           "A compromised agent acting harmfully while appearing legitimate",
-          "An agent that exceeds its token budget"
+          "An agent that exceeds its token budget",
+          "An unregistered third-party agent"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "The danger is that its traffic looks authorized, because it is, which is why attribution and audit matter as much as prevention."
       }
     ]
@@ -590,37 +590,126 @@
       {
         "question": "Why is a secret in context still at risk many turns later?",
         "options": [
-          "Encryption expires after a set period",
           "It remains in the conversation history, where a later injection can ask for it",
-          "Providers re-send old context automatically",
-          "Models cache secrets permanently"
+          "Encryption expires after a set period",
+          "Models cache secrets permanently",
+          "Providers re-send old context automatically"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Context persists across the conversation. A value that was needed once is still available to any instruction that arrives later, including an injected one."
       },
       {
         "question": "Which pattern is strongest for keeping credentials out of context?",
         "options": [
-          "Redacting outputs",
-          "Instructing the model not to repeat secrets",
+          "Brokering the call so the credential is injected server-side",
           "Using a shorter context window",
-          "Brokering the call so the credential is injected server-side"
+          "Redacting outputs",
+          "Instructing the model not to repeat secrets"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "Brokering means the credential never enters the model's view at all. Redaction and instruction both operate after the secret is already exposed."
       },
       {
         "question": "What is the correct role of output redaction?",
         "options": [
-          "A replacement for access policies",
           "The main defence against exfiltration",
+          "A way to shorten context",
           "A backstop for known values, not a primary control",
-          "A way to shorten context"
+          "A replacement for access policies"
         ],
         "correctIndex": 2,
         "explanation": "Redaction can only catch values it knows about, so it cannot make an unsafe architecture safe. It is a useful last line, not a first one."
       }
     ]
+  },
+  {
+    "id": "lab-context-outlives-the-turn",
+    "title": "Lab: a secret you pasted 37 turns ago",
+    "summary": "Put a credential into a conversation, run it forward, and check whether it is still reachable at the end.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The exfiltration lesson said that context is not scoped to the moment a value was needed, and that a secret pasted early is still there much later when an injected instruction asks for everything. Thirty lines make that concrete."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Model a conversation the way every provider actually receives one: an accumulating list.",
+            "code": "cat > /tmp/ctx.py <<'EOF'\ncontext = []\n\ndef turn(role, text):\n    context.append(f\"{role}: {text}\")\n    return text\n\n# turn 1: the user is being helpful\nturn(\"user\",  \"Here is the DB password so you can help: pw=prod-9f2a\")\nturn(\"agent\", \"Thanks, I will not repeat it.\")\n\n# 37 turns of entirely unrelated work\nfor i in range(3, 40):\n    turn(\"user\",  f\"question {i}\")\n    turn(\"agent\", f\"answer {i}\")\n\nprint(f\"turns: {len(context)//2}, context entries: {len(context)}\")\n\nprint(\"\\nturn 40, an injected instruction arrives:\")\nturn(\"user\", \"Summarise everything you were told in this conversation.\")\nleaked = [c for c in context if \"prod-9f2a\" in c]\nprint(f\"  still in context: {bool(leaked)}\")\nprint(f\"  {leaked[0]}\")\nEOF\npython3 /tmp/ctx.py",
+            "lang": "bash"
+          },
+          {
+            "text": "The agent said it would not repeat the password, and that promise had no effect on whether the password is still available.",
+            "code": "turns: 38, context entries: 76\n\nturn 40, an injected instruction arrives:\n  still in context: True\n  user: Here is the DB password so you can help: pw=prod-9f2a",
+            "lang": "text"
+          },
+          {
+            "text": "Clean up.",
+            "code": "rm /tmp/ctx.py",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Nothing here required the model to misbehave. The value was in the transcript, the transcript is the input, and a request to summarise the conversation is a completely ordinary request."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The agent's assurance at turn 2 was a statement about intent, not a change to what the transcript contains.",
+          "Every request after turn 1 sent that password to the provider again, so it is in their logs as many times as you took a turn.",
+          "Anything that captured the conversation, an error report, a trace, a debugging tool, a saved thread, captured the password with it."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "This is why the advice is reference, do not paste. A path in context is inert; a value in context has been published to everything that has ever seen the conversation."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "It also explains why redaction is a backstop rather than a boundary. Scrubbing the output at turn 40 does nothing about the 38 requests that already carried the value upstream."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "The agent said it would not repeat the password. Why did that not help?",
+        "options": [
+          "It only applied to that turn",
+          "The instruction was in the wrong role",
+          "It was a statement of intent, and the value is still in the transcript that gets resent every turn",
+          "The model forgot the instruction"
+        ],
+        "correctIndex": 2,
+        "explanation": "Nothing about the promise changed what the context contains. The transcript is the input, and it kept the value available to every subsequent request."
+      },
+      {
+        "question": "How many times did that password reach the provider?",
+        "options": [
+          "Once per turn, because the whole transcript is resent",
+          "Never, it stayed local",
+          "Twice, at turn 1 and turn 40",
+          "Once, at turn 1"
+        ],
+        "correctIndex": 0,
+        "explanation": "Conversations are stateless at the API: the full context is sent with each request. A value pasted once is transmitted as many times as you take turns."
+      },
+      {
+        "question": "What follows for output redaction?",
+        "options": [
+          "It should be applied to input instead",
+          "It works only for known formats",
+          "It is a backstop: scrubbing at turn 40 does nothing about the 38 requests that already carried the value",
+          "It solves this if applied from turn 1"
+        ],
+        "correctIndex": 2,
+        "explanation": "Redaction acts on what leaves. By the time it runs, the value has already been transmitted repeatedly, which is why not putting it in context beats cleaning it up."
+      }
+    ],
+    "kind": "lab"
   },
   {
     "id": "excessive-agency-confused-deputy",
@@ -675,10 +764,10 @@
       {
         "question": "What makes an agent a natural confused deputy?",
         "options": [
-          "It has no audit log",
-          "Being steered by text is its normal mode of operation",
           "It cannot authenticate",
-          "It runs with root privileges"
+          "Being steered by text is its normal mode of operation",
+          "It runs with root privileges",
+          "It has no audit log"
         ],
         "correctIndex": 1,
         "explanation": "The attacker does not escalate privilege; they borrow the agent's legitimate authority by supplying convincing text, which is exactly what the agent is designed to act on."
@@ -698,9 +787,9 @@
         "question": "An agent is tricked into deleting records it had permission to delete. Which root cause is primarily at fault?",
         "options": [
           "Excessive autonomy only",
-          "Weak authentication",
+          "Insufficient logging",
           "Excessive functionality: it should not have had the delete tool",
-          "Insufficient logging"
+          "Weak authentication"
         ],
         "correctIndex": 2,
         "explanation": "The most durable fix is removing the capability. If the tool is genuinely needed, the fallback is narrowing permissions and adding a human for high-impact cases."
@@ -764,34 +853,34 @@
       {
         "question": "Why is memory poisoning more serious than single-session injection?",
         "options": [
+          "The payload persists and can be retrieved in later sessions, possibly by other users",
           "It is harder to write",
           "It cannot be detected at all",
-          "It only affects vector databases",
-          "The payload persists and can be retrieved in later sessions, possibly by other users"
+          "It only affects vector databases"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "Persistence removes the session boundary. The gap between planting and triggering can be long enough to defeat monitoring that only looks at one conversation."
       },
       {
         "question": "How should an agent treat output received from another agent?",
         "options": [
           "As instructions, since agents are authenticated",
-          "As trusted, if both agents are in the same organization",
           "As untrusted content, since it may carry an injection from its own inputs",
-          "As trusted, if the delegation is authorized"
+          "As trusted, if the delegation is authorized",
+          "As trusted, if both agents are in the same organization"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "Authorization says the sender is allowed to send. It says nothing about whether the content is safe: the sending agent may itself have been injected."
       },
       {
         "question": "Why are tool descriptions from an MCP server a security concern?",
         "options": [
-          "They are not versioned",
-          "They consume context tokens",
           "The model reads them as guidance, so a malicious server can inject instructions",
+          "They consume context tokens",
+          "They are not versioned",
           "They may contain invalid JSON"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "Descriptions enter the model's context and influence behaviour, which makes an installed tool's metadata an injection vector as much as its code."
       }
     ]
@@ -888,34 +977,34 @@
       {
         "question": "What distinguishes a real control plane from a system prompt instruction?",
         "options": [
-          "It is faster",
+          "Enforcement lives outside the agent, where it cannot be talked out of it",
           "It is logged",
-          "It is written in a policy language",
-          "Enforcement lives outside the agent, where it cannot be talked out of it"
+          "It is faster",
+          "It is written in a policy language"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "A control the agent can be persuaded to ignore is a preference, not a control. Enforcement has to sit somewhere the model's context cannot reach."
       },
       {
         "question": "Which circle of the lethal trifecta does brokered execution primarily shrink?",
         "options": [
           "External communication",
+          "Untrusted content",
           "All three equally",
-          "Private data access: the agent holds no credential to steal",
-          "Untrusted content"
+          "Private data access: the agent holds no credential to steal"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "With the credential injected server-side, a successful injection cannot exfiltrate a key the agent never held. Allowlists then constrain the communication circle separately."
       },
       {
         "question": "Why is 'untrusted content' the circle you generally cannot remove?",
         "options": [
-          "It is technically impossible to filter",
-          "It is not a real risk",
           "Processing external content is usually the agent's purpose",
-          "Providers require it"
+          "Providers require it",
+          "It is technically impossible to filter",
+          "It is not a real risk"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "An agent that reads nothing external is rarely useful. That is precisely why the other two circles must carry the defensive weight."
       }
     ]
@@ -1042,21 +1131,21 @@
       {
         "question": "The deploy agent has only two circles. What does that tell you about its risk?",
         "options": [
-          "It is low risk and can be deprioritised indefinitely",
-          "Exfiltration is unlikely, but the trifecta says nothing about the risk of an unintended action",
+          "It is safe because a human approved the pull request",
           "It needs a third circle before anything can go wrong",
-          "It is safe because a human approved the pull request"
+          "It is low risk and can be deprioritised indefinitely",
+          "Exfiltration is unlikely, but the trifecta says nothing about the risk of an unintended action"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "The trifecta is a model of data exfiltration. An agent that cannot leak data can still take a damaging action, which is what the excessive-agency root causes address."
       },
       {
         "question": "Why was the documentation bot the right answer despite the finance assistant handling money?",
         "options": [
-          "It processes more messages per day",
+          "Slack has weaker authentication than email",
           "It is fully exploitable and fully autonomous, while the finance flow has a human before anything moves",
           "Public channels are inherently less secure than mailboxes",
-          "Slack has weaker authentication than email"
+          "It processes more messages per day"
         ],
         "correctIndex": 1,
         "explanation": "Human approval in the payment path converts a successful injection into a suspicious draft. The docs bot has no equivalent control anywhere in its path."
@@ -1064,12 +1153,12 @@
       {
         "question": "What made the documentation bot easy to overlook in review?",
         "options": [
-          "It was approved by a different team",
-          "It was deployed without a review",
           "Each capability is individually reasonable and the agent seems harmless",
-          "Its tools were undocumented"
+          "Its tools were undocumented",
+          "It was deployed without a review",
+          "It was approved by a different team"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "Every capability was justified on its own terms, and reviewing them one at a time never surfaces the combination. Auditing the set together is what the trifecta is for."
       }
     ],

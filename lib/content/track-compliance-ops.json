@@ -114,33 +114,33 @@
         "question": "What is stored in an audit event?",
         "options": [
           "The secret value and the metadata",
-          "The private key hash",
           "Only metadata such as path, action, actor, and timestamp",
-          "Nothing until export"
+          "Nothing until export",
+          "The private key hash"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "Metadata only: path, action, actor, timestamp. If values were logged the audit trail would become a second copy of every secret, in a store with weaker controls and broader read access."
       },
       {
         "question": "How does the log resist tampering at write time?",
         "options": [
-          "It is read-only after 24 hours",
           "Writes go through a SECURITY DEFINER function since vault_app cannot INSERT directly",
           "Events are encrypted with the org KEK",
-          "Only admins can query it"
+          "Only admins can query it",
+          "It is read-only after 24 hours"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "vault_app has direct INSERT revoked, so all writes funnel through the trusted insert_audit_event function that enforces the chain."
       },
       {
         "question": "What links each event to the previous one?",
         "options": [
-          "prev_event_id plus a SHA-256 integrity_hash",
           "The actor's IP address",
           "A sequential integer ID",
+          "prev_event_id plus a SHA-256 integrity_hash",
           "A Stripe invoice ID"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "prev_event_id plus a SHA-256 integrity_hash, which is the hash-chain construction. It does not prevent tampering; it makes tampering detectable, and that is what turns a list of events into evidence."
       }
     ],
@@ -232,34 +232,34 @@
       {
         "question": "Why does deleting an entry produce two errors rather than one?",
         "options": [
-          "Deletion corrupts the file structure",
-          "The sequence has a hole and the next entry's prev hash no longer matches",
           "Deleted entries are cached and reappear",
-          "The genesis hash is recomputed"
+          "The genesis hash is recomputed",
+          "The sequence has a hole and the next entry's prev hash no longer matches",
+          "Deletion corrupts the file structure"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Sequence continuity catches the hole and the chain catches the broken link. Deletion is noisier than modification, which surprises most people."
       },
       {
         "question": "What does a hash chain actually provide?",
         "options": [
           "Tamper-proofing: entries cannot be altered",
-          "Tamper-evidence: alterations cannot be made quietly",
           "Encryption of log contents",
+          "Tamper-evidence: alterations cannot be made quietly",
           "Prevention of unauthorised writes"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Anyone with write access can still change the file. The chain makes the change detectable, which is a different and achievable goal."
       },
       {
         "question": "What is the complete answer to 'prove nobody read this secret in Q3'?",
         "options": [
-          "No event matches the query",
           "No event matches, and the log is verifiably complete and unmodified for the period",
           "The access policy did not permit it",
-          "The secret was rotated at the end of Q3"
+          "The secret was rotated at the end of Q3",
+          "No event matches the query"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Negative assurance is a conjunction. The first statement alone is the one people give and it establishes nothing without the second."
       }
     ],
@@ -389,34 +389,34 @@
       {
         "question": "What does vault binding (vault_ids) add on top of policies?",
         "options": [
-          "It restricts which vaults the agent JWT works for regardless of policies",
-          "It grants access to every vault",
           "It disables audit logging",
+          "It grants access to every vault",
+          "It restricts which vaults the agent JWT works for regardless of policies",
           "It rotates keys nightly"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Vault binding is a second layer: even a too-broad policy cannot let the JWT reach vaults outside vault_ids."
       },
       {
         "question": "Why deactivate an agent instead of deleting it?",
         "options": [
-          "There is no difference",
           "Deactivate is faster to type",
           "Deactivate preserves the records and audit trail",
-          "Delete keeps the token valid"
+          "Delete keeps the token valid",
+          "There is no difference"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "Deactivating with --active false blocks access but preserves records and audit events; delete removes them."
       },
       {
         "question": "For a common set of secrets shared by all fleet agents, what layout is recommended?",
         "options": [
-          "A single wildcard policy on production",
-          "No policies at all",
+          "A shared vault with path-scoped policies",
           "One vault per secret",
-          "A shared vault with path-scoped policies"
+          "A single wildcard policy on production",
+          "No policies at all"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "One shared vault with path-scoped policies: api-keys/** shared, agents/{name}/** per agent. A vault per agent multiplies the KEKs and the administration without narrowing anything the paths could not."
       }
     ],
@@ -427,6 +427,95 @@
         "note": "ASI10: rogue agents look legitimate"
       }
     ]
+  },
+  {
+    "id": "lab-attribution-collapse",
+    "title": "Lab: ask the log who did it",
+    "summary": "Run the same three actions under one shared identity and under one per job, then ask the log a question an auditor would ask.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The fleet lesson said attribution collapses onto one identity when agents share a credential, and that this satisfies retention while answering nothing. It is a two-line difference in the log and a total difference in what you can say."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Build the same activity twice, differing only in who it is attributed to.",
+            "code": "cat > /tmp/attr.py <<'EOF'\nACTIONS = [(\"app/key\",), (\"prod/db/root\",), (\"app/config\",)]\n\nshared = [{\"actor\": \"fleet-agent\", \"target\": t[0]} for t in ACTIONS]\nscoped = [{\"actor\": a, \"target\": t} for a, t in\n          [(\"agent-search\",  \"app/key\"),\n           (\"agent-billing\", \"prod/db/root\"),\n           (\"agent-search\",  \"app/config\")]]\n\nq = \"who read prod/db/root?\"\nfor name, log in ((\"one shared identity\", shared),\n                  (\"one identity per job\", scoped)):\n    who = {e[\"actor\"] for e in log if e[\"target\"] == \"prod/db/root\"}\n    print(f\"{name:22} {q} -> {who}\")\nEOF\npython3 /tmp/attr.py",
+            "lang": "bash"
+          },
+          {
+            "text": "Both logs recorded the read. Only one of them answered the question.",
+            "code": "one shared identity    who read prod/db/root? -> {'fleet-agent'}\none identity per job   who read prod/db/root? -> {'agent-billing'}",
+            "lang": "text"
+          },
+          {
+            "text": "Clean up.",
+            "code": "rm /tmp/attr.py",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Both logs are complete, tamper-evident and correctly retained. The shared one is also useless for the only question anyone asks during an incident."
+      },
+      {
+        "type": "points",
+        "items": [
+          "fleet-agent is a true answer and not an informative one. It names the credential rather than the workload, and during an incident you need to know which workload to stop.",
+          "It also removes your ability to scope a response. With one identity you revoke everything or nothing; with several you revoke the one that misbehaved.",
+          "And it removes the blocked-event signal, because you can no longer tell which agent is repeatedly attempting something it is not permitted to do."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "This is why identity separation is an audit requirement rather than a tidiness preference. A retention policy measured in years, pointed at a log that attributes everything to one actor, satisfies the letter of the requirement and none of its purpose."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "The rule of thumb is one identity per workload, not per team, per service or per environment. If two things could ever need to be stopped independently, they need separate identities."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Both logs recorded the read. What did the shared-identity log fail to provide?",
+        "options": [
+          "A timestamp",
+          "Retention beyond the policy window",
+          "Which workload performed it, which is what you need in order to respond",
+          "Tamper evidence"
+        ],
+        "correctIndex": 2,
+        "explanation": "The record is true and uninformative. Naming the credential rather than the workload leaves you unable to tell what to stop."
+      },
+      {
+        "question": "What else does a shared identity take away?",
+        "options": [
+          "Encryption of the audit log",
+          "The ability to set policies",
+          "The ability to revoke narrowly: you revoke everything or nothing",
+          "Compliance with retention requirements"
+        ],
+        "correctIndex": 2,
+        "explanation": "Revocation follows identity. One credential across many workloads means any response is all-or-nothing, which turns a contained incident into an outage."
+      },
+      {
+        "question": "What is the right granularity for agent identities?",
+        "options": [
+          "One per workload, so anything that might need stopping independently can be",
+          "One per team",
+          "One per environment",
+          "One per vault"
+        ],
+        "correctIndex": 0,
+        "explanation": "The test is whether two things could ever need to be stopped or investigated separately. If so, they need separate identities."
+      }
+    ],
+    "kind": "lab"
   },
   {
     "id": "platform-api-multitenancy",
@@ -558,10 +647,10 @@
       {
         "question": "In a bootstrap template, how do you enable the Intents API on an agent?",
         "options": [
-          "scopes: [intents]",
           "enable_intents: 1",
+          "intents_api_enabled: true (flat)",
           "intents: { enabled: true } (nested)",
-          "intents_api_enabled: true (flat)"
+          "scopes: [intents]"
         ],
         "correctIndex": 2,
         "explanation": "Templates use the nested intents: { enabled: true }; the flat intents_api_enabled is the direct agent-creation form."
@@ -569,23 +658,23 @@
       {
         "question": "What must client_id be for Sign in with 1Claw?",
         "options": [
+          "The plt_ key",
           "The app slug",
           "The user email",
-          "The app UUID",
-          "The plt_ key"
+          "The app UUID"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "The app slug, not the UUID. Passing the UUID returns Unknown client_id, which reads like a misconfiguration rather than a wrong identifier, so it is worth recognising."
       },
       {
         "question": "Why can't the platform read a bootstrapped user's signing keys?",
         "options": [
-          "The plt_ key cannot read signing keys across the org boundary",
+          "They are deleted after bootstrap",
           "Signing keys are never provisioned",
-          "They are only on testnets",
-          "They are deleted after bootstrap"
+          "The plt_ key cannot read signing keys across the org boundary",
+          "They are only on testnets"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Signing keys are provisioned server-side and the plt_ key cannot read them across the org boundary, keeping custody separated."
       }
     ],
@@ -702,23 +791,23 @@
       {
         "question": "When should you use sub-organizations rather than the Platform API?",
         "options": [
-          "When you want a second billing account only",
-          "When partitioning your own org into departments or subsidiaries",
+          "When you need more API keys",
           "When provisioning resources for your product's end users",
-          "When you need more API keys"
+          "When partitioning your own org into departments or subsidiaries",
+          "When you want a second billing account only"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Sub-orgs partition your own organization. The Platform API is for provisioning on behalf of other people's users: a different problem with a different model."
       },
       {
         "question": "What happens when you delete a sub-org?",
         "options": [
-          "It is archived, preserving the audit trail",
-          "Its users are deleted too",
           "It is permanently destroyed with all records",
-          "It is merged into the parent"
+          "It is merged into the parent",
+          "Its users are deleted too",
+          "It is archived, preserving the audit trail"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "The DELETE endpoint archives the sub-org so historical activity stays auditable."
       }
     ],
@@ -817,8 +906,8 @@
         "options": [
           "All three trifecta circles are present and none can be removed, so the design must assume injection succeeds",
           "Regulators require a threat model first",
-          "Healthcare data requires MPC by law",
-          "Referral emails cannot be parsed safely"
+          "Referral emails cannot be parsed safely",
+          "Healthcare data requires MPC by law"
         ],
         "correctIndex": 0,
         "explanation": "When no circle can be removed without destroying the product, prevention stops being the goal and limiting the consequence becomes it. That drives identity, credential handling and approval design."
@@ -826,9 +915,9 @@
       {
         "question": "What is the strongest argument against merging the three agents into one?",
         "options": [
-          "It would exceed the agent quota",
           "Three audit trails are required by the regulator",
           "Single-purpose agents are a best practice",
+          "It would exceed the agent quota",
           "It would put the settlement credential on the path that consumes untrusted email"
         ],
         "correctIndex": 3,
@@ -837,12 +926,12 @@
       {
         "question": "What does the design actually change about the original contractor breach?",
         "options": [
-          "It makes the leaked credential short-lived, narrowly scoped, attributable, and useless for reaching payments",
           "It prevents credentials from leaking",
-          "It removes the need for contractors to hold credentials",
-          "It detects the leak faster"
+          "It makes the leaked credential short-lived, narrowly scoped, attributable, and useless for reaching payments",
+          "It detects the leak faster",
+          "It removes the need for contractors to hold credentials"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "No design prevents a person from leaking a credential. The measure of the architecture is what an attacker gets when one inevitably leaks."
       }
     ],

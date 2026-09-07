@@ -98,12 +98,12 @@
       {
         "question": "What wraps the DEK before it is stored?",
         "options": [
-          "The JWT signing key",
-          "The per-vault KEK inside the HSM",
           "The agent's ocv_ key",
-          "Another DEK"
+          "The JWT signing key",
+          "Another DEK",
+          "The per-vault KEK inside the HSM"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "The per-vault KEK, inside the HSM. One KEK per vault rather than one per system is what keeps a compromise scoped to a single vault instead of the whole store."
       },
       {
@@ -122,8 +122,8 @@
         "options": [
           "Every 90 days",
           "Every 365 days",
-          "Never",
-          "Every 30 days"
+          "Every 30 days",
+          "Never"
         ],
         "correctIndex": 1,
         "explanation": "Every 365 days, which is the NIST SP 800-57 maximum for a symmetric KEK rather than an arbitrary interval. Old versions stay available, because data encrypted under them still needs to be readable."
@@ -223,12 +223,12 @@
       {
         "question": "Why did rotating the KEK not stop the attacker?",
         "options": [
-          "The rotation did not complete",
           "They were using the ability to call the HSM, not the key material",
+          "The DEKs were not re-wrapped",
           "The old KEK remained valid",
-          "The DEKs were not re-wrapped"
+          "The rotation did not complete"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Rotation is the response to key compromise. This was credential compromise, so the effective action is revoking whatever authorises calls to the HSM."
       },
       {
@@ -236,8 +236,8 @@
         "options": [
           "It prevented the secrets from being read",
           "The attacker could not take the key away, so their capability ended with their access",
-          "It made rotation unnecessary",
-          "It blocked the unwrap operation"
+          "It blocked the unwrap operation",
+          "It made rotation unnecessary"
         ],
         "correctIndex": 1,
         "explanation": "The blast radius is bounded in time rather than eliminated. A stolen key file works forever and anywhere; this attacker lost everything the moment their access was revoked."
@@ -245,10 +245,10 @@
       {
         "question": "What is the practical consequence for the credential the application uses to call the HSM?",
         "options": [
-          "It can be long-lived because the HSM is the real control",
+          "It should be stored alongside the wrapped DEKs",
           "It is the actual boundary and deserves the same care as key material",
           "It only matters for audit attribution",
-          "It should be stored alongside the wrapped DEKs"
+          "It can be long-lived because the HSM is the real control"
         ],
         "correctIndex": 1,
         "explanation": "The key is protected by hardware and the token authorising its use frequently is not, which makes that token the weakest link in an otherwise strong hierarchy."
@@ -366,12 +366,12 @@
       {
         "question": "What does 1Claw store about your CMEK key?",
         "options": [
-          "Only its SHA-256 fingerprint",
           "The full key",
+          "An encrypted copy in the HSM",
           "Nothing at all",
-          "An encrypted copy in the HSM"
+          "Only its SHA-256 fingerprint"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "Only the SHA-256 fingerprint is stored so the vault can track which key was used."
       },
       {
@@ -404,6 +404,95 @@
         "note": "holding the KEK yourself"
       }
     ]
+  },
+  {
+    "id": "lab-lose-the-cmek-key",
+    "title": "Lab: lose the key and find out what that means",
+    "summary": "Encrypt client-side, hand the server only a fingerprint, then delete your key and try every recovery path.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The CMEK lesson said the provider cannot help you if the key is lost, and that the fingerprint verifies rather than reconstructs. Those are load-bearing claims for a feature people enable to satisfy an auditor, so they are worth checking rather than accepting."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Model the split: the customer holds the key, the server holds ciphertext and a fingerprint.",
+            "code": "cat > /tmp/cmek.py <<'EOF'\nimport os, hashlib\nxor = lambda a, b: bytes(x ^ y for x, y in zip(a, b * (len(a)//len(b) + 1)))\n\nkey = os.urandom(32)                       # never leaves the customer\nfingerprint = hashlib.sha256(key).hexdigest()\nblob = xor(b\"sk-live-9f2a\", key)           # encrypted before upload\n\nprint(\"server stores fingerprint:\", fingerprint[:16], \"...\")\nprint(\"server stores ciphertext: \", blob.hex()[:24], \"...\")\n\n# the fingerprint can confirm a candidate key\ncandidate = key\nprint(\"\\nfingerprint verifies a candidate:\",\n      hashlib.sha256(candidate).hexdigest() == fingerprint)\n\n# ... and cannot produce one\ndel key, candidate\ntry:\n    print(xor(blob, key))\nexcept NameError:\n    print(\"customer lost the key -> unrecoverable, by design\")\nEOF\npython3 /tmp/cmek.py",
+            "lang": "bash"
+          },
+          {
+            "text": "The fingerprint did exactly one useful thing and could not do the other. Your fingerprint and ciphertext will differ from these, because the key is generated fresh on every run; the two lines that matter are the last two.",
+            "code": "server stores fingerprint: 6b16b6d49124d0b4 ...\nserver stores ciphertext:  9923abb66f8a4e11c284ad76 ...\n\nfingerprint verifies a candidate: True\ncustomer lost the key -> unrecoverable, by design",
+            "lang": "text"
+          },
+          {
+            "text": "Clean up.",
+            "code": "rm /tmp/cmek.py",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "A SHA-256 of the key can confirm that a key you already have is the right one. It cannot run backwards, so it is a checksum rather than an escrow, and no amount of provider goodwill changes that."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Verification is the fingerprint's whole job: it lets the server reject a wrong key before wasting a decryption attempt.",
+          "There is no server-side copy by construction. That is the property being purchased, and its cost is that recovery is your problem.",
+          "Server-assisted rotation decrypts with the old key first, so it is not a recovery path either. Losing the key means losing the ability to rotate as well as to read."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Pair every CMEK enrolment with a customer-controlled escrow before the first secret is written. Split the key across two safes, put it in a hardware token with a documented successor, do something. The most common CMEK incident is not an attacker, it is a laptop."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "This is the same trade as the client-custody MPC modes, one step further. Stronger guarantees against the provider always mean weaker guarantees against yourself, and the decision belongs to whoever will be answering for both."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What can the stored fingerprint do?",
+        "options": [
+          "Confirm that a candidate key is the right one, and nothing more",
+          "Prove the key was generated correctly",
+          "Decrypt the ciphertext directly",
+          "Reconstruct the key if the customer loses it"
+        ],
+        "correctIndex": 0,
+        "explanation": "A hash runs one way. It is a checksum that saves a wasted decryption attempt, not an escrow, and expecting otherwise is the misunderstanding that turns a lost laptop into lost data."
+      },
+      {
+        "question": "Why is server-assisted rotation not a recovery path?",
+        "options": [
+          "It decrypts with the old key first, so losing the key loses rotation too",
+          "It requires a support ticket",
+          "It rotates the fingerprint rather than the key",
+          "It only works on vaults under 100 secrets"
+        ],
+        "correctIndex": 0,
+        "explanation": "Rotation re-encrypts from plaintext it must first obtain. Without the old key there is nothing to rotate from, so the loss takes both capabilities."
+      },
+      {
+        "question": "What should accompany every CMEK enrolment?",
+        "options": [
+          "A customer-controlled escrow, established before the first secret is written",
+          "A support contract with recovery SLAs",
+          "Quarterly key rotation",
+          "A second vault with the same secrets"
+        ],
+        "correctIndex": 0,
+        "explanation": "The provider genuinely cannot help, so the recovery plan has to be yours and has to exist before it is needed. The common CMEK incident is a lost laptop, not an attacker."
+      }
+    ],
+    "kind": "lab"
   },
   {
     "id": "mpc-secret-storage",
@@ -520,8 +609,8 @@
         "options": [
           "Standard HSM only",
           "2of2_client_custody",
-          "2of3_multi_hsm",
-          "CMEK"
+          "CMEK",
+          "2of3_multi_hsm"
         ],
         "correctIndex": 1,
         "explanation": "2of2_client_custody splits by XOR and hands you one share, which must be presented as X-Client-Share on every read. That is the strongest trust property available and the least forgiving: lose the share and the secret is gone."
@@ -529,10 +618,10 @@
       {
         "question": "Can a vault's MPC custody mode be changed after it is set?",
         "options": [
-          "Yes, once per year",
-          "No, it is immutable",
           "Yes, anytime",
-          "Only by support"
+          "No, it is immutable",
+          "Only by support",
+          "Yes, once per year"
         ],
         "correctIndex": 1,
         "explanation": "Immutable once set, which is why the mode should be chosen deliberately rather than during a spike. Changing your mind means creating a new vault and migrating the secrets into it."
@@ -541,9 +630,9 @@
         "question": "Where are the shares stored in 2of3_multi_hsm?",
         "options": [
           "Across GCP, AWS, and Azure",
+          "On the client only",
           "In a single HSM",
-          "All on GCP",
-          "On the client only"
+          "All on GCP"
         ],
         "correctIndex": 0,
         "explanation": "Three Shamir shares across GCP KMS, AWS KMS and Azure Key Vault. Spreading them across providers is the point: no single vendor, subpoena or outage reaches a complete key."
@@ -657,11 +746,11 @@
         "question": "What is the format of the X-Shroud-Agent-Key header value?",
         "options": [
           "Just the ocv_ key",
-          "vault_id:secret_path",
           "A Bearer JWT",
-          "agent_id:api_key"
+          "agent_id:api_key",
+          "vault_id:secret_path"
         ],
-        "correctIndex": 3,
+        "correctIndex": 2,
         "explanation": "Exactly agent_id:api_key, with the ocv_ key on the right. Shroud uses it to authenticate the agent before deciding what the request is allowed to reach."
       },
       {
@@ -678,12 +767,12 @@
       {
         "question": "What TEE technology runs the Shroud proxy?",
         "options": [
-          "AMD SEV-SNP on confidential GKE",
           "Apple Secure Enclave",
+          "AWS Nitro only",
           "Intel SGX",
-          "AWS Nitro only"
+          "AMD SEV-SNP on confidential GKE"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "AMD SEV-SNP on confidential GKE nodes, which encrypts VM memory so the host operator cannot read it. That is what makes inspecting sensitive prompts acceptable rather than merely centralised."
       }
     ],
@@ -809,32 +898,32 @@
       {
         "question": "What does the audit log use to stay tamper-evident?",
         "options": [
-          "Nightly backups",
           "A blockchain",
-          "A SHA-256 hash chain",
-          "Row-level encryption only"
+          "Nightly backups",
+          "Row-level encryption only",
+          "A SHA-256 hash chain"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Audit entries form a SHA-256 hash chain, and inserts go through a SECURITY DEFINER function."
       },
       {
         "question": "What happens the moment a honeytoken is read?",
         "options": [
-          "The vault is locked",
+          "A critical verdict is recorded but the request proceeds",
           "Nothing until a human reviews it",
           "The request is blocked immediately",
-          "A critical verdict is recorded but the request proceeds"
+          "The vault is locked"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "The read is allowed to avoid tipping off the attacker, but a critical verdict blocks their next auth."
       },
       {
         "question": "What does DPoP protect against?",
         "options": [
           "Use of a stolen JWT without the matching private key",
+          "Database theft",
           "Slow token refresh",
-          "Weak passwords",
-          "Database theft"
+          "Weak passwords"
         ],
         "correctIndex": 0,
         "explanation": "DPoP binds a JWT to a client keypair, so a stolen token is useless without the private key."
@@ -956,34 +1045,34 @@
       {
         "question": "In what order does an HFA policy resolve?",
         "options": [
-          "Wallet policy only",
-          "User policy, then wallet spend policy, then defaults",
+          "Defaults, then wallet policy, then user policy",
           "Whichever was configured most recently",
-          "Defaults, then wallet policy, then user policy"
+          "Wallet policy only",
+          "User policy, then wallet spend policy, then defaults"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Resolution runs most specific first: the user's human_factor_auth_policies, then human_factor_auth on the wallet spend policy, then system defaults."
       },
       {
         "question": "Why prefetch GET /v1/treasury/wallets/auth-policy?",
         "options": [
-          "To list pending approvals",
-          "To rotate the wallet key",
+          "To cache wallet balances",
           "So the client knows which step-up to prompt for before the user acts",
-          "To cache wallet balances"
+          "To rotate the wallet key",
+          "To list pending approvals"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "Prefetching the effective policy lets the client show the right passkey or password prompt up front, instead of failing the send and retrying."
       },
       {
         "question": "A social-login user has no password set. What breaks if the HFA policy requires the password method?",
         "options": [
-          "Nothing: a password is generated for them",
           "Their account is locked",
-          "The policy silently falls back to no step-up",
-          "They cannot satisfy the step-up until they enrol a passkey or TOTP"
+          "Nothing: a password is generated for them",
+          "They cannot satisfy the step-up until they enrol a passkey or TOTP",
+          "The policy silently falls back to no step-up"
         ],
-        "correctIndex": 3,
+        "correctIndex": 2,
         "explanation": "Without a password there is nothing to verify. They need to enrol a passkey or TOTP at /settings/security, or the policy should require one of those methods instead."
       }
     ],
@@ -1100,34 +1189,34 @@
       {
         "question": "What does OIDC federation let you remove?",
         "options": [
-          "Static long-lived API keys at the service boundary",
-          "The need for agent policies",
+          "TLS between services",
           "The vault itself",
-          "TLS between services"
+          "Static long-lived API keys at the service boundary",
+          "The need for agent policies"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "The relying party validates a short-lived 1Claw-issued JWT against published JWKS, so there is no long-lived shared secret to store or rotate."
       },
       {
         "question": "An agent has federation_enabled true but federation_audiences empty. What happens?",
         "options": [
-          "Every audience is allowed",
           "The agent cannot authenticate at all",
           "Every audience is denied",
+          "Every audience is allowed",
           "Only the default audience is allowed"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "federation_audiences is an allowlist and empty means deny all. Federation is deny-by-default throughout."
       },
       {
         "question": "Which algorithms sign agent JWTs and federation tokens?",
         "options": [
-          "EdDSA for both",
-          "HS256 for both",
+          "EdDSA for agent JWTs, RS256 for federation tokens",
           "RS256 for both",
-          "EdDSA for agent JWTs, RS256 for federation tokens"
+          "HS256 for both",
+          "EdDSA for both"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "Agent JWTs use the EC_SIGN_ED25519 key (EdDSA); federation tokens use an HSM-backed RSA-2048 key (RS256), because external relying parties overwhelmingly expect RSA."
       }
     ],
