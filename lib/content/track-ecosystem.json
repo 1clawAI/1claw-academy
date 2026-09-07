@@ -114,23 +114,23 @@
       {
         "question": "Which call retrieves a single secret by path?",
         "options": [
-          "client.secrets.get(vault_id, path)",
           "client.vaults.get(path)",
-          "client.get_secret(path)",
-          "client.secrets.read(path)"
+          "client.secrets.read(path)",
+          "client.secrets.get(vault_id, path)",
+          "client.get_secret(path)"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "client.secrets.get(vault_id, path), with the value under secret.data['value']. Like the TypeScript SDK it returns an envelope, so read the field off data rather than treating the result as the value."
       },
       {
         "question": "What does an ocv_ prefixed key represent?",
         "options": [
-          "A platform key",
-          "A JWT",
           "A user key",
-          "An agent key"
+          "An agent key",
+          "A JWT",
+          "A platform key"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "ocv_ is an agent key and 1ck_ is a human key. The prefix tells you which authentication model applies: agents exchange for a short-lived JWT, humans use the key directly as a bearer token."
       }
     ],
@@ -198,23 +198,23 @@
       {
         "question": "Why did the try block catch a TypeError rather than a permissions error?",
         "options": [
-          "The SDK converts errors to TypeErrors",
           "The call returned normally with error populated and data None, so the crash came from indexing None",
           "The exception was raised asynchronously",
+          "The SDK converts errors to TypeErrors",
           "The path was malformed"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Nothing was raised by the call. The exception came from your own code touching data, several steps after the real failure."
       },
       {
         "question": "What else does this pattern hide?",
         "options": [
-          "Network timeouts",
           "Retryable conditions like 402 payment-required or approval-required, which arrive as values in error",
           "Authentication failures only",
+          "Network timeouts",
           "Rate limits only"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Those are meaningful states with specific handling. Code that only handles exceptions treats all of them as an unexpected crash."
       },
       {
@@ -222,8 +222,8 @@
         "options": [
           "Check error before reading data on every call, or write one wrapper that raises and use it everywhere",
           "Wrap every call in a broader try/except",
-          "Assert non-null on data",
-          "Log the whole response object"
+          "Log the whole response object",
+          "Assert non-null on data"
         ],
         "correctIndex": 0,
         "explanation": "Either discipline works. What fails is a codebase where some call sites check the envelope and others assume it succeeded."
@@ -287,9 +287,9 @@
       {
         "question": "What made this leak so easy?",
         "options": [
-          "The logging library is insecure",
-          "The log level was set too low",
           "The value was not encrypted in transit",
+          "The log level was set too low",
+          "The logging library is insecure",
           "The SDK returns an envelope, so logging the object logs the value inside it"
         ],
         "correctIndex": 3,
@@ -298,23 +298,23 @@
       {
         "question": "Why does structured logging not solve it?",
         "options": [
-          "It drops nested fields",
-          "It serialises the object faithfully, which is precisely the problem",
+          "It requires extra configuration",
           "It only supports strings",
-          "It requires extra configuration"
+          "It drops nested fields",
+          "It serialises the object faithfully, which is precisely the problem"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Faithful serialisation is the feature. If the value is in the object, structured output includes it as reliably as a print statement would."
       },
       {
         "question": "What is the durable fix?",
         "options": [
-          "Use a different SDK",
           "Log the field you need rather than the container, and check exception handlers that attach context",
-          "Lower the log level in production",
-          "Redact log output downstream"
+          "Redact log output downstream",
+          "Use a different SDK",
+          "Lower the log level in production"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Downstream redaction only catches values it knows about. Not logging the container is the change that holds, and error handlers attaching request context are the path people forget."
       }
     ],
@@ -432,9 +432,9 @@
         "question": "How do you get the Bearer token for the hosted MCP server?",
         "options": [
           "By calling POST /v1/auth/agent-token with agent_id and api_key",
+          "From the dashboard settings page",
           "From npx @1claw/mcp",
-          "It is the ocv_ key itself",
-          "From the dashboard settings page"
+          "It is the ocv_ key itself"
         ],
         "correctIndex": 0,
         "explanation": "POST agent_id and api_key to /v1/auth/agent-token and use the returned access_token. It expires in about fifteen minutes, which is exactly why an IDE should use stdio and let the server refresh instead."
@@ -444,8 +444,8 @@
         "options": [
           "create_vault",
           "list_secrets",
-          "get_env_bundle",
-          "sign_message"
+          "sign_message",
+          "get_env_bundle"
         ],
         "correctIndex": 1,
         "explanation": "list_secrets returns metadata, so it proves the connection and the policy work without exposing a value. It is the right first call precisely because a failure is informative and a success is harmless."
@@ -458,6 +458,89 @@
         "note": "ASI04: your tools are your attack surface"
       }
     ]
+  },
+  {
+    "id": "lab-check-this-courses-own-claim",
+    "title": "Lab: check this course's own '141 tools' claim",
+    "summary": "Fetch the live MCP server card and compare its tool count against the number this course has repeated since the very first lesson on MCP.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "This course has stated that the 1Claw MCP server exposes 141 tools, sourced from 1Claw's own documentation early in this course. It has never been checked against a live, running artifact until now. This lab does that, and the result is not a clean confirmation."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Fetch the public server card. It is what any MCP client discovers before ever connecting.",
+            "code": "curl -s https://1claw.co/.well-known/mcp/server-card.json | python3 -c '\nimport json, sys\nd = json.load(sys.stdin)\nprint(\"version:    \", d[\"version\"])\nprint(\"tools_count:\", d[\"tools_count\"])\nprint(\"first five: \", d[\"tools\"][:5])\n'"
+          },
+          {
+            "text": "A real number, and it is not 141.",
+            "code": "version:     0.60.0\ntools_count: 30\nfirst five:  ['list_vaults', 'create_vault', 'list_secrets', 'get_secret', 'put_secret']",
+            "lang": "text"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Sit with that before reaching for an explanation. The honest position is not 'the course was wrong' and it is not 'the card is wrong' either, because a discrepancy this clean, exactly 30 versus 141, could mean several different things, and this endpoint alone cannot tell you which."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The most likely explanation is that this well-known card is a curated discovery preview rather than the complete registry. The five tools shown are exactly the ones you would put in front of a client deciding whether to connect: vaults and secrets, the core of the product, not the full surface behind an authenticated stdio session.",
+          "It could also mean the documented number is stale. 1Claw ships fast, at v0.60.0 as of this lab, and a course written against one release can drift from a later one in either direction.",
+          "What it cannot mean is that you should simply pick whichever number is more convenient. The correct next step is the one you cannot take from here: connect over authenticated stdio, as the MCP lesson two lessons ago described, and call the tool-listing method yourself."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "This is the honest output of the verification method this entire course has used on itself. Sometimes it confirms a claim, as it did for the OpenAPI paths and the npm versions elsewhere in this track. Sometimes it surfaces a live discrepancy with no clean resolution from where you are standing, and the correct response to that is to say so rather than to quietly pick a side."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "If you are integrating against 1Claw's MCP server for anything where the exact tool count matters, this is the check to run yourself, with your own authenticated connection, rather than trusting either this course or a public discovery card."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What is the honest conclusion from finding tools_count: 30 against a course claiming 141?",
+        "options": [
+          "The discrepancy is real but its cause is unresolved from public data alone; a curated preview and a stale number are both plausible",
+          "Both numbers are correct simultaneously",
+          "The course is definitely wrong and should say 30",
+          "The card is broken and should be ignored"
+        ],
+        "correctIndex": 0,
+        "explanation": "A clean discrepancy with more than one plausible explanation calls for saying so, not for confidently picking one story. The card could be a curated preview; the documented number could be stale. Both remain open."
+      },
+      {
+        "question": "What would actually resolve this discrepancy?",
+        "options": [
+          "Comparing more well-known files",
+          "Connecting over authenticated stdio, as the MCP lesson describes, and calling the tool-listing method directly",
+          "Waiting for the next course update",
+          "Reading more of 1Claw's marketing pages"
+        ],
+        "correctIndex": 1,
+        "explanation": "The well-known card is a public discovery artifact by design. The authoritative count is whatever an authenticated session actually lists, which is the one thing this lab, run with no account, cannot do."
+      },
+      {
+        "question": "Why does this lab matter even though it does not reach a clean answer?",
+        "options": [
+          "It shows public APIs should not be trusted",
+          "It confirms the course needs no corrections",
+          "It proves live checks are unreliable",
+          "It demonstrates that verification sometimes surfaces an open question rather than a confirmation, and that is a more honest outcome than forcing a conclusion the data does not support"
+        ],
+        "correctIndex": 3,
+        "explanation": "Teaching the method only on cases that resolve cleanly would be dishonest about how verification actually works. This is what it looks like when the evidence runs out before the question does."
+      }
+    ],
+    "kind": "lab"
   },
   {
     "id": "lab-a-tool-that-instructs",
@@ -515,9 +598,9 @@
       {
         "question": "Why is this attack invisible to a code review of the tool?",
         "options": [
-          "It only activates in production",
-          "The code is obfuscated",
           "The tool is loaded dynamically",
+          "The code is obfuscated",
+          "It only activates in production",
           "The payload is the description text, not the code"
         ],
         "correctIndex": 3,
@@ -527,22 +610,22 @@
         "question": "Which of your existing controls stops it?",
         "options": [
           "TLS between the client and the server",
+          "The system prompt telling the model not to reveal secrets",
           "The policy on the secret path, since the model would be calling a legitimate tool as an authorised agent",
-          "Tool name validation",
-          "The system prompt telling the model not to reveal secrets"
+          "Tool name validation"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "The call would be authorised and would look ordinary. What bounds it is the agent's policy on that path, which is enforced somewhere the prompt cannot reach."
       },
       {
         "question": "What follows for installing MCP servers?",
         "options": [
           "Run each server in a separate container",
+          "Only install servers written in TypeScript",
           "Disable tool descriptions in the client",
-          "Read the descriptions as well as the code, and pin versions",
-          "Only install servers written in TypeScript"
+          "Read the descriptions as well as the code, and pin versions"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "A description can change in an update as easily as code can, and a diff that only touches strings reads as harmless."
       }
     ],
@@ -647,31 +730,31 @@
       {
         "question": "How does the agent avoid putting raw secret values in the prompt?",
         "options": [
-          "It uses a separate model",
-          "It encrypts the prompt",
           "It fetches secrets just in time via tools and the system prompt forbids echoing values",
-          "It disables logging"
+          "It disables logging",
+          "It uses a separate model",
+          "It encrypts the prompt"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "The LLM calls vault tools on demand and is instructed never to reveal raw secret values."
       },
       {
         "question": "Which package do the custom LangChain tools wrap?",
         "options": [
-          "langchain-1claw",
           "@1claw/mcp",
           "oneclaw",
-          "@1claw/sdk"
+          "@1claw/sdk",
+          "langchain-1claw"
         ],
-        "correctIndex": 3,
+        "correctIndex": 2,
         "explanation": "The tools wrap @1claw/sdk via createClient. Note these are tools you write: the published langchain-1claw package ships ready-made ones if you would rather not maintain your own."
       },
       {
         "question": "What does npm run mcp do differently from npm start?",
         "options": [
-          "It skips authentication",
-          "It connects to the hosted 1Claw MCP server and loads all vault tools automatically",
           "It runs offline",
+          "It connects to the hosted 1Claw MCP server and loads all vault tools automatically",
+          "It skips authentication",
           "It uses Gemini only"
         ],
         "correctIndex": 1,
@@ -796,23 +879,23 @@
       {
         "question": "Why should verbose stay False in production?",
         "options": [
-          "It disables the vault tool",
-          "It slows the crew down",
           "CrewAI logs raw tool return values, which can print secrets",
-          "It breaks Gemini"
+          "It breaks Gemini",
+          "It disables the vault tool",
+          "It slows the crew down"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "With verbose=True, CrewAI's executor prints the raw return value of every tool call, including secret values."
       },
       {
         "question": "How are the vault credentials retrieved?",
         "options": [
+          "At import time from a config file",
           "Copied into the prompt once",
           "At runtime using a scoped agent identity",
-          "At import time from a config file",
           "From a local .env only"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Credentials are fetched at runtime with a scoped agent identity, not baked into prompts or repos."
       }
     ],
@@ -923,30 +1006,30 @@
       {
         "question": "What is the human 1ck_ key used for in this flow?",
         "options": [
-          "Setup only, to provision the vault, agent, and policy",
-          "Signing transactions",
+          "Runtime access for the character",
           "Nothing: it is optional",
-          "Runtime access for the character"
+          "Setup only, to provision the vault, agent, and policy",
+          "Signing transactions"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "The human key is used only during bootstrap and is never written to disk; the character runs on the agent ocv_ key."
       },
       {
         "question": "Which file does bootstrap write agent credentials to?",
         "options": [
-          "character.json",
-          ".env.elizaos",
           ".env",
-          "secrets.json"
+          "secrets.json",
+          ".env.elizaos",
+          "character.json"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": ".env.elizaos, written with mode 600 so only your user can read it. It holds ONECLAW_AGENT_API_KEY, ONECLAW_AGENT_ID and ONECLAW_VAULT_ID, so it belongs in .gitignore before anything else happens."
       },
       {
         "question": "Where do private signing keys live?",
         "options": [
-          "In the character JSON",
           "In the LLM context",
+          "In the character JSON",
           "In .env.elizaos",
           "In the HSM or TEE, never leaving it"
         ],
@@ -1061,34 +1144,34 @@
       {
         "question": "Where are the signing keys stored with @1claw/agentkit?",
         "options": [
-          "In the 1Claw Vault with HSM and MPC, never on disk",
-          "On the Base chain",
           "In the agent's process forever",
+          "On the Base chain",
+          "In the 1Claw Vault with HSM and MPC, never on disk",
           "In a .env file"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Credentials resolve from the HSM-encrypted vault at boot and never touch disk; signing happens in a TEE."
       },
       {
         "question": "When should you pick @1claw/agentkit over mcp.base.org?",
         "options": [
-          "For Claude Desktop chat only",
-          "When you have no vault",
           "When the agent runs autonomously with no human per transaction",
+          "When you have no vault",
+          "For Claude Desktop chat only",
           "When a human approves every transaction"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "When the agent runs autonomously, because then the guardrails have to be programmatic. mcp.base.org suits a human-in-the-loop flow where a person reviews each transaction, which is a different control model rather than a lesser one."
       },
       {
         "question": "What starter kit bootstraps a full onchain dApp with 1Claw?",
         "options": [
+          "Scaffold-Agent",
           "Hardhat",
           "create-react-app",
-          "Scaffold-Agent",
           "Base Wizard"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "Scaffold-Agent, which wires HSM-backed secrets and Intents API signing into a Scaffold-ETH 2 project. It is a starting point rather than a dependency: the guardrails still need setting for your case."
       }
     ],
@@ -1209,22 +1292,22 @@
         "question": "How does the container get credentials if it never receives the agent key?",
         "options": [
           "They are passed as environment variables",
-          "The container fetches them from the vault directly",
           "They are baked into the image at build time",
-          "The host daemon injects them over a Unix-socket mount"
+          "The host daemon injects them over a Unix-socket mount",
+          "The container fetches them from the vault directly"
         ],
-        "correctIndex": 3,
+        "correctIndex": 2,
         "explanation": "Credential injection happens over a Unix-socket mount from the host daemon, the same trust boundary as local daemon mode, so nothing sensitive is ever inside the image or its environment."
       },
       {
         "question": "What does --local mode give up?",
         "options": [
-          "The cloud account and the LLM, leaving only a few local slash commands",
           "Nothing: it is identical to cloud mode",
+          "Only the MCP server",
           "Only the chat UI",
-          "Only the MCP server"
+          "The cloud account and the LLM, leaving only a few local slash commands"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "--local is fully offline: no cloud account and no LLM, with just /help, /secrets, /info and /proxy available."
       },
       {
@@ -1232,8 +1315,8 @@
         "options": [
           "All three require a key",
           "1Claw LLM token billing via the Stripe AI Gateway",
-          "The local CLI vault option",
-          "The cloud vault option"
+          "The cloud vault option",
+          "The local CLI vault option"
         ],
         "correctIndex": 1,
         "explanation": "Token billing is the default and needs no provider key; you enable it for the org and Shroud routes through the Stripe AI Gateway."

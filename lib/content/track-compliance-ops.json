@@ -115,8 +115,8 @@
         "options": [
           "The secret value and the metadata",
           "Only metadata such as path, action, actor, and timestamp",
-          "Nothing until export",
-          "The private key hash"
+          "The private key hash",
+          "Nothing until export"
         ],
         "correctIndex": 1,
         "explanation": "Metadata only: path, action, actor, timestamp. If values were logged the audit trail would become a second copy of every secret, in a store with weaker controls and broader read access."
@@ -126,8 +126,8 @@
         "options": [
           "Writes go through a SECURITY DEFINER function since vault_app cannot INSERT directly",
           "Events are encrypted with the org KEK",
-          "Only admins can query it",
-          "It is read-only after 24 hours"
+          "It is read-only after 24 hours",
+          "Only admins can query it"
         ],
         "correctIndex": 0,
         "explanation": "vault_app has direct INSERT revoked, so all writes funnel through the trusted insert_audit_event function that enforces the chain."
@@ -135,12 +135,12 @@
       {
         "question": "What links each event to the previous one?",
         "options": [
-          "The actor's IP address",
-          "A sequential integer ID",
           "prev_event_id plus a SHA-256 integrity_hash",
-          "A Stripe invoice ID"
+          "A Stripe invoice ID",
+          "The actor's IP address",
+          "A sequential integer ID"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "prev_event_id plus a SHA-256 integrity_hash, which is the hash-chain construction. It does not prevent tampering; it makes tampering detectable, and that is what turns a list of events into evidence."
       }
     ],
@@ -233,9 +233,9 @@
         "question": "Why does deleting an entry produce two errors rather than one?",
         "options": [
           "Deleted entries are cached and reappear",
-          "The genesis hash is recomputed",
+          "Deletion corrupts the file structure",
           "The sequence has a hole and the next entry's prev hash no longer matches",
-          "Deletion corrupts the file structure"
+          "The genesis hash is recomputed"
         ],
         "correctIndex": 2,
         "explanation": "Sequence continuity catches the hole and the chain catches the broken link. Deletion is noisier than modification, which surprises most people."
@@ -243,23 +243,23 @@
       {
         "question": "What does a hash chain actually provide?",
         "options": [
-          "Tamper-proofing: entries cannot be altered",
-          "Encryption of log contents",
           "Tamper-evidence: alterations cannot be made quietly",
-          "Prevention of unauthorised writes"
+          "Prevention of unauthorised writes",
+          "Tamper-proofing: entries cannot be altered",
+          "Encryption of log contents"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "Anyone with write access can still change the file. The chain makes the change detectable, which is a different and achievable goal."
       },
       {
         "question": "What is the complete answer to 'prove nobody read this secret in Q3'?",
         "options": [
-          "No event matches, and the log is verifiably complete and unmodified for the period",
           "The access policy did not permit it",
-          "The secret was rotated at the end of Q3",
-          "No event matches the query"
+          "No event matches the query",
+          "No event matches, and the log is verifiably complete and unmodified for the period",
+          "The secret was rotated at the end of Q3"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Negative assurance is a conjunction. The first statement alone is the one people give and it establishes nothing without the second."
       }
     ],
@@ -321,34 +321,34 @@
       {
         "question": "Both queries returned zero. Why is only one of them informative?",
         "options": [
+          "Q1 events are archived separately",
           "The Q1 query used the wrong date range",
           "The log does not cover Q1, so zero means no records rather than no events",
-          "Q1 events are archived separately",
           "The Q3 result was cached"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "An empty result looks the same whether nothing happened or nothing was kept. Without stated coverage the zero carries no information."
       },
       {
         "question": "What does complete negative assurance require?",
         "options": [
-          "No matching event, plus completeness, plus a retention window covering the period",
-          "No matching event and a tamper-evident log",
           "A signed attestation from the provider",
-          "An access policy showing it was not permitted"
+          "No matching event and a tamper-evident log",
+          "An access policy showing it was not permitted",
+          "No matching event, plus completeness, plus a retention window covering the period"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "The audit lab established the first two. Coverage is the third, and it is the one that fails quietly because it is a setting rather than a property of the data."
       },
       {
         "question": "Why export the audit log to durable storage?",
         "options": [
-          "Platform retention is an operational setting while your obligation to answer is not, and different people set them",
           "To improve query performance",
-          "Because the platform log is not tamper-evident",
-          "To reduce storage costs"
+          "To reduce storage costs",
+          "Platform retention is an operational setting while your obligation to answer is not, and different people set them",
+          "Because the platform log is not tamper-evident"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "A retention default chosen for operational convenience has no relationship to the period a regulator will ask about."
       }
     ],
@@ -478,10 +478,10 @@
       {
         "question": "What does vault binding (vault_ids) add on top of policies?",
         "options": [
-          "It disables audit logging",
           "It grants access to every vault",
+          "It rotates keys nightly",
           "It restricts which vaults the agent JWT works for regardless of policies",
-          "It rotates keys nightly"
+          "It disables audit logging"
         ],
         "correctIndex": 2,
         "explanation": "Vault binding is a second layer: even a too-broad policy cannot let the JWT reach vaults outside vault_ids."
@@ -489,23 +489,23 @@
       {
         "question": "Why deactivate an agent instead of deleting it?",
         "options": [
-          "Deactivate is faster to type",
           "Deactivate preserves the records and audit trail",
           "Delete keeps the token valid",
+          "Deactivate is faster to type",
           "There is no difference"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Deactivating with --active false blocks access but preserves records and audit events; delete removes them."
       },
       {
         "question": "For a common set of secrets shared by all fleet agents, what layout is recommended?",
         "options": [
-          "A shared vault with path-scoped policies",
-          "One vault per secret",
           "A single wildcard policy on production",
+          "One vault per secret",
+          "A shared vault with path-scoped policies",
           "No policies at all"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "One shared vault with path-scoped policies: api-keys/** shared, agents/{name}/** per agent. A vault per agent multiplies the KEKs and the administration without narrowing anything the paths could not."
       }
     ],
@@ -573,8 +573,8 @@
       {
         "question": "Both logs recorded the read. What did the shared-identity log fail to provide?",
         "options": [
-          "A timestamp",
           "Retention beyond the policy window",
+          "A timestamp",
           "Which workload performed it, which is what you need in order to respond",
           "Tamper evidence"
         ],
@@ -586,10 +586,10 @@
         "options": [
           "Encryption of the audit log",
           "The ability to set policies",
-          "The ability to revoke narrowly: you revoke everything or nothing",
-          "Compliance with retention requirements"
+          "Compliance with retention requirements",
+          "The ability to revoke narrowly: you revoke everything or nothing"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Revocation follows identity. One credential across many workloads means any response is all-or-nothing, which turns a contained incident into an outage."
       },
       {
@@ -736,12 +736,12 @@
       {
         "question": "In a bootstrap template, how do you enable the Intents API on an agent?",
         "options": [
-          "enable_intents: 1",
-          "intents_api_enabled: true (flat)",
           "intents: { enabled: true } (nested)",
+          "intents_api_enabled: true (flat)",
+          "enable_intents: 1",
           "scopes: [intents]"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "Templates use the nested intents: { enabled: true }; the flat intents_api_enabled is the direct agent-creation form."
       },
       {
@@ -749,8 +749,8 @@
         "options": [
           "The plt_ key",
           "The app slug",
-          "The user email",
-          "The app UUID"
+          "The app UUID",
+          "The user email"
         ],
         "correctIndex": 1,
         "explanation": "The app slug, not the UUID. Passing the UUID returns Unknown client_id, which reads like a misconfiguration rather than a wrong identifier, so it is worth recognising."
@@ -759,11 +759,11 @@
         "question": "Why can't the platform read a bootstrapped user's signing keys?",
         "options": [
           "They are deleted after bootstrap",
+          "They are only on testnets",
           "Signing keys are never provisioned",
-          "The plt_ key cannot read signing keys across the org boundary",
-          "They are only on testnets"
+          "The plt_ key cannot read signing keys across the org boundary"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Signing keys are provisioned server-side and the plt_ key cannot read them across the org boundary, keeping custody separated."
       }
     ],
@@ -880,23 +880,23 @@
       {
         "question": "When should you use sub-organizations rather than the Platform API?",
         "options": [
+          "When you want a second billing account only",
           "When you need more API keys",
           "When provisioning resources for your product's end users",
-          "When partitioning your own org into departments or subsidiaries",
-          "When you want a second billing account only"
+          "When partitioning your own org into departments or subsidiaries"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Sub-orgs partition your own organization. The Platform API is for provisioning on behalf of other people's users: a different problem with a different model."
       },
       {
         "question": "What happens when you delete a sub-org?",
         "options": [
+          "It is archived, preserving the audit trail",
           "It is permanently destroyed with all records",
-          "It is merged into the parent",
           "Its users are deleted too",
-          "It is archived, preserving the audit trail"
+          "It is merged into the parent"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "The DELETE endpoint archives the sub-org so historical activity stays auditable."
       }
     ],
@@ -907,6 +907,98 @@
         "note": "hierarchy and delegated permission"
       }
     ]
+  },
+  {
+    "id": "lab-audit-vendor-disclosure",
+    "title": "Lab: audit what 1Claw discloses about itself",
+    "summary": "Fetch every well-known metadata file 1Claw publishes and apply the audit-and-compliance track's own standards to the vendor this course has been teaching from.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Every lesson in this track has asked you to hold your own systems to a standard: disclose what is needed, log what matters, retain what regulators will ask about. This lab holds 1Claw to that same standard, using only what it publishes about itself."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Fetch the AI catalog entry, which is 1Claw's own disclosure of what it operates and how to reach it.",
+            "code": "curl -s https://1claw.co/.well-known/ai-catalog.json | python3 -c '\nimport json, sys\nd = json.load(sys.stdin)\nprint(\"host:   \", d[\"host\"][\"displayName\"])\nprint(\"entries:\", [e[\"type\"] for e in d[\"entries\"]])\n'"
+          },
+          {
+            "text": "A declared host identity and a typed list of everything it discloses: an MCP server card, an A2A agent card, and an OpenAPI spec.",
+            "code": "host:    1Claw\nentries: ['application/mcp-server-card+json', 'application/a2a-agent-card+json', 'application/openapi+json']",
+            "lang": "text"
+          },
+          {
+            "text": "Cross-check that against the OAuth protected-resource metadata, which is a second, independent disclosure of the same API.",
+            "code": "curl -s https://1claw.co/.well-known/oauth-protected-resource | python3 -c '\nimport json, sys\nd = json.load(sys.stdin)\nprint(\"resource:\", d.get(\"resource\"))\nprint(\"auth servers:\", d.get(\"authorization_servers\"))\n'"
+          },
+          {
+            "text": "Two independently maintained files agreeing on the same issuer is exactly the kind of corroboration an auditor looks for.",
+            "code": "resource: https://1claw.co\nauth servers: ['https://api.1claw.co']",
+            "lang": "text"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Nothing here required 1Claw's cooperation beyond what they already publish for exactly this purpose. That is the point: a vendor whose architecture is verifiable from public metadata is giving you the same thing the audit-and-compliance lesson asked you to give your own auditors."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Independent corroboration matters more than a single disclosure. One file claiming an architecture is a statement; two separately-maintained files agreeing on the same issuer is evidence.",
+          "This is a smaller version of the same negative-assurance problem from the audit lab. These files tell you what is disclosed, not that nothing is missing, and a vendor's well-known directory is not a complete architecture diagram.",
+          "The exercise generalises past 1Claw. Before adopting any vendor into a system you will be audited on, check what they disclose about themselves the same way, unprompted, before you ask them a single question directly."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "This is genuinely all public, unauthenticated metadata. If you are evaluating 1Claw, or any vendor, as part of your own compliance posture, checking what they disclose without an account is a five-minute exercise worth doing before the sales call."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Public disclosure is necessarily a summary. It tells you the shape of what exists, not the operational detail an SOC 2 report or a real audit would require. Treat this as a first filter, not a substitute for due diligence."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why does agreement between two independently maintained files matter more than either one alone?",
+        "options": [
+          "It is required by the OIDC spec",
+          "It is a coincidence with no significance",
+          "Two separately maintained sources agreeing is corroboration; one source alone is just a claim",
+          "It makes the files load faster"
+        ],
+        "correctIndex": 2,
+        "explanation": "This is the same logic behind cross-referencing any claim: independent agreement is evidence, while a single assertion is not, however official it looks."
+      },
+      {
+        "question": "What does this lab's method NOT tell you about a vendor?",
+        "options": [
+          "Whether their operational controls, the things an SOC 2 report covers, actually hold up in practice",
+          "Their declared architecture",
+          "Their public issuer",
+          "Whether their metadata is internally consistent"
+        ],
+        "correctIndex": 0,
+        "explanation": "Public disclosure is a first filter, not a substitute for real due diligence. It tells you the vendor is willing to be checked, not that everything underneath has been verified."
+      },
+      {
+        "question": "Why is this exercise worth running before adopting any vendor, not just 1Claw?",
+        "options": [
+          "It is legally required",
+          "Every vendor publishes identical files",
+          "It is a five-minute, unauthenticated check that surfaces obvious inconsistencies before you invest in a deeper evaluation",
+          "It replaces the need for a security questionnaire"
+        ],
+        "correctIndex": 2,
+        "explanation": "The value is proportional to the cost: near-zero effort for a real signal, which makes it a sensible first step rather than a complete audit."
+      }
+    ],
+    "kind": "lab"
   },
   {
     "id": "capstone-architect-a-control-plane",
@@ -993,23 +1085,23 @@
       {
         "question": "Why does the brief's threat model settle the shape of the design before any product decision?",
         "options": [
-          "All three trifecta circles are present and none can be removed, so the design must assume injection succeeds",
           "Regulators require a threat model first",
           "Referral emails cannot be parsed safely",
+          "All three trifecta circles are present and none can be removed, so the design must assume injection succeeds",
           "Healthcare data requires MPC by law"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "When no circle can be removed without destroying the product, prevention stops being the goal and limiting the consequence becomes it. That drives identity, credential handling and approval design."
       },
       {
         "question": "What is the strongest argument against merging the three agents into one?",
         "options": [
           "Three audit trails are required by the regulator",
-          "Single-purpose agents are a best practice",
           "It would exceed the agent quota",
-          "It would put the settlement credential on the path that consumes untrusted email"
+          "It would put the settlement credential on the path that consumes untrusted email",
+          "Single-purpose agents are a best practice"
         ],
-        "correctIndex": 3,
+        "correctIndex": 2,
         "explanation": "Naming the concrete consequence is what survives a follow-up meeting. Stating it as a principle invites an exception the first time it is inconvenient."
       },
       {
@@ -1017,8 +1109,8 @@
         "options": [
           "It prevents credentials from leaking",
           "It makes the leaked credential short-lived, narrowly scoped, attributable, and useless for reaching payments",
-          "It detects the leak faster",
-          "It removes the need for contractors to hold credentials"
+          "It removes the need for contractors to hold credentials",
+          "It detects the leak faster"
         ],
         "correctIndex": 1,
         "explanation": "No design prevents a person from leaking a credential. The measure of the architecture is what an attacker gets when one inevitably leaks."

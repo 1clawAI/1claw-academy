@@ -220,6 +220,7 @@ const norm = (p) =>
 const FOREIGN = [
   /^\/v1\/chat\/completions$/, // Shroud
   /^\/v1\/(balance|charges|data|transfers|shipments)$/, // third-party examples (Stripe, carrier APIs)
+  /^\/v1\/agent-readiness\/x402-probe$/, // lives on 1claw.co, not the Vault API
   /^\/v1\/oauth$/, // prose reference to a group of endpoints
 ];
 

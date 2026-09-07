@@ -123,23 +123,23 @@
       {
         "question": "What does intents_api_enabled: true do besides granting the transaction endpoints?",
         "options": [
+          "It blocks the agent from reading private_key or ssh_key via the secrets endpoint",
           "It disables all guardrails",
-          "It exports the private key to the agent",
           "It rotates the signing key nightly",
-          "It blocks the agent from reading private_key or ssh_key via the secrets endpoint"
+          "It exports the private key to the agent"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "The flag is two-sided: it grants transaction endpoints and blocks direct signing-key reads so keys are only usable through the proxy."
       },
       {
         "question": "What happens when simulate_first: true and the simulation reverts?",
         "options": [
-          "The value cap is raised",
           "The agent is deactivated",
-          "The API returns 422 and does not sign or broadcast",
-          "The tx is broadcast anyway"
+          "The value cap is raised",
+          "The tx is broadcast anyway",
+          "The API returns 422 and does not sign or broadcast"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "A reverted simulation returns 422 and nothing is signed or broadcast. Simulation is the cheapest warning available, which is why routing failures to a policy beats logging them and proceeding."
       },
       {
@@ -147,8 +147,8 @@
         "options": [
           "GET /v1/agents/:id/transactions",
           "POST /v1/agents/:id/transactions/sign",
-          "POST /v1/agents/:id/transactions",
-          "POST /v1/agents/:id/signing-keys"
+          "POST /v1/agents/:id/signing-keys",
+          "POST /v1/agents/:id/transactions"
         ],
         "correctIndex": 1,
         "explanation": "The /transactions/sign endpoint returns signed_tx for you to broadcast yourself, and the guardrails still apply. Separating signing from broadcast is useful when you need to batch or time the submission."
@@ -218,34 +218,34 @@
       {
         "question": "Why did the value cap allow the approval?",
         "options": [
-          "The cap only applies to native transfers",
-          "An approval moves nothing, so its value is zero and the cap has nothing to act on",
+          "Approvals are exempt by protocol",
           "The allowance was below the cap",
-          "Approvals are exempt by protocol"
+          "The cap only applies to native transfers",
+          "An approval moves nothing, so its value is zero and the cap has nothing to act on"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "The cap reads the transaction's value. The dangerous quantity is the allowance amount, which is data inside the call and not the value being moved."
       },
       {
         "question": "What survives deleting the agent and rotating its keys?",
         "options": [
-          "Nothing; both revoke the approval",
-          "The on-chain allowance, until a further transaction sets it to zero",
           "The agent's audit log only",
-          "The approval, for 24 hours"
+          "Nothing; both revoke the approval",
+          "The approval, for 24 hours",
+          "The on-chain allowance, until a further transaction sets it to zero"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "The grant lives on-chain against the spender, not against the agent's credentials. Revoking requires another transaction."
       },
       {
         "question": "What question catches this class of transaction?",
         "options": [
-          "What does this call grant, as well as what does it move",
-          "Is the recipient allowlisted",
           "Is the value below the cap",
-          "Has the transaction been simulated"
+          "Has the transaction been simulated",
+          "What does this call grant, as well as what does it move",
+          "Is the recipient allowlisted"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Approvals, permits, delegations and setApprovalForAll all move nothing and grant a great deal, so a review that only asks about movement misses all of them."
       }
     ],
@@ -346,34 +346,34 @@
       {
         "question": "Why can a guardrail not inspect a raw digest?",
         "options": [
+          "A hash is one-way, so the recipient and value are not recoverable from it",
           "The digest arrives after the guardrail runs",
           "Guardrails only support EVM chains",
-          "A hash is one-way, so the recipient and value are not recoverable from it",
           "Digests are encrypted with the signing key"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "It is a property of hashing rather than a limitation of the implementation. No engineering effort recovers the preimage, which is exactly why the hash is useful and exactly why it is opaque."
       },
       {
         "question": "The guardrail allowed the drain in the second run. What failed?",
         "options": [
-          "Nothing failed; the guardrail had nothing to inspect and correctly reported that",
           "The digest was computed incorrectly",
           "The allowlist was misconfigured",
-          "The value cap was too high"
+          "The value cap was too high",
+          "Nothing failed; the guardrail had nothing to inspect and correctly reported that"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "Every component behaved correctly. That is what makes blind signing dangerous: there is no error to notice and no alert to fire."
       },
       {
         "question": "You enable raw signing for a legitimate ERC-1271 flow. What must you do?",
         "options": [
           "Restrict it to testnets",
-          "Rotate the signing key more frequently",
           "Rebuild the validation elsewhere: recipient allowlists, value caps and approval above a threshold",
+          "Rotate the signing key more frequently",
           "Nothing; the flow is legitimate so the risk is accepted"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "Enabling raw signing moves the burden of validation to whoever builds the hash. The compensating controls have to exist somewhere, and you should be able to name where."
       }
     ],
@@ -508,34 +508,34 @@
       {
         "question": "Why does an agent get a 403 when calling a treasury wallet endpoint?",
         "options": [
+          "Treasury endpoints enforce require_human",
           "Treasury wallets are testnet only",
           "The agent has no signing key",
-          "The org is over quota",
-          "Treasury endpoints enforce require_human"
+          "The org is over quota"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "Treasury endpoints enforce require_human, so an agent gets a 403 by design rather than by misconfiguration. Treasury wallets are the human side of the system; agents get signing keys instead."
       },
       {
         "question": "In Delegated mode, where does the treasury private key live when an agent signs?",
         "options": [
-          "It stays in __treasury-keys and signs via the Intents API",
-          "It is copied to the agent",
           "It moves to the Safe contract",
-          "It is returned in the response"
+          "It is returned in the response",
+          "It stays in __treasury-keys and signs via the Intents API",
+          "It is copied to the agent"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Delegated mode signs with the treasury key through the Intents API; the key never leaves __treasury-keys."
       },
       {
         "question": "What triggers a Safe proposal to execute automatically?",
         "options": [
-          "Approve signatures reaching the Safe threshold",
-          "The daily limit resetting",
+          "A human clicking export",
           "A single approve signature",
-          "A human clicking export"
+          "Approve signatures reaching the Safe threshold",
+          "The daily limit resetting"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "It executes once approve signatures reach the Safe threshold. That is separation of duties enforced on-chain: no single signer can move funds, and the threshold is the control."
       }
     ],
@@ -666,12 +666,12 @@
       {
         "question": "Which network and asset do 1Claw x402 payments use?",
         "options": [
+          "Solana USDC",
           "Polygon DAI",
-          "Base USDC (eip155:8453)",
           "Ethereum mainnet ETH",
-          "Solana USDC"
+          "Base USDC (eip155:8453)"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "The accepts[] entry uses network eip155:8453 with USDC on Base, settled via the Coinbase CDP facilitator."
       },
       {
@@ -688,12 +688,12 @@
       {
         "question": "After the API returns 402, how does the client complete the request?",
         "options": [
-          "It signs the payment and retries with an X-PAYMENT header",
-          "It upgrades the subscription tier",
           "It waits for the quota to reset",
-          "It switches to credits automatically"
+          "It upgrades the subscription tier",
+          "It switches to credits automatically",
+          "It signs the payment and retries with an X-PAYMENT header"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "The client pays on-chain and retries with an X-PAYMENT header carrying the proof. Validate the challenge before paying: payTo, network, amount and asset contract all have to match."
       }
     ]
@@ -765,23 +765,23 @@
       {
         "question": "What goes wrong when a value cap is written in atomic units for the wrong token?",
         "options": [
-          "The cap is rejected at configuration time",
           "A cap written for 18 decimals is a thousand billion times looser on a 6-decimal token",
-          "The cap applies per chain instead of per token",
-          "Nothing; caps are denominated in USD"
+          "The cap is rejected at configuration time",
+          "Nothing; caps are denominated in USD",
+          "The cap applies per chain instead of per token"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Decimals are a property of the token. A guardrail assuming one token's decimals silently stops constraining another."
       },
       {
         "question": "Why does x402 challenge validation pin the asset contract rather than the symbol?",
         "options": [
           "Symbols are longer to compare",
-          "Any token can claim a symbol, and two tokens called USDC can use different decimals",
           "Contracts are cheaper to verify",
+          "Any token can claim a symbol, and two tokens called USDC can use different decimals",
           "Symbols are not returned in the challenge"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "The symbol is a label anyone can choose. The contract address is the identity, and decimals follow the contract."
       }
     ],
@@ -900,23 +900,23 @@
       {
         "question": "How does a user log in to get a wallet?",
         "options": [
-          "Email OTP with sendEmailOtp and verifyEmailOtp",
+          "Seed phrase import",
           "Password only",
-          "MetaMask connect",
-          "Seed phrase import"
+          "Email OTP with sendEmailOtp and verifyEmailOtp",
+          "MetaMask connect"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "You send a code with sendEmailOtp and confirm it with verifyEmailOtp, which returns the wallet_address."
       },
       {
         "question": "Which two components does wallet-react provide for the widget?",
         "options": [
-          "OneclawWalletProvider and OneclawEmbeddedWallet",
           "WalletKit and WalletButton",
+          "OneclawClient and OneclawAuth",
           "ProviderRoot and WalletCard",
-          "OneclawClient and OneclawAuth"
+          "OneclawWalletProvider and OneclawEmbeddedWallet"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "They serve different purposes rather than nesting. OneclawEmbeddedWallet is standalone and takes appId; OneclawWalletProvider plus the useOneclawWallet hook is the lower-level route when you are building custom wallet UI."
       }
     ]
@@ -1031,23 +1031,23 @@
       {
         "question": "What does enforcement \"log\" do?",
         "options": [
-          "Logs every request to the audit trail",
           "Disables the guardrail entirely",
+          "Runs the rule in shadow mode, recording what it would deny without denying it",
           "Denies and logs the reason",
-          "Runs the rule in shadow mode, recording what it would deny without denying it"
+          "Logs every request to the audit trail"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "Shadow mode measures a rule against real traffic before it can break anything, and the shadow report tells you what would have been blocked."
       },
       {
         "question": "You widen an agent's guardrail with a PATCH and get back a 202 with a pending_approval_id. Why?",
         "options": [
           "The guardrail JSON was invalid",
+          "The agent is suspended",
           "The API is rate limiting you",
-          "Widening edits queue behind a policy_change approval with step-up re-auth",
-          "The agent is suspended"
+          "Widening edits queue behind a policy_change approval with step-up re-auth"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Since v0.56.2 widening access is itself a privileged change: it waits for an approval. Narrowing edits still apply immediately, because they only reduce access."
       },
       {
@@ -1182,20 +1182,20 @@
         "question": "With card_require_approval true, when does the x402 payment actually happen?",
         "options": [
           "When the card monitor next runs",
-          "Immediately, and it is refunded if rejected",
           "Only after a human approves the pending approval",
+          "Immediately, and it is refunded if rejected",
           "At the end of the billing period"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "The order returns 202 awaiting_approval and creates a card row in that state. No payment is made until a human approves: rejecting simply marks the card rejected."
       },
       {
         "question": "Why is the reveal operation deliberately missing from the MCP tool set?",
         "options": [
           "Because MCP does not support it technically",
-          "Because reveal is deprecated",
+          "To reduce the tool count",
           "So a card number can never be written into a model's context window",
-          "To reduce the tool count"
+          "Because reveal is deprecated"
         ],
         "correctIndex": 2,
         "explanation": "order_card, list_cards and get_card_status are exposed, but reveal is omitted on purpose to keep PANs out of agent context. Humans reveal through re-authenticated paths."
@@ -1203,12 +1203,12 @@
       {
         "question": "What does the Vault validate before signing the x402 payment authorization?",
         "options": [
-          "payTo allowlist, Base network, exact amount, and the pinned USDC contract",
-          "Only the amount",
+          "Only that the agent has cards_enabled",
           "Nothing: the provider validates it",
-          "Only that the agent has cards_enabled"
+          "Only the amount",
+          "payTo allowlist, Base network, exact amount, and the pinned USDC contract"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "That four-part check on the 402 challenge is the payment security boundary, and it is why a malicious challenge cannot redirect funds elsewhere."
       }
     ],
@@ -1281,34 +1281,34 @@
       {
         "question": "Why did the client retry at all?",
         "options": [
-          "It was misconfigured",
           "It ignored the first response",
           "The endpoint returned a 5xx",
-          "A timeout says the response did not arrive and says nothing about whether the server acted"
+          "A timeout says the response did not arrive and says nothing about whether the server acted",
+          "It was misconfigured"
         ],
-        "correctIndex": 3,
+        "correctIndex": 2,
         "explanation": "Retrying on a timeout is correct behaviour. The problem is not the retry, it is that the second request was indistinguishable from a new one."
       },
       {
         "question": "What happens if the client generates a fresh key per attempt?",
         "options": [
           "The attempts are merged automatically",
-          "The server rejects it",
           "It is equivalent to having no key at all",
+          "The server rejects it",
           "Only the first attempt is charged"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "The key identifies the logical operation, not the attempt. A new key per attempt makes every retry a distinct request, which is exactly the situation the header exists to avoid."
       },
       {
         "question": "Why is this especially important for agents?",
         "options": [
-          "Agent tokens expire mid-request",
-          "Agents cannot read HTTP status codes",
           "Agents retry on error, so an agent that retries a purchase will eventually duplicate it",
-          "Agents cannot generate UUIDs"
+          "Agents cannot generate UUIDs",
+          "Agents cannot read HTTP status codes",
+          "Agent tokens expire mid-request"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "Automatic retry is normal agent behaviour and irreversible actions are exactly where it is dangerous. A stable key is what makes an autonomous retry safe."
       }
     ],
@@ -1415,32 +1415,32 @@
       {
         "question": "What does GET /v1/portfolio aggregate?",
         "options": [
-          "Only EVM chains",
           "Only treasury wallets",
-          "Treasury wallets, agent signing keys, and smart accounts",
-          "Only wallets with a non-zero balance"
+          "Only EVM chains",
+          "Only wallets with a non-zero balance",
+          "Treasury wallets, agent signing keys, and smart accounts"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "It is a unified aggregator across all three wallet types, with optional token balances and USD estimates."
       },
       {
         "question": "Why does reading __treasury-keys directly return 403?",
         "options": [
-          "Only agents may read it",
           "It requires a Business tier plan",
           "The vault does not exist yet",
-          "Private keys may only leave through the audited export endpoints"
+          "Private keys may only leave through the audited export endpoints",
+          "Only agents may read it"
         ],
-        "correctIndex": 3,
+        "correctIndex": 2,
         "explanation": "Blocking direct reads means there is exactly one path to a private key: the export endpoint, which demands password re-auth and writes an audit record."
       },
       {
         "question": "Which MPC custody mode applies to a Business-tier org's treasury keys?",
         "options": [
-          "No MPC",
+          "XOR 2-of-2",
           "Shamir 2-of-3 across multiple HSMs",
           "Client-custody 2-of-2",
-          "XOR 2-of-2"
+          "No MPC"
         ],
         "correctIndex": 1,
         "explanation": "Custody is set automatically by tier: XOR 2-of-2 for Pro and Team, Shamir 2-of-3 multi-HSM for Business and Enterprise."
@@ -1559,22 +1559,22 @@
         "question": "Why does an agent's Bankr lease response omit the api_key field?",
         "options": [
           "Because the key is not generated yet",
+          "So the key never enters the agent's context: Shroud resolves it at request time",
           "Because the agent lacks permission",
-          "To reduce response size",
-          "So the key never enters the agent's context: Shroud resolves it at request time"
+          "To reduce response size"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "The lease gives the agent metadata only. Shroud resolves the actual key when the request is made, so the credential never reaches the model's context window."
       },
       {
         "question": "What must exist before an agent can lease a Bankr key?",
         "options": [
-          "A treasury wallet",
-          "Business tier billing",
+          "A signing key on Base",
           "A policy on agents/{id}/bankr/* in the __agent-keys vault",
-          "A signing key on Base"
+          "Business tier billing",
+          "A treasury wallet"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "Bankr vending is deny-by-default. Without an explicit policy on that path the lease is refused."
       },
       {
@@ -1697,10 +1697,10 @@
       {
         "question": "What does counterfactual provisioning mean here?",
         "options": [
-          "The Safe is deployed immediately on creation",
+          "The Safe exists only in the database",
           "The address changes after deployment",
           "The Safe address is derived and usable before any deployment transaction is sent",
-          "The Safe exists only in the database"
+          "The Safe is deployed immediately on creation"
         ],
         "correctIndex": 2,
         "explanation": "The address is computed deterministically up front, so you can fund and reference the account without paying deployment gas until it is actually needed."
@@ -1708,23 +1708,23 @@
       {
         "question": "Why do several Safe endpoints currently return 501?",
         "options": [
-          "On-chain deploy, cosign, passkey, timelock and 4337 are pending a Guard audit",
           "They require Enterprise tier",
+          "They are deprecated",
           "They were removed in v0.56",
-          "They are deprecated"
+          "On-chain deploy, cosign, passkey, timelock and 4337 are pending a Guard audit"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "The provisioning and migration foundation ships now; the on-chain execution paths are held back behind 501 until the Guard audit completes."
       },
       {
         "question": "What is the advantage of a Safe over a bare EOA for an agent?",
         "options": [
           "It removes the need for signing keys",
-          "It works on non-EVM chains",
+          "Guardrails can eventually be enforced on-chain rather than only by the Vault",
           "It signs transactions faster",
-          "Guardrails can eventually be enforced on-chain rather than only by the Vault"
+          "It works on non-EVM chains"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "An EOA is one key with no on-chain policy. A Safe with modules can enforce constraints at the chain level, so a compromised Vault path is not automatically a compromised wallet."
       }
     ],
@@ -1735,5 +1735,97 @@
         "note": "why one key with no on-chain policy is fragile"
       }
     ]
+  },
+  {
+    "id": "lab-validate-a-live-x402-challenge",
+    "title": "Lab: validate a real x402 challenge",
+    "summary": "Trigger a genuine 402 payment-required response from 1Claw's production API and run the exact validation checklist the x402 lesson described, against real numbers.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Every check in the x402 lesson was described against a hypothetical challenge. This one is real: 1Claw runs a public, unauthenticated probe endpoint specifically so agent developers can see a genuine 402 without spending anything."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Trigger it. No payment, no account, just a request to an endpoint that is priced.",
+            "code": "curl -s https://1claw.co/api/v1/agent-readiness/x402-probe | python3 -m json.tool"
+          },
+          {
+            "text": "A real 402 challenge, with the exact shape the lesson described.",
+            "code": "{\n    \"x402Version\": 1,\n    \"error\": \"Payment required for agent-readiness probe\",\n    \"accepts\": [\n        {\n            \"scheme\": \"exact\",\n            \"network\": \"eip155:8453\",\n            \"maxAmountRequired\": \"10000\",\n            \"payTo\": \"...\",\n            \"asset\": \"...\",\n            \"description\": \"1Claw x402 agent-readiness probe (0.01 USDC on Base)\"\n        }\n    ]\n}",
+            "lang": "text"
+          },
+          {
+            "text": "Run the checklist from the x402 lesson against it: network, asset contract, and the amount in the units that actually matter.",
+            "code": "curl -s https://1claw.co/api/v1/agent-readiness/x402-probe | python3 -c '\nimport json, sys\nd = json.load(sys.stdin)\nc = d[\"accepts\"][0]\nprint(\"network is Base:       \", c[\"network\"] == \"eip155:8453\")\nprint(\"asset is Base USDC:    \", c[\"asset\"] == \"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913\")\nprint(\"amount, atomic units: \", c[\"maxAmountRequired\"])\nprint(\"amount, human units:  \", int(c[\"maxAmountRequired\"]) / 10**6, \"USDC\")\n'"
+          },
+          {
+            "text": "Every check passes, and the human-readable amount matches what the description field already told you in plain English.",
+            "code": "network is Base:        True\nasset is Base USDC:     True\namount, atomic units:  10000\namount, human units:   0.01 USDC",
+            "lang": "text"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "This is the same four-field check from the x402 lesson, run against a live production challenge instead of an example. The description field even states the human amount in plain English, which is 1Claw making the same point this course has: never trust a raw atomic-unit number without converting it yourself."
+      },
+      {
+        "type": "points",
+        "items": [
+          "You just did the off-by-a-million lab's conversion on a real challenge. 10000 atomic units of a 6-decimal asset is 0.01, not 10000 and not 0.00001, and getting the exponent wrong in either direction is exactly the failure that lab demonstrated.",
+          "payTo is deliberately not printed here, because it is one real wallet address, and hardcoding it into a course that will be read for years is the wrong way to teach 'check the allowlist'. Fetch it yourself and compare it to whatever allowlist your own client would apply.",
+          "This endpoint exists specifically so an agent, or a course, can validate x402 handling against a live challenge without spending real money. It is the test fixture the ecosystem provides for exactly this purpose."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "If any one of these three checks had failed, the payment lesson says do not sign. Network match, asset match, and amount match are a conjunction: passing three of four checks is not a pass, because the one that failed is usually the one an attacker changed."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "The values here, price included, are 1Claw's own and may change. What will not change is that this endpoint exists to be probed safely, which makes it worth bookmarking the next time you are testing x402 handling in your own code rather than mocking the response."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why does this lab avoid printing the payTo address directly in the lesson text?",
+        "options": [
+          "It changes every request",
+          "The API hides it",
+          "It is one real wallet address, and hardcoding a live value into permanent course text is the wrong way to teach checking an allowlist",
+          "It is too long to display"
+        ],
+        "correctIndex": 2,
+        "explanation": "The lesson has the reader fetch and compare it themselves, which is also the only way the exercise stays meaningful if the address ever changes."
+      },
+      {
+        "question": "The probe's atomic amount is 10000 on a 6-decimal asset. What is the human-readable amount?",
+        "options": [
+          "10000 USDC",
+          "0.01 USDC",
+          "100 USDC",
+          "1 USDC"
+        ],
+        "correctIndex": 1,
+        "explanation": "10000 divided by 10^6 is 0.01, which is exactly what the challenge's own description field states in plain English, confirming the atomic-unit conversion the earlier lab covered."
+      },
+      {
+        "question": "If the network and asset checks both pass but the amount does not match what you requested, what is the correct action?",
+        "options": [
+          "Refuse: validation is a conjunction, and the field that fails is often the one that was tampered with",
+          "Sign anyway since two of three checks passed",
+          "Retry the request",
+          "Adjust your payment to match what was requested"
+        ],
+        "correctIndex": 0,
+        "explanation": "Passing most of the checklist is not passing. Every field is load-bearing, and a mismatch on any one of them is reason enough to refuse."
+      }
+    ],
+    "kind": "lab"
   }
 ]

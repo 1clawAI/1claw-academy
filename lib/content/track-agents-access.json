@@ -84,34 +84,34 @@
       {
         "question": "How many times is the plaintext ocv_ API key returned?",
         "options": [
-          "On every token exchange",
           "Once, at agent creation or key rotation",
           "Once per day",
+          "On every token exchange",
           "Never, it stays in the HSM"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Only the argon2 hash is stored; the plaintext is shown once at creation or rotation."
       },
       {
         "question": "Which endpoint turns an agent_id plus api_key into a JWT?",
         "options": [
-          "GET /v1/agents/me",
           "POST /v1/vaults",
-          "POST /v1/auth/agent-token",
-          "POST /v1/agents"
+          "POST /v1/agents",
+          "GET /v1/agents/me",
+          "POST /v1/auth/agent-token"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "POST /v1/auth/agent-token takes agent_id and api_key in the body and returns a short-lived access_token. The long-lived key stays at rest and the short-lived token is what travels."
       },
       {
         "question": "What two keypairs does 1Claw auto-generate for a new agent?",
         "options": [
+          "Ed25519 signing and P-256 ECDH",
           "secp256k1 and Ed25519",
           "Two AES keys",
-          "Ed25519 signing and P-256 ECDH",
           "RSA and DSA"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "An Ed25519 signing keypair and a P-256 ECDH keypair, both stored in a dedicated __agent-keys vault. They exist so agent-to-agent messaging can be authenticated and encrypted without you provisioning anything."
       }
     ],
@@ -252,8 +252,8 @@
         "question": "What access does an agent have before any policy is written?",
         "options": [
           "Full read on all vaults",
-          "Read plus write on the default vault",
           "Read on its own vault only",
+          "Read plus write on the default vault",
           "Zero access, empty scopes"
         ],
         "correctIndex": 3,
@@ -263,31 +263,31 @@
         "question": "In a policy pattern, what does ** match?",
         "options": [
           "Only the vault root",
-          "Zero or more segments at any depth",
           "Nothing: it is a literal",
-          "Exactly one segment"
+          "Exactly one segment",
+          "Zero or more segments at any depth"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "* matches one segment, ** matches zero or more at any depth. The difference decides whether app/* reaches app/billing/stripe, and getting it wrong widens a grant silently rather than erroring."
       },
       {
         "question": "What happens to active JWTs when an agent's policy changes?",
         "options": [
+          "They are revoked immediately",
           "They gain the new scope automatically",
-          "Only write tokens are revoked",
           "Nothing until they expire",
-          "They are revoked immediately"
+          "Only write tokens are revoked"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "Any policy create, update, or delete revokes the agent's active JWTs so stale scopes cannot linger."
       },
       {
         "question": "An allow policy on app/** has priority 10 and a deny policy on app/billing/** has priority 5. What happens on a read of app/billing/stripe?",
         "options": [
-          "The read is denied, because deny always beats allow",
+          "Both policies are ignored",
           "The read is allowed, because the allow rule has higher priority",
           "The request errors as an unresolvable conflict",
-          "Both policies are ignored"
+          "The read is denied, because deny always beats allow"
         ],
         "correctIndex": 1,
         "explanation": "Priority resolves the overlap, and 10 beats 5. Deny does not win automatically: the deny rule needs the higher priority number to take effect."
@@ -361,34 +361,34 @@
       {
         "question": "Under fnmatch, why did app/* reach app/billing/stripe?",
         "options": [
+          "The path list was unsorted",
           "The pattern was compiled incorrectly",
           "fnmatch's asterisk crosses the path separator, unlike a shell glob",
-          "The path list was unsorted",
           "billing is a reserved prefix"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Shell globbing stops an asterisk at a slash and fnmatch does not. Carrying the shell intuition into a policy written against fnmatch silently widens the grant by every level below."
       },
       {
         "question": "What went wrong with app* specifically?",
         "options": [
-          "It only matched the first result",
           "Without a trailing separator it matched sibling prefixes like apps/ and app-staging/",
-          "It required an anchor character",
-          "It excluded app/key"
+          "It excluded app/key",
+          "It only matched the first result",
+          "It required an anchor character"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "A missing slash turns a prefix into a substring match. It reads as narrow because it is short, which is what makes it easy to approve in review."
       },
       {
         "question": "What does this lab imply about 1Claw's documented semantics?",
         "options": [
-          "They are wrong; a single asterisk crosses segments",
-          "Double asterisks should be avoided entirely",
           "fnmatch should be used for all policies",
-          "They are correct for 1Claw, and the lesson is that semantics differ between engines so patterns should be tested rather than assumed"
+          "They are correct for 1Claw, and the lesson is that semantics differ between engines so patterns should be tested rather than assumed",
+          "Double asterisks should be avoided entirely",
+          "They are wrong; a single asterisk crosses segments"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "1Claw's engine does stop a single asterisk at one segment. The transferable habit is listing what a pattern actually matches, because the same syntax means different things in different implementations."
       }
     ],
@@ -475,12 +475,12 @@
       {
         "question": "What is the purpose of the /v1/org/cedar-policies/test endpoint?",
         "options": [
-          "Dry-run a policy against a hypothetical request without saving it",
-          "Load-test the policy engine",
+          "Apply the policy to every past request",
           "Verify the policy's syntax only",
-          "Apply the policy to every past request"
+          "Load-test the policy engine",
+          "Dry-run a policy against a hypothetical request without saving it"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "The test endpoint evaluates a full principal/action/resource/context request and returns the decision, so you can confirm behaviour before a policy affects live traffic."
       },
       {
@@ -497,12 +497,12 @@
       {
         "question": "Which tiers gate Cedar and OPA respectively?",
         "options": [
-          "Cedar is Business+, OPA is Team+",
           "Both are Free",
-          "Cedar is Team+, OPA is Business+",
-          "Both are Enterprise-only"
+          "Both are Enterprise-only",
+          "Cedar is Business+, OPA is Team+",
+          "Cedar is Team+, OPA is Business+"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Cedar requires Team or above; OPA requires Business or above. On lower tiers the endpoints return a tier error."
       }
     ],
@@ -594,32 +594,32 @@
       {
         "question": "Where does the enrolled agent's API key go?",
         "options": [
+          "Printed to the server log",
           "Emailed to the human after approval",
           "Stored in the agent's env",
-          "Returned in the enroll response",
-          "Printed to the server log"
+          "Returned in the enroll response"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "The plaintext key is emailed to the approving human and is never returned from the enroll endpoint."
       },
       {
         "question": "Which risk tier requires passkey plus TOTP attestation?",
         "options": [
-          "None require step-up",
           "T3",
           "T2",
-          "T1"
+          "T1",
+          "None require step-up"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "T3 requires passkey plus TOTP. The tiers exist so that low-value approvals stay cheap: making every decision require the strongest factor produces reflexive approval, which is worse than a weaker factor used attentively."
       },
       {
         "question": "What can an agent submit with name only and no email?",
         "options": [
           "A link-only enrollment returning an approval_url",
+          "A policy change",
           "Nothing, email is mandatory",
-          "A full agent with an immediate key",
-          "A policy change"
+          "A full agent with an immediate key"
         ],
         "correctIndex": 0,
         "explanation": "Name-only enrollment creates a link-only pending enrollment and returns an approval_url for a signed-in human."
@@ -716,31 +716,31 @@
         "question": "Which two headers authenticate a hosted MCP connection?",
         "options": [
           "Cookie and X-Vault-ID",
+          "Authorization and X-Client-Share",
           "Authorization and X-Vault-ID",
-          "X-Api-Key and X-Agent-ID",
-          "Authorization and X-Client-Share"
+          "X-Api-Key and X-Agent-ID"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "The hosted server takes a Bearer JWT in Authorization and the vault UUID in X-Vault-ID."
       },
       {
         "question": "Who enforces access control for MCP tool calls?",
         "options": [
-          "The MCP server itself",
-          "The vault API policy engine",
           "The LLM provider",
-          "The AI client"
+          "The AI client",
+          "The MCP server itself",
+          "The vault API policy engine"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "The MCP server just relays requests; the vault API checks every call against the agent's policies."
       },
       {
         "question": "What does list_secrets return?",
         "options": [
+          "Decrypted values",
           "Only the vault name",
-          "The agent's private keys",
           "Paths, types, versions, and metadata only",
-          "Decrypted values"
+          "The agent's private keys"
         ],
         "correctIndex": 2,
         "explanation": "Metadata only: paths, types and versions, never values. That split is what lets an agent discover what exists without being able to read it, and get_secret is separately policy-checked."
@@ -846,31 +846,31 @@
       {
         "question": "What is the main security advantage of executing through a binding rather than reading the secret?",
         "options": [
+          "The request is faster",
           "The credential is injected server-side and never enters the agent's context",
           "The agent gets a longer-lived token",
-          "The credential is rotated after every call",
-          "The request is faster"
+          "The credential is rotated after every call"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "The agent sends an intent, not a key. The credential stays server-side, so it cannot leak into the context window, logs, or model memory."
       },
       {
         "question": "Why choose credential_source vault_ref over an inline credential?",
         "options": [
-          "It encrypts the credential more strongly",
           "The credential resolves from the vault at execution time, so rotation needs no binding update",
-          "It makes the binding usable by every agent",
-          "It removes the need for allowed_hosts"
+          "It removes the need for allowed_hosts",
+          "It encrypts the credential more strongly",
+          "It makes the binding usable by every agent"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Inline copies the credential at creation. A vault_ref is a live pointer resolved at execution, so rotating the underlying secret is picked up automatically."
       },
       {
         "question": "What does execution_require_tee do beyond forcing execution through Shroud?",
         "options": [
           "It grants the agent Business tier features",
-          "It disables the agent's signing keys",
           "It exempts the agent from binding allowlists",
+          "It disables the agent's signing keys",
           "It also blocks the agent's direct secret reads"
         ],
         "correctIndex": 3,
@@ -950,34 +950,34 @@
       {
         "question": "After both agents complete, what is the difference in their contexts?",
         "options": [
-          "The reading agent holds a live credential; the brokered one holds only an intent and a result",
           "Neither holds anything sensitive",
           "The brokered agent holds a hashed credential",
+          "The reading agent holds a live credential; the brokered one holds only an intent and a result",
           "Both hold the credential, but the brokered one encrypts it"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "That difference is the entire point. There is nothing to exfiltrate from the brokered agent because it never received the value."
       },
       {
         "question": "What did the DENIED line demonstrate?",
         "options": [
           "The broker rate-limits requests",
-          "POST requests are never allowed",
           "A successfully injected agent still cannot initiate an action the broker was not configured for",
+          "POST requests are never allowed",
           "The credential had expired"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "Brokering provides two properties, not one: the credential stays out of context, and the set of possible actions is bounded by the allowlist rather than by the agent's judgment."
       },
       {
         "question": "What does brokering not solve?",
         "options": [
-          "The broker still holds the credential, so compromising it yields everything",
-          "Limiting request rates",
           "Auditing which agent called what",
-          "Credential rotation"
+          "Limiting request rates",
+          "Credential rotation",
+          "The broker still holds the credential, so compromising it yields everything"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "It shrinks the private-data circle rather than removing it, which is why production implementations keep the material in an HSM and constrain what each binding may reach."
       }
     ],
@@ -1060,23 +1060,23 @@
       {
         "question": "Why use recipient_type \"creator\" instead of the human's email?",
         "options": [
-          "It grants write access automatically",
           "It skips the acceptance step",
-          "It delivers the share faster",
-          "The API resolves the recipient from the agent's created_by field, so the agent needs no identity data"
+          "The API resolves the recipient from the agent's created_by field, so the agent needs no identity data",
+          "It grants write access automatically",
+          "It delivers the share faster"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "The agent does not need to know or store who its human is. The server resolves it from created_by, which removes both a failure mode and a small data-leak surface."
       },
       {
         "question": "What happens to a share before the human accepts it?",
         "options": [
-          "It expires after one minute",
-          "The recipient already has full access",
           "It is pending and grants nothing",
-          "It is auto-accepted for the creator"
+          "It expires after one minute",
+          "It is auto-accepted for the creator",
+          "The recipient already has full access"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "Shares are pending until accepted. The recipient sees it in their Inbound tab and must accept before any access is granted."
       }
     ],
@@ -1171,12 +1171,12 @@
       {
         "question": "Who can create a delegation between two agents?",
         "options": [
-          "Any agent in the org",
-          "The delegating agent only",
+          "Either agent involved",
           "A human: agents get a 403 creating their own",
-          "Either agent involved"
+          "The delegating agent only",
+          "Any agent in the org"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "Delegation records are human-authored. Agents cannot create, modify, or revoke their own delegations; those calls return 403."
       },
       {
@@ -1193,12 +1193,12 @@
       {
         "question": "In the default \"caller\" delegation mode, whose credentials does the delegate use?",
         "options": [
+          "Its own",
           "A temporary shared credential",
           "The delegating agent's",
-          "Its own",
           "The human creator's"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "In caller mode the delegate acts with its own credentials and its own scopes. target mode instead runs it with the target agent's config and tools."
       }
     ],
@@ -1267,33 +1267,33 @@
         "question": "What is max_depth actually preventing?",
         "options": [
           "Unauthorised delegations",
-          "How far an instruction can travel from whoever originally made it",
+          "Concurrent delegations",
           "Too many agents in one organisation",
-          "Concurrent delegations"
+          "How far an instruction can travel from whoever originally made it"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Every hop in the chain was authorised. The limit bounds distance from the original request, which is where accountability and context integrity degrade."
       },
       {
         "question": "What happens if an implementation forgets to forward X-Delegation-Depth?",
         "options": [
+          "The delegation record is invalidated",
           "The request is rejected",
           "The depth resets to zero at every hop, disabling the limit while nothing appears to fail",
-          "The delegation record is invalidated",
           "The chain is capped at one hop"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "The count is carried in the header. Losing it silently removes the control, which is the most dangerous kind of failure because nothing errors."
       },
       {
         "question": "What does each hop carry with it?",
         "options": [
           "Only the task description",
-          "The previous agent's context, so text that entered at the first hop is acted on several interpretations later",
           "A fresh, empty context",
+          "The previous agent's context, so text that entered at the first hop is acted on several interpretations later",
           "The original user's credentials"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "That is why an injection at the start of a chain is worse than one at the end: it gets re-interpreted at every subsequent hop."
       }
     ],
@@ -1389,8 +1389,8 @@
         "options": [
           "The directory search and the agent card",
           "Only the agent card",
-          "Neither: both need an agent JWT",
-          "Only the directory search"
+          "Only the directory search",
+          "Neither: both need an agent JWT"
         ],
         "correctIndex": 0,
         "explanation": "GET /v1/agents/directory and GET /v1/agents/{id}/card are both public, which is what lets other agents discover peers before any trust exists."
@@ -1398,12 +1398,12 @@
       {
         "question": "Discovering an agent in the directory means you can delegate work to it.",
         "options": [
+          "True, if both agents are in the same org",
           "True, if the card lists the tool",
           "False: delegation still needs a human-authored delegation record",
-          "True, discovery implies permission",
-          "True, if both agents are in the same org"
+          "True, discovery implies permission"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Discovery and authorization are separate. Finding an agent tells you it exists; a human-created delegation decides whether work can actually be handed to it."
       }
     ],
@@ -1414,6 +1414,93 @@
         "note": "discovery is not authorization"
       }
     ]
+  },
+  {
+    "id": "lab-fetch-a-real-agent-card",
+    "title": "Lab: fetch a real agent's public card",
+    "summary": "Pull a live agent's public discovery card and run the same disclosure check the discovery lesson described, against something you did not write.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The discovery lesson said a card is unauthenticated by design, so publish only what you would put on a public web page. This lab checks whether that principle actually holds for a card that exists in production right now."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Get an id from the live directory, then fetch that agent's card directly. No credentials, same as anyone on the internet could do.",
+            "code": "AID=$(curl -s \"https://api.1claw.co/v1/agents/directory\" | python3 -c \"import json,sys; print(json.load(sys.stdin)['agents'][0]['id'])\")\ncurl -s \"https://api.1claw.co/v1/agents/$AID/card\" | python3 -m json.tool"
+          },
+          {
+            "text": "A minimal, public-facing shape.",
+            "code": "{\n    \"id\": \"...\",\n    \"name\": \"...\",\n    \"description\": \"...\",\n    \"tags\": [],\n    \"a2a_url\": null,\n    \"mcp_url\": null,\n    \"capabilities\": [...]\n}",
+            "lang": "text"
+          },
+          {
+            "text": "Check it against the discovery lesson's own warning: no internal service names, no region, no topology.",
+            "code": "AID=$(curl -s \"https://api.1claw.co/v1/agents/directory\" | python3 -c 'import json,sys; print(json.load(sys.stdin)[\"agents\"][0][\"id\"])')\ncurl -s \"https://api.1claw.co/v1/agents/$AID/card\" | python3 -c '\nimport json, sys\nc = json.load(sys.stdin)\nfields = set(c.keys())\nexpected = {\"id\", \"name\", \"description\", \"tags\", \"a2a_url\", \"mcp_url\", \"capabilities\"}\nprint(\"fields present:\", sorted(fields))\nprint(\"unexpected fields:\", sorted(fields - expected))\n'"
+          },
+          {
+            "text": "Seven fields, all seven expected, nothing extra. Whichever agent you fetched, this list is the same, because it is generated from the schema rather than from what the operator remembered to leave out.",
+            "code": "fields present: ['a2a_url', 'capabilities', 'description', 'id', 'mcp_url', 'name', 'tags']\nunexpected fields: []",
+            "lang": "text"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Whatever card you fetched, its field set is fixed by the API rather than by the operator's discretion. This is the structural version of the lesson's advice: the card cannot leak internal topology, because the schema never has a place to put it. A human choosing what to disclose can make a mistake; a schema with seven fixed fields cannot be talked into a wider one."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Compare this to your own systems. Anything you publish for discovery through a format you fully control can grow a field nobody meant to expose. The 1Claw card cannot, because the shape is enforced server-side.",
+          "capabilities is the only field carrying operational information, and it is a closed vocabulary of short strings rather than free text, which limits what could accidentally be disclosed even there.",
+          "Nothing here required trusting the operator's judgment. That is the actual security property: good defaults enforced by a schema beat good intentions enforced by a person remembering a guideline."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "This is worth generalising past agent cards. Anywhere your own service publishes something for public discovery, ask whether the safe boundary is enforced by a schema or by whoever happens to be filling in the form that day."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why can this card not leak internal topology the way a hand-written status page could?",
+        "options": [
+          "The API strips suspicious-looking text",
+          "The response schema has a fixed set of fields, so there is no place to put it even by mistake",
+          "1Claw operators are trained not to include it",
+          "Cards are reviewed before publishing"
+        ],
+        "correctIndex": 1,
+        "explanation": "A schema enforced server-side is a structural guarantee. A guideline followed by a person is not, which is the actual difference this lab demonstrates."
+      },
+      {
+        "question": "Why does it matter that `capabilities` is a closed vocabulary rather than free text?",
+        "options": [
+          "It is faster to parse",
+          "It compresses better",
+          "It is required by the OpenAPI spec",
+          "Free text could accidentally carry more than intended; a fixed set of known strings cannot"
+        ],
+        "correctIndex": 3,
+        "explanation": "A field that only accepts predefined values cannot become the place where someone pastes an internal hostname by accident, unlike an open description field."
+      },
+      {
+        "question": "What is the general principle this lab illustrates beyond agent cards?",
+        "options": [
+          "Agent cards should never include capabilities",
+          "A safe disclosure boundary enforced by a schema is more reliable than one enforced by a person remembering a guideline",
+          "Discovery endpoints should be rate limited",
+          "Public APIs should always be free of authentication"
+        ],
+        "correctIndex": 1,
+        "explanation": "This generalises to any public-facing endpoint your own systems publish: structural constraints hold up better than good intentions."
+      }
+    ],
+    "kind": "lab"
   },
   {
     "id": "capstone-design-an-access-model",
@@ -1514,19 +1601,19 @@
         "question": "Why does the booking agent get no secret read access at all?",
         "options": [
           "Its traffic is billed per call, so reads are expensive",
-          "It executes through a binding, so the carrier credential stays server-side",
           "Booking agents cannot be granted policies",
+          "It executes through a binding, so the carrier credential stays server-side",
           "It runs unattended"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "The binding injects the credential at execution time. The agent never holds it, so there is nothing to scope a read policy to and nothing to leak."
       },
       {
         "question": "What does the deny on invoices/** achieve when no allow would have matched anyway?",
         "options": [
+          "It prevents the path from being created",
           "It speeds up policy evaluation",
           "It is required before a binding can be created",
-          "It prevents the path from being created",
           "It documents the intent and survives a later broad grant"
         ],
         "correctIndex": 3,
@@ -1535,12 +1622,12 @@
       {
         "question": "Why is an approval policy preferred over a hard 500 USD cap for the booking agent?",
         "options": [
+          "Approval policies cannot be bypassed",
           "Caps are not supported for booking flows",
           "It is cheaper to evaluate",
-          "A legitimate large booking reaches a human instead of simply failing",
-          "Approval policies cannot be bypassed"
+          "A legitimate large booking reaches a human instead of simply failing"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "A hard cap refuses and the work stops. An approval policy routes the transaction to the operations lead, satisfying the attribution requirement without breaking the business case."
       }
     ],

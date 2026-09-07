@@ -98,12 +98,12 @@
       {
         "question": "What wraps the DEK before it is stored?",
         "options": [
-          "The agent's ocv_ key",
-          "The JWT signing key",
+          "The per-vault KEK inside the HSM",
           "Another DEK",
-          "The per-vault KEK inside the HSM"
+          "The agent's ocv_ key",
+          "The JWT signing key"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "The per-vault KEK, inside the HSM. One KEK per vault rather than one per system is what keeps a compromise scoped to a single vault instead of the whole store."
       },
       {
@@ -120,10 +120,10 @@
       {
         "question": "How often do KEKs rotate automatically?",
         "options": [
-          "Every 90 days",
+          "Never",
           "Every 365 days",
           "Every 30 days",
-          "Never"
+          "Every 90 days"
         ],
         "correctIndex": 1,
         "explanation": "Every 365 days, which is the NIST SP 800-57 maximum for a symmetric KEK rather than an arbitrary interval. Old versions stay available, because data encrypted under them still needs to be readable."
@@ -223,12 +223,12 @@
       {
         "question": "Why did rotating the KEK not stop the attacker?",
         "options": [
-          "They were using the ability to call the HSM, not the key material",
-          "The DEKs were not re-wrapped",
           "The old KEK remained valid",
-          "The rotation did not complete"
+          "They were using the ability to call the HSM, not the key material",
+          "The rotation did not complete",
+          "The DEKs were not re-wrapped"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "Rotation is the response to key compromise. This was credential compromise, so the effective action is revoking whatever authorises calls to the HSM."
       },
       {
@@ -245,12 +245,12 @@
       {
         "question": "What is the practical consequence for the credential the application uses to call the HSM?",
         "options": [
-          "It should be stored alongside the wrapped DEKs",
           "It is the actual boundary and deserves the same care as key material",
           "It only matters for audit attribution",
+          "It should be stored alongside the wrapped DEKs",
           "It can be long-lived because the HSM is the real control"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "The key is protected by hardware and the token authorising its use frequently is not, which makes that token the weakest link in an otherwise strong hierarchy."
       }
     ],
@@ -366,34 +366,34 @@
       {
         "question": "What does 1Claw store about your CMEK key?",
         "options": [
+          "Only its SHA-256 fingerprint",
           "The full key",
-          "An encrypted copy in the HSM",
           "Nothing at all",
-          "Only its SHA-256 fingerprint"
+          "An encrypted copy in the HSM"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "Only the SHA-256 fingerprint is stored so the vault can track which key was used."
       },
       {
         "question": "What algorithm does the client-side CMEK layer use?",
         "options": [
-          "Ed25519",
-          "ChaCha20 only",
+          "RSA-2048",
           "AES-256-GCM",
-          "RSA-2048"
+          "Ed25519",
+          "ChaCha20 only"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "AES-256-GCM, applied client-side before the value is ever sent. GCM authenticates as well as encrypts, so a tampered ciphertext fails to decrypt rather than producing plausible garbage."
       },
       {
         "question": "What protects a secret if the CMEK vault's database is stolen?",
         "options": [
-          "Only the fingerprint is needed to decrypt",
           "Nothing extra",
           "The IV alone",
-          "It is doubly encrypted and useless without your key"
+          "It is doubly encrypted and useless without your key",
+          "Only the fingerprint is needed to decrypt"
         ],
-        "correctIndex": 3,
+        "correctIndex": 2,
         "explanation": "Two independent layers, so a stolen backup yields doubly-encrypted blobs. The provider cannot decrypt it either, which is the trade you accepted: no provider access also means no provider recovery."
       }
     ],
@@ -461,34 +461,34 @@
       {
         "question": "What can the stored fingerprint do?",
         "options": [
+          "Decrypt the ciphertext directly",
           "Confirm that a candidate key is the right one, and nothing more",
           "Prove the key was generated correctly",
-          "Decrypt the ciphertext directly",
           "Reconstruct the key if the customer loses it"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "A hash runs one way. It is a checksum that saves a wasted decryption attempt, not an escrow, and expecting otherwise is the misunderstanding that turns a lost laptop into lost data."
       },
       {
         "question": "Why is server-assisted rotation not a recovery path?",
         "options": [
-          "It decrypts with the old key first, so losing the key loses rotation too",
           "It requires a support ticket",
           "It rotates the fingerprint rather than the key",
+          "It decrypts with the old key first, so losing the key loses rotation too",
           "It only works on vaults under 100 secrets"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Rotation re-encrypts from plaintext it must first obtain. Without the old key there is nothing to rotate from, so the loss takes both capabilities."
       },
       {
         "question": "What should accompany every CMEK enrolment?",
         "options": [
+          "A second vault with the same secrets",
           "A customer-controlled escrow, established before the first secret is written",
-          "A support contract with recovery SLAs",
           "Quarterly key rotation",
-          "A second vault with the same secrets"
+          "A support contract with recovery SLAs"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "The provider genuinely cannot help, so the recovery plan has to be yours and has to exist before it is needed. The common CMEK incident is a lost laptop, not an attacker."
       }
     ],
@@ -607,34 +607,34 @@
       {
         "question": "Which mode returns a client_share and needs X-Client-Share on reads?",
         "options": [
-          "Standard HSM only",
-          "2of2_client_custody",
           "CMEK",
-          "2of3_multi_hsm"
+          "Standard HSM only",
+          "2of3_multi_hsm",
+          "2of2_client_custody"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "2of2_client_custody splits by XOR and hands you one share, which must be presented as X-Client-Share on every read. That is the strongest trust property available and the least forgiving: lose the share and the secret is gone."
       },
       {
         "question": "Can a vault's MPC custody mode be changed after it is set?",
         "options": [
-          "Yes, anytime",
           "No, it is immutable",
+          "Yes, anytime",
           "Only by support",
           "Yes, once per year"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Immutable once set, which is why the mode should be chosen deliberately rather than during a spike. Changing your mind means creating a new vault and migrating the secrets into it."
       },
       {
         "question": "Where are the shares stored in 2of3_multi_hsm?",
         "options": [
-          "Across GCP, AWS, and Azure",
-          "On the client only",
           "In a single HSM",
-          "All on GCP"
+          "All on GCP",
+          "Across GCP, AWS, and Azure",
+          "On the client only"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Three Shamir shares across GCP KMS, AWS KMS and Azure Key Vault. Spreading them across providers is the point: no single vendor, subpoena or outage reaches a complete key."
       }
     ],
@@ -747,32 +747,32 @@
         "options": [
           "Just the ocv_ key",
           "A Bearer JWT",
-          "agent_id:api_key",
-          "vault_id:secret_path"
+          "vault_id:secret_path",
+          "agent_id:api_key"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Exactly agent_id:api_key, with the ocv_ key on the right. Shroud uses it to authenticate the agent before deciding what the request is allowed to reach."
       },
       {
         "question": "At what prompt-injection score does Shroud hard-block regardless of config?",
         "options": [
-          "Above 0.7",
-          "Above 0.5",
           "Only at 1.0",
-          "Above 0.9"
+          "Above 0.9",
+          "Above 0.7",
+          "Above 0.5"
         ],
-        "correctIndex": 3,
+        "correctIndex": 1,
         "explanation": "Above 0.9 is always blocked, whatever the agent's configured threshold. A hard ceiling exists so that a permissive per-agent setting cannot disable the control entirely."
       },
       {
         "question": "What TEE technology runs the Shroud proxy?",
         "options": [
-          "Apple Secure Enclave",
+          "AMD SEV-SNP on confidential GKE",
           "AWS Nitro only",
-          "Intel SGX",
-          "AMD SEV-SNP on confidential GKE"
+          "Apple Secure Enclave",
+          "Intel SGX"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "AMD SEV-SNP on confidential GKE nodes, which encrypts VM memory so the host operator cannot read it. That is what makes inspecting sensitive prompts acceptable rather than merely centralised."
       }
     ],
@@ -846,33 +846,33 @@
         "question": "Why was the harmless comment rejected?",
         "options": [
           "Comments are stripped before measurement",
-          "A measurement is a bit-for-bit equality check, so any change produces a different value",
           "The comment referenced /tmp",
-          "Only signed comments are permitted"
+          "Only signed comments are permitted",
+          "A measurement is a bit-for-bit equality check, so any change produces a different value"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "It answers exactly one question: is this identical to what I expected. It has no notion of a change being harmless."
       },
       {
         "question": "What does a valid attestation not tell you?",
         "options": [
-          "Which code is running",
           "Whether that code is correct or free of flaws",
           "Whether the hardware supports SEV-SNP",
+          "Which code is running",
           "Whether memory is encrypted"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "A faithfully attested enclave running a flawed program is flawed with a signature attached. Attestation is about identity, not quality."
       },
       {
         "question": "Where does attestation usually fail in practice?",
         "options": [
-          "Hardware side channels",
           "In how the expected measurement gets updated on each release",
+          "In memory encryption",
           "In the signature algorithm",
-          "In memory encryption"
+          "Hardware side channels"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Every legitimate deploy changes the measurement, so updating the expected value is routine. Routine and unreviewed is exactly where an attacker prefers to work."
       }
     ],
@@ -987,9 +987,9 @@
       {
         "question": "What does the audit log use to stay tamper-evident?",
         "options": [
-          "A blockchain",
           "Nightly backups",
           "Row-level encryption only",
+          "A blockchain",
           "A SHA-256 hash chain"
         ],
         "correctIndex": 3,
@@ -998,23 +998,23 @@
       {
         "question": "What happens the moment a honeytoken is read?",
         "options": [
-          "A critical verdict is recorded but the request proceeds",
           "Nothing until a human reviews it",
-          "The request is blocked immediately",
-          "The vault is locked"
+          "A critical verdict is recorded but the request proceeds",
+          "The vault is locked",
+          "The request is blocked immediately"
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "The read is allowed to avoid tipping off the attacker, but a critical verdict blocks their next auth."
       },
       {
         "question": "What does DPoP protect against?",
         "options": [
-          "Use of a stolen JWT without the matching private key",
-          "Database theft",
+          "Weak passwords",
           "Slow token refresh",
-          "Weak passwords"
+          "Database theft",
+          "Use of a stolen JWT without the matching private key"
         ],
-        "correctIndex": 0,
+        "correctIndex": 3,
         "explanation": "DPoP binds a JWT to a client keypair, so a stolen token is useless without the private key."
       }
     ],
@@ -1134,32 +1134,32 @@
       {
         "question": "In what order does an HFA policy resolve?",
         "options": [
-          "Defaults, then wallet policy, then user policy",
+          "User policy, then wallet spend policy, then defaults",
           "Whichever was configured most recently",
-          "Wallet policy only",
-          "User policy, then wallet spend policy, then defaults"
+          "Defaults, then wallet policy, then user policy",
+          "Wallet policy only"
         ],
-        "correctIndex": 3,
+        "correctIndex": 0,
         "explanation": "Resolution runs most specific first: the user's human_factor_auth_policies, then human_factor_auth on the wallet spend policy, then system defaults."
       },
       {
         "question": "Why prefetch GET /v1/treasury/wallets/auth-policy?",
         "options": [
-          "To cache wallet balances",
           "So the client knows which step-up to prompt for before the user acts",
-          "To rotate the wallet key",
-          "To list pending approvals"
+          "To list pending approvals",
+          "To cache wallet balances",
+          "To rotate the wallet key"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "Prefetching the effective policy lets the client show the right passkey or password prompt up front, instead of failing the send and retrying."
       },
       {
         "question": "A social-login user has no password set. What breaks if the HFA policy requires the password method?",
         "options": [
-          "Their account is locked",
           "Nothing: a password is generated for them",
+          "The policy silently falls back to no step-up",
           "They cannot satisfy the step-up until they enrol a passkey or TOTP",
-          "The policy silently falls back to no step-up"
+          "Their account is locked"
         ],
         "correctIndex": 2,
         "explanation": "Without a password there is nothing to verify. They need to enrol a passkey or TOTP at /settings/security, or the policy should require one of those methods instead."
@@ -1278,23 +1278,23 @@
       {
         "question": "What does OIDC federation let you remove?",
         "options": [
-          "TLS between services",
-          "The vault itself",
+          "The need for agent policies",
           "Static long-lived API keys at the service boundary",
-          "The need for agent policies"
+          "TLS between services",
+          "The vault itself"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "The relying party validates a short-lived 1Claw-issued JWT against published JWKS, so there is no long-lived shared secret to store or rotate."
       },
       {
         "question": "An agent has federation_enabled true but federation_audiences empty. What happens?",
         "options": [
+          "Every audience is allowed",
           "The agent cannot authenticate at all",
           "Every audience is denied",
-          "Every audience is allowed",
           "Only the default audience is allowed"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "federation_audiences is an allowlist and empty means deny all. Federation is deny-by-default throughout."
       },
       {
@@ -1302,8 +1302,8 @@
         "options": [
           "EdDSA for agent JWTs, RS256 for federation tokens",
           "RS256 for both",
-          "HS256 for both",
-          "EdDSA for both"
+          "EdDSA for both",
+          "HS256 for both"
         ],
         "correctIndex": 0,
         "explanation": "Agent JWTs use the EC_SIGN_ED25519 key (EdDSA); federation tokens use an HSM-backed RSA-2048 key (RS256), because external relying parties overwhelmingly expect RSA."
@@ -1316,5 +1316,97 @@
         "note": "JWKS, audience binding, and short expiry"
       }
     ]
+  },
+  {
+    "id": "lab-verify-a-federation-claim",
+    "title": "Lab: check what a real federated token would need to pass",
+    "summary": "Use 1Claw's real issuer and real JWKS to write the audience check the federation lesson described, against the actual production values rather than invented ones.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The security-foundations JWKS lab showed you two real keys. This lab uses them for something: writing the exact verification a relying party would run on a 1Claw federation token, against the real issuer this course has been citing throughout."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Confirm the real values this check depends on.",
+            "code": "curl -s https://api.1claw.co/.well-known/openid-configuration | python3 -c '\nimport json, sys\nd = json.load(sys.stdin)\nprint(\"issuer:  \", d[\"issuer\"])\nprint(\"jwks_uri:\", d[\"jwks_uri\"])\n'"
+          },
+          {
+            "text": "Both match what every lesson in this course has assumed without you checking.",
+            "code": "issuer:   https://api.1claw.co\njwks_uri: https://api.1claw.co/.well-known/jwks.json",
+            "lang": "text"
+          },
+          {
+            "text": "Write the check a relying party actually runs: does a token's iss match this issuer, and does its aud match this service. Use a token shaped like a real federated one, since 1Claw will not hand you a live signed one without an account.",
+            "code": "python3 -c '\nimport json\n\nISSUER = \"https://api.1claw.co\"  # confirmed live above\n\ndef verify(token_claims, expected_audience):\n    if token_claims[\"iss\"] != ISSUER:\n        return \"REJECT: iss is \" + token_claims[\"iss\"] + \", not \" + ISSUER\n    if token_claims[\"aud\"] != expected_audience:\n        return \"REJECT: aud is \" + token_claims[\"aud\"] + \", not \" + expected_audience\n    return \"ACCEPT\"\n\n# a token genuinely issued by 1Claw, for a different service\nreal_but_wrong_audience = {\"iss\": ISSUER, \"aud\": \"https://billing.example.com\"}\n\n# a token that merely claims to be from 1Claw\nforged_issuer = {\"iss\": \"https://api.1claw.io\", \"aud\": \"https://deploy.example.com\"}\n\nprint(verify(real_but_wrong_audience, \"https://deploy.example.com\"))\nprint(verify(forged_issuer, \"https://deploy.example.com\"))\n'"
+          },
+          {
+            "text": "Both rejected, for different reasons, against the real issuer this course has cited every time.",
+            "code": "REJECT: aud is https://billing.example.com, not https://deploy.example.com\nREJECT: iss is https://api.1claw.io, not https://api.1claw.co",
+            "lang": "text"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "The second rejection is the one worth reading twice. api.1claw.io is not api.1claw.co, and it is exactly the kind of difference an inattentive check misses. Hardcoding the real issuer, confirmed live rather than copied from a lesson, is what makes that check meaningful rather than decorative."
+      },
+      {
+        "type": "points",
+        "items": [
+          "This is the read-a-jwt lab's replay attack, run against 1Claw's actual issuer value instead of a placeholder. The mechanism does not change; using the real value is what makes it a check on the real system rather than a story about one.",
+          "The federation lesson's RFC 8693 token exchange exists to produce exactly the audience-bound token this check is written for. The exchange sets aud to whatever the relying party requested, so the relying party validating it is closing the loop it opened.",
+          "You cannot get a real, live, validly-signed federation token here without an account and an enabled agent. What you can do, and just did, is confirm the two facts, issuer and key location, that a correct implementation depends on getting right."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "federation_audiences on the agent side is an allowlist of what a token may be requested for. This check is the other half, on the relying party's side: verifying that what arrived matches what you specifically asked for. Both halves are required; either alone is incomplete."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "If you build a relying party for federated 1Claw tokens, do not hardcode the issuer string into your code from a lesson you read once. Fetch it from the discovery document at startup, the way this lab just did, so a future change is picked up rather than silently mismatched."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why does the check reject a token with iss set to api.1claw.io?",
+        "options": [
+          "It is a typo the parser cannot handle",
+          "It is a different issuer than the one confirmed live, and the check correctly treats it as untrusted",
+          "io domains are blocked by policy",
+          "The token has expired"
+        ],
+        "correctIndex": 1,
+        "explanation": "A single-character domain difference is precisely what a careless implementation would miss. The check works because it compares against a confirmed real value rather than assuming."
+      },
+      {
+        "question": "Why is a token with a correct issuer but the wrong audience still rejected?",
+        "options": [
+          "The signature does not cover aud",
+          "Wrong-audience tokens are always expired",
+          "The issuer check runs twice",
+          "It proves the issuer signed it, not that it was meant for this service; any customer of that issuer could hold a validly issued token for somewhere else"
+        ],
+        "correctIndex": 3,
+        "explanation": "This is the confused-deputy shape from earlier in the course. A real, validly signed token is not sufficient on its own; it has to be checked against who it was actually issued for."
+      },
+      {
+        "question": "Why fetch the issuer from the discovery document at runtime instead of hardcoding it from a lesson?",
+        "options": [
+          "Discovery documents are faster to parse",
+          "It reduces the number of HTTP calls",
+          "A hardcoded value from a source read once will not pick up a future change, while fetching it keeps the check current",
+          "Hardcoding is against the OIDC spec"
+        ],
+        "correctIndex": 2,
+        "explanation": "The whole point of a discovery document is that relying parties do not need to track issuer details out of band. Hardcoding a copied value defeats that and reintroduces the staleness risk this lab is about avoiding."
+      }
+    ],
+    "kind": "lab"
   }
 ]
