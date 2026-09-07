@@ -302,6 +302,99 @@
     ]
   },
   {
+    "id": "lab-what-does-your-glob-match",
+    "title": "Lab: find out what your policy actually matches",
+    "summary": "Write three patterns you believe are narrow, then list what each one really reaches.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The policy lesson gave you 1Claw's glob semantics: a single asterisk matches one segment and a double asterisk matches any depth. That is correct for 1Claw and it is not universal, and the gap between the semantics you assume and the ones your engine implements is where scope quietly widens."
+      },
+      {
+        "type": "prose",
+        "text": "This lab uses Python's fnmatch, which is what a naive implementation reaches for. Watch what it does with patterns that look obviously narrow."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "List the paths in a vault, then ask three patterns what they reach.",
+            "code": "cat > /tmp/glob.py <<'EOF'\nimport fnmatch\n\nPATHS = [\"app/key\", \"app/billing/stripe\", \"app/billing/eu/vat\",\n         \"apps/other/key\", \"app-staging/key\"]\n\n# how a naive implementation often handles ** : collapse it to *\nnaive = lambda pat, path: fnmatch.fnmatch(path, pat.replace(\"**\", \"*\"))\n\nprint(\"intent: everything directly under app/, and NOT the billing subtree\\n\")\nfor pat in [\"app/*\", \"app/**\", \"app*\"]:\n    hits = [p for p in PATHS if naive(pat, p)]\n    print(f\"  {pat:10} -> {hits}\")\nEOF\npython3 /tmp/glob.py",
+            "lang": "bash"
+          },
+          {
+            "text": "Three patterns, three surprises.",
+            "code": "intent: everything directly under app/, and NOT the billing subtree\n\n  app/*      -> ['app/key', 'app/billing/stripe', 'app/billing/eu/vat']\n  app/**     -> ['app/key', 'app/billing/stripe', 'app/billing/eu/vat']\n  app*       -> ['app/key', 'app/billing/stripe', 'app/billing/eu/vat', 'apps/other/key', 'app-staging/key']",
+            "lang": "text"
+          },
+          {
+            "text": "Clean up.",
+            "code": "rm /tmp/glob.py",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "points",
+        "items": [
+          "app/* reached two levels down, because fnmatch's asterisk crosses the separator. If you assumed shell behaviour, where an asterisk stops at a slash, you just granted the billing subtree.",
+          "app/** behaved identically, so under this implementation the two patterns you would use to mean different things mean the same thing.",
+          "app* reached apps/other/key and app-staging/key. A single missing slash walked out of the prefix entirely and into two sibling trees you did not know existed."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "None of this contradicts what the policies lesson told you about 1Claw, where a single asterisk does stop at one segment. That is the point: the same pattern means different things in different engines, and a pattern you carry over from another system will not necessarily mean what it meant there."
+      },
+      {
+        "type": "prose",
+        "text": "The habit worth forming is small. Before relying on a pattern, list what it matches against the paths you actually have, including the ones you did not intend to include. A grant is defined by what it reaches, not by what you meant."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "The third case is the one to watch for in review. Prefixes without a trailing separator are how a policy meant for app/ ends up covering app-staging/, and it reads as narrow at a glance because it is short."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Under fnmatch, why did app/* reach app/billing/stripe?",
+        "options": [
+          "The pattern was compiled incorrectly",
+          "fnmatch's asterisk crosses the path separator, unlike a shell glob",
+          "billing is a reserved prefix",
+          "The path list was unsorted"
+        ],
+        "correctIndex": 1,
+        "explanation": "Shell globbing stops an asterisk at a slash and fnmatch does not. Carrying the shell intuition into a policy written against fnmatch silently widens the grant by every level below."
+      },
+      {
+        "question": "What went wrong with app* specifically?",
+        "options": [
+          "It excluded app/key",
+          "Without a trailing separator it matched sibling prefixes like apps/ and app-staging/",
+          "It only matched the first result",
+          "It required an anchor character"
+        ],
+        "correctIndex": 1,
+        "explanation": "A missing slash turns a prefix into a substring match. It reads as narrow because it is short, which is what makes it easy to approve in review."
+      },
+      {
+        "question": "What does this lab imply about 1Claw's documented semantics?",
+        "options": [
+          "They are wrong; a single asterisk crosses segments",
+          "They are correct for 1Claw, and the lesson is that semantics differ between engines so patterns should be tested rather than assumed",
+          "fnmatch should be used for all policies",
+          "Double asterisks should be avoided entirely"
+        ],
+        "correctIndex": 1,
+        "explanation": "1Claw's engine does stop a single asterisk at one segment. The transferable habit is listing what a pattern actually matches, because the same syntax means different things in different implementations."
+      }
+    ],
+    "kind": "lab"
+  },
+  {
     "id": "cedar-and-opa-policies",
     "title": "Cedar and OPA policy backends",
     "summary": "Express authorization as declarative Cedar or Rego policy, and dry-run it before it ever denies a real request.",

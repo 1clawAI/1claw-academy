@@ -633,8 +633,8 @@
   },
   {
     "id": "lab-read-a-jwt",
-    "title": "Lab: read a token without its key",
-    "summary": "Decode a real JWT with nothing but base64, and see for yourself which claims a bearer can read.",
+    "title": "Lab: read a token, then replay it",
+    "summary": "Decode a JWT with nothing but base64, then mint one for another service and watch a naive verifier accept it.",
     "blocks": [
       {
         "type": "prose",
@@ -662,57 +662,84 @@
             "text": "Decode the header too. It names the algorithm and the key id the verifier should use from the JWKS.",
             "code": "cut -d. -f1 /tmp/jwt.txt | python3 -c \"\nimport sys, base64, json\ns = sys.stdin.read().strip()\nprint(json.loads(base64.urlsafe_b64decode(s + '=' * (-len(s) % 4))))\n\"",
             "lang": "bash"
+          },
+          {
+            "text": "Now the part that matters. Build two services that both trust the same issuer, and have one of them verify only the signature.",
+            "code": "cat > /tmp/aud.py <<'EOF'\nimport hmac, hashlib, base64, json\n\nKEY = b\"issuer-signing-key\"          # stands in for the issuer's key\nb64   = lambda b: base64.urlsafe_b64encode(b).rstrip(b\"=\").decode()\nunb64 = lambda s: base64.urlsafe_b64decode(s + \"=\" * (-len(s) % 4))\n\ndef mint(payload):\n    h = b64(json.dumps({\"alg\":\"HS256\",\"typ\":\"JWT\"}).encode())\n    p = b64(json.dumps(payload).encode())\n    sig = b64(hmac.new(KEY, f\"{h}.{p}\".encode(), hashlib.sha256).digest())\n    return f\"{h}.{p}.{sig}\"\n\ndef signature_valid(tok):\n    h, p, s = tok.split(\".\")\n    return hmac.compare_digest(\n        s, b64(hmac.new(KEY, f\"{h}.{p}\".encode(), hashlib.sha256).digest()))\n\nclaims = lambda tok: json.loads(unb64(tok.split(\".\")[1]))\n\n# A token the billing service legitimately holds.\ntok = mint({\"iss\": \"https://api.1claw.co\", \"sub\": \"agent_01H8XK\",\n            \"aud\": \"https://billing.example.com\", \"scope\": \"invoices:read\"})\nprint(\"minted for:\", claims(tok)[\"aud\"])\n\nprint(\"\\n=== deploy service, checking only the signature ===\")\nprint(\"  ->\", \"ACCEPTED\" if signature_valid(tok) else \"REJECTED\")\n\nprint(\"\\n=== the same check, with the audience ===\")\ndef verify(tok, me):\n    if not signature_valid(tok):     return \"REJECTED (bad signature)\"\n    if claims(tok).get(\"aud\") != me: return f\"REJECTED (aud is {claims(tok)['aud']})\"\n    return \"ACCEPTED\"\nprint(\"  deploy  ->\", verify(tok, \"https://deploy.example.com\"))\nprint(\"  billing ->\", verify(tok, \"https://billing.example.com\"))\nEOF\npython3 /tmp/aud.py",
+            "lang": "bash"
+          },
+          {
+            "text": "A cryptographically valid token, issued to somebody else, accepted by a service it was never meant for.",
+            "code": "minted for: https://billing.example.com\n\n=== deploy service, checking only the signature ===\n  -> ACCEPTED\n\n=== the same check, with the audience ===\n  deploy  -> REJECTED (aud is https://billing.example.com)\n  billing -> ACCEPTED",
+            "lang": "text"
+          },
+          {
+            "text": "Clean up.",
+            "code": "rm /tmp/jwt.txt /tmp/aud.py",
+            "lang": "bash"
           }
         ]
       },
       {
-        "type": "callout",
-        "variant": "tip",
-        "text": "The padding arithmetic is not incidental. JWTs use base64url with the trailing = stripped, so a plain `base64 -d` fails on most tokens. That is why the snippet re-adds it."
+        "type": "prose",
+        "text": "The signature proved the issuer and nothing else. Every customer of that issuer can mint a validly signed token, so a service that stops at signature verification will accept tokens minted for anybody. This is the confused deputy in its smallest form, and it is one missing line of code."
       },
       {
-        "type": "prose",
-        "text": "Now consider what you could not do. You read every claim, but you could not change one: altering the payload invalidates the signature, and you do not hold the signing key. That is the split at the centre of the previous lesson. Signing gives integrity and authenticity; it gives no confidentiality at all."
+        "type": "points",
+        "items": [
+          "iss tells you who minted it. Check it, or you will accept tokens from any issuer whose key you happen to have.",
+          "aud tells you who it is for. Check it, or you accept tokens meant for someone else.",
+          "exp tells you when it dies. Check it, with a little clock skew tolerance, because short TTLs make tight expiry checks brittle."
+        ]
       },
       {
         "type": "callout",
         "variant": "warn",
-        "text": "Never put anything in a JWT you would not publish. Internal ids, email addresses and role names all end up in browser storage, proxy logs and error reports, because a token travels everywhere its bearer goes."
+        "text": "Most JWT libraries verify the signature by default and leave the claim checks to you. A call that returns the decoded payload without throwing is not a call that has authorised anything."
+      },
+      {
+        "type": "prose",
+        "text": "This is exactly why 1Claw's federation tokens carry an audience and why an agent's federation_audiences allowlist is empty, meaning deny, until you fill it. The issuer constrains what may be requested; your service still has to check what it received."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "You also could not alter the token. Editing any claim invalidates the signature, which is the split at the centre of the previous lesson: signing gives integrity and authenticity, never confidentiality."
       }
     ],
     "quiz": [
       {
         "question": "What did decoding the payload require?",
         "options": [
-          "The issuer's permission",
+          "The signing key",
           "The public key from the JWKS",
           "Nothing but the token itself",
-          "The signing key"
+          "The issuer's permission"
         ],
         "correctIndex": 2,
-        "explanation": "A signed JWT is encoded, not encrypted. Anyone holding it can read every claim, which is why secrets must never be placed in one."
+        "explanation": "A signed JWT is encoded, not encrypted. Anyone holding it reads every claim, which is why a secret must never be placed in one."
+      },
+      {
+        "question": "The deploy service verified the signature and accepted a token minted for billing. What was missing?",
+        "options": [
+          "An expiry check",
+          "An audience check: the signature proves the issuer, not the intended recipient",
+          "A stronger algorithm",
+          "A fresher JWKS"
+        ],
+        "correctIndex": 1,
+        "explanation": "Any customer of the same issuer can mint a validly signed token. Checking aud is what stops one being replayed against a service it was never issued for, and it is a single line."
       },
       {
         "question": "Why does `base64 -d` often fail on a JWT segment?",
         "options": [
-          "The segments are compressed before encoding",
-          "Each segment uses a different encoding",
+          "The payload is encrypted",
           "JWTs use base64url with padding stripped, so it must be re-added",
-          "The payload is encrypted"
+          "Segments are compressed first",
+          "Each segment uses a different encoding"
         ],
-        "correctIndex": 2,
-        "explanation": "base64url swaps two characters and drops the trailing equals signs. Restoring the padding is what makes a standard decoder work."
-      },
-      {
-        "question": "You decoded the token but cannot alter its claims. Why not?",
-        "options": [
-          "The payload is write-protected",
-          "The exp claim locks the contents",
-          "Editing the payload breaks the signature, which you cannot recompute without the signing key",
-          "The claims are checksummed by the client"
-        ],
-        "correctIndex": 2,
-        "explanation": "Integrity comes from the signature. You can read freely, but any modification is detectable by anyone with the public key."
+        "correctIndex": 1,
+        "explanation": "base64url swaps two characters and drops the trailing equals signs. Restoring the padding is what lets a standard decoder read it."
       }
     ],
     "kind": "lab"
