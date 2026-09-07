@@ -153,6 +153,119 @@
     ]
   },
   {
+    "id": "lab-prove-a-negative",
+    "title": "Lab: prove nobody read it",
+    "summary": "Build a hash-chained audit log, try to answer an auditor's question, then edit and delete entries and watch the chain object.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The audit lesson said that showing no matching event proves nothing on its own, and that negative assurance needs completeness evidence attached. This lab builds the mechanism that supplies it, in about thirty lines."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Each step appends to the same script, so every run reprints the sections before it. The expected output shown under each step is the new part; scroll to the bottom of your terminal to find it."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Build a log where each entry commits to the one before it. That single field is what turns a list into evidence.",
+            "code": "mkdir -p /tmp/auditlab && cd /tmp/auditlab\ncat > log.py <<'EOF'\nimport hashlib, json, copy\n\ndef entry(seq, actor, action, target, prev_hash):\n    e = {\"seq\": seq, \"actor\": actor, \"action\": action,\n         \"target\": target, \"prev\": prev_hash}\n    e[\"hash\"] = hashlib.sha256(\n        json.dumps(e, sort_keys=True).encode()).hexdigest()[:16]\n    return e\n\ndef build(events):\n    log, prev = [], \"genesis\"\n    for i, (actor, action, target) in enumerate(events, 1):\n        e = entry(i, actor, action, target, prev)\n        log.append(e); prev = e[\"hash\"]\n    return log\n\ndef verify(log):\n    problems, prev = [], \"genesis\"\n    for i, e in enumerate(log):\n        if e[\"seq\"] != i + 1:\n            problems.append(f\"gap: expected seq {i+1}, found {e['seq']}\")\n        if e[\"prev\"] != prev:\n            problems.append(f\"seq {e['seq']}: prev hash does not match\")\n        body = {k: e[k] for k in (\"seq\",\"actor\",\"action\",\"target\",\"prev\")}\n        if hashlib.sha256(\n            json.dumps(body, sort_keys=True).encode()).hexdigest()[:16] != e[\"hash\"]:\n            problems.append(f\"seq {e['seq']}: modified after it was written\")\n        prev = e[\"hash\"]\n    return problems\n\nlog = build([\n    (\"alice\",   \"read\",  \"app/config\"),\n    (\"deploy\",  \"read\",  \"app/config\"),\n    (\"mallory\", \"read\",  \"prod/db/root\"),\n    (\"alice\",   \"write\", \"app/config\"),\n])\nfor e in log:\n    print(f\"  {e['seq']} {e['actor']:8} {e['action']:6} {e['target']:14} {e['hash']}\")\nprint(\"verify:\", verify(log) or \"intact\")\nEOF\npython3 log.py",
+            "lang": "bash"
+          },
+          {
+            "text": "A normal, intact log.",
+            "code": "  1 alice    read   app/config     1f60b80d41853f19\n  2 deploy   read   app/config     9f6775b6316dd39e\n  3 mallory  read   prod/db/root   7db2cf9f81110058\n  4 alice    write  app/config     6c8ab733497f6d9c\nverify: intact",
+            "lang": "text"
+          },
+          {
+            "text": "Now be the person who wants entry three to say something else.",
+            "code": "cat >> log.py <<'EOF'\n\nprint(\"\\n--- edit the entry ---\")\nedited = copy.deepcopy(log); edited[2][\"target\"] = \"app/config\"\nprint(\"verify:\", verify(edited))\n\nprint(\"\\n--- delete it instead ---\")\ndeleted = [e for e in copy.deepcopy(log) if e[\"seq\"] != 3]\nprint(\"verify:\", verify(deleted))\nEOF\npython3 log.py",
+            "lang": "bash"
+          },
+          {
+            "text": "Both attempts are detected, and for different reasons worth distinguishing.",
+            "code": "--- edit the entry ---\nverify: ['seq 3: modified after it was written']\n\n--- delete it instead ---\nverify: ['gap: expected seq 3, found 4', 'seq 4: prev hash does not match']",
+            "lang": "text"
+          },
+          {
+            "text": "Now answer the auditor properly. The claim is two statements, not one.",
+            "code": "cat >> log.py <<'EOF'\n\nprint(\"\\n--- the auditor's question ---\")\nreads = [e for e in log if e[\"action\"] == \"read\" and e[\"target\"] == \"prod/db/root\"]\nprint(f\"  matching events:  {len(reads)}\")\nprint(f\"  log complete:     {verify(log) or 'chain intact, no gaps'}\")\nEOF\npython3 log.py",
+            "lang": "bash"
+          },
+          {
+            "text": "Clean up.",
+            "code": "cd /tmp && rm -rf auditlab",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "The two tampering attempts failed differently, and knowing which is which matters during an investigation."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Editing an entry breaks that entry's own hash, because the hash covers its contents. You learn exactly which record was altered.",
+          "Deleting an entry breaks two things: the sequence has a hole, and the following entry's prev no longer matches. Deletion is louder than modification, which is the opposite of what most people expect.",
+          "Neither is prevented. A hash chain is tamper-evident, not tamper-proof, and the distinction is the whole design: you cannot stop someone with write access from changing a file, you can make it impossible to do so quietly."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "This is why the answer to \"prove nobody read it\" is two statements joined together: no event matches, and the log is complete and unmodified for the period. The first alone is worthless, and it is the one people give."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "A chain verified only by the party who could tamper with it is weaker than it looks. Real deployments anchor it somewhere the operator does not control: a periodic hash published externally, a write-once store, or a third party countersigning."
+      },
+      {
+        "type": "prose",
+        "text": "Every property this lab demonstrates is one STRIDE calls repudiation. An actor denies having done something and you cannot prove otherwise, which is a security failure with no confidentiality breach, no downtime, and nothing an intrusion detector would ever flag."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why does deleting an entry produce two errors rather than one?",
+        "options": [
+          "Deletion corrupts the file structure",
+          "The sequence has a hole and the next entry's prev hash no longer matches",
+          "Deleted entries are cached and reappear",
+          "The genesis hash is recomputed"
+        ],
+        "correctIndex": 1,
+        "explanation": "Sequence continuity catches the hole and the chain catches the broken link. Deletion is noisier than modification, which surprises most people."
+      },
+      {
+        "question": "What does a hash chain actually provide?",
+        "options": [
+          "Tamper-proofing: entries cannot be altered",
+          "Tamper-evidence: alterations cannot be made quietly",
+          "Encryption of log contents",
+          "Prevention of unauthorised writes"
+        ],
+        "correctIndex": 1,
+        "explanation": "Anyone with write access can still change the file. The chain makes the change detectable, which is a different and achievable goal."
+      },
+      {
+        "question": "What is the complete answer to 'prove nobody read this secret in Q3'?",
+        "options": [
+          "No event matches the query",
+          "No event matches, and the log is verifiably complete and unmodified for the period",
+          "The access policy did not permit it",
+          "The secret was rotated at the end of Q3"
+        ],
+        "correctIndex": 1,
+        "explanation": "Negative assurance is a conjunction. The first statement alone is the one people give and it establishes nothing without the second."
+      }
+    ],
+    "kind": "lab"
+  },
+  {
     "id": "agent-fleet-management",
     "title": "Agent fleet management",
     "summary": "Provision agents at scale, scope their vaults, then rotate a key and deactivate an agent.",

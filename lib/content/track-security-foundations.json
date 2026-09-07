@@ -994,6 +994,11 @@
         "text": "The previous lessons said that deny-by-default fails closed, and that priority rather than effect resolves overlapping rules. Both are easy to nod along to and easy to get wrong under deadline, so build the engine and let it bite you."
       },
       {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Each step appends to the same script, so every run reprints the sections before it. The expected output shown under each step is the new part; scroll to the bottom of your terminal to find it."
+      },
+      {
         "type": "steps",
         "steps": [
           {

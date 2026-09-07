@@ -143,6 +143,120 @@
     ]
   },
   {
+    "id": "lab-hierarchy-under-compromise",
+    "title": "Lab: the key hierarchy under compromise",
+    "summary": "Build a KEK and DEK tree, take a shell on the application server, then rotate the KEK and watch it change nothing.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The key hierarchy lesson claimed that an HSM protects against key theft rather than key misuse, and that the audit log is therefore your detection surface rather than a byproduct. This lab puts an attacker inside the boundary that claim is about."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Each step appends to the same script, so every run reprints the sections before it. The expected output shown under each step is the new part; scroll to the bottom of your terminal to find it."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Build the hierarchy. The HSM object holds the KEK and never returns it, exactly as real non-exportability works; the application server holds ciphertext and wrapped DEKs.",
+            "code": "mkdir -p /tmp/hsmlab && cd /tmp/hsmlab\ncat > hsm.py <<'EOF'\nimport os\n\nxor = lambda a, b: bytes(x ^ y for x, y in zip(a, b * (len(a)//len(b) + 1)))\n\nclass HSM:\n    \"\"\"Holds the KEK. Performs operations, never hands the key back.\"\"\"\n    def __init__(self):\n        self._kek = os.urandom(32)\n        self.log = []\n    def unwrap(self, wrapped, caller):\n        self.log.append({\"caller\": caller, \"op\": \"unwrap\"})\n        return xor(wrapped, self._kek)\n    def rotate(self):\n        old, self._kek = self._kek, os.urandom(32)\n        return old\n\nhsm = HSM()\nSTORE = {}\nfor name, value in [(\"db/password\", b\"prod-db-pw-9f2a\"),\n                    (\"stripe/key\",  b\"sk-live-9f2a\")]:\n    dek = os.urandom(32)\n    STORE[name] = {\"ciphertext\": xor(value, dek),\n                   \"wrapped_dek\": xor(dek, hsm._kek)}\n\ndef read_secret(name, caller):\n    e = STORE[name]\n    return xor(e[\"ciphertext\"], hsm.unwrap(e[\"wrapped_dek\"], caller))\n\nprint(\"normal operation:\", read_secret(\"db/password\", \"app-server\").decode())\nEOF\npython3 hsm.py",
+            "lang": "bash"
+          },
+          {
+            "text": "Now put an attacker on the application server. They cannot take the KEK, because it is not there to take.",
+            "code": "cat >> hsm.py <<'EOF'\n\nprint(\"\\n--- attacker has a shell on the app server ---\")\nprint(\"steal the KEK? \", \"no, it never leaves the HSM\")\nprint(\"read a secret? \", read_secret(\"stripe/key\", \"app-server(attacker)\").decode())\nEOF\npython3 hsm.py",
+            "lang": "bash"
+          },
+          {
+            "text": "The key is safe and the secret is not.",
+            "code": "--- attacker has a shell on the app server ---\nsteal the KEK?  no, it never leaves the HSM\nread a secret?  sk-live-9f2a",
+            "lang": "text"
+          },
+          {
+            "text": "Do the thing everyone reaches for in an incident: rotate the KEK and re-wrap every DEK.",
+            "code": "cat >> hsm.py <<'EOF'\n\nprint(\"\\n--- incident response: rotate the KEK ---\")\nold = hsm.rotate()\nfor e in STORE.values():\n    dek = xor(e[\"wrapped_dek\"], old)\n    e[\"wrapped_dek\"] = xor(dek, hsm._kek)\nprint(\"rotated, all DEKs re-wrapped.\")\nprint(\"attacker still on the box:\", read_secret(\"stripe/key\", \"app-server(attacker)\").decode())\nEOF\npython3 hsm.py",
+            "lang": "bash"
+          },
+          {
+            "text": "Rotation completed successfully and achieved nothing, because the attacker was never using the key material. They were using the ability to ask.",
+            "code": "--- incident response: rotate the KEK ---\nrotated, all DEKs re-wrapped.\nattacker still on the box: sk-live-9f2a",
+            "lang": "text"
+          },
+          {
+            "text": "Look at what does tell you something.",
+            "code": "cat >> hsm.py <<'EOF'\n\nprint(\"\\n--- the HSM audit log ---\")\nfor entry in hsm.log:\n    print(\"   \", entry)\nEOF\npython3 hsm.py",
+            "lang": "bash"
+          },
+          {
+            "text": "Clean up.",
+            "code": "cd /tmp && rm -rf hsmlab",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Three conclusions, and the second is the one that changes how you run an incident."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Non-exportability worked exactly as advertised. The attacker could not take the key with them, so their access ended when their access ended, and nothing was compromised permanently.",
+          "Rotation was the wrong response. It is the reflex for key compromise, and this was credential compromise. The effective action is revoking whatever let the attacker call the HSM, which in production is the token or certificate the application authenticates with.",
+          "The log is the only record of what actually happened. Every unwrap is there, attributed to a caller. Without it you would know an attacker had access and nothing about what they did with it."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "This is why the credential that calls the HSM deserves the same care as key material. The key file is protected by hardware; the token authorising calls to it usually sits in an environment variable."
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "In an incident, ask what the attacker was actually using. If they held key material, rotate. If they held the ability to invoke, revoke the invoker and read the log to scope the damage. Rotating in the second case burns hours and changes nothing."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why did rotating the KEK not stop the attacker?",
+        "options": [
+          "The rotation did not complete",
+          "They were using the ability to call the HSM, not the key material",
+          "The old KEK remained valid",
+          "The DEKs were not re-wrapped"
+        ],
+        "correctIndex": 1,
+        "explanation": "Rotation is the response to key compromise. This was credential compromise, so the effective action is revoking whatever authorises calls to the HSM."
+      },
+      {
+        "question": "What did non-exportability actually achieve here?",
+        "options": [
+          "It prevented the secrets from being read",
+          "The attacker could not take the key away, so their capability ended with their access",
+          "It made rotation unnecessary",
+          "It blocked the unwrap operation"
+        ],
+        "correctIndex": 1,
+        "explanation": "The blast radius is bounded in time rather than eliminated. A stolen key file works forever and anywhere; this attacker lost everything the moment their access was revoked."
+      },
+      {
+        "question": "What is the practical consequence for the credential the application uses to call the HSM?",
+        "options": [
+          "It can be long-lived because the HSM is the real control",
+          "It is the actual boundary and deserves the same care as key material",
+          "It only matters for audit attribution",
+          "It should be stored alongside the wrapped DEKs"
+        ],
+        "correctIndex": 1,
+        "explanation": "The key is protected by hardware and the token authorising its use frequently is not, which makes that token the weakest link in an otherwise strong hierarchy."
+      }
+    ],
+    "kind": "lab"
+  },
+  {
     "id": "customer-managed-keys-cmek",
     "title": "Customer-managed keys (CMEK)",
     "summary": "Add a client-side AES-256-GCM layer so 1Claw stores only your key's fingerprint.",
