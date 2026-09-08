@@ -119,7 +119,7 @@ export function CurriculumView() {
                           className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs ${
                             done
                               ? "border-[var(--success)] bg-[var(--success)]/15 text-[var(--success)]"
-                              : "border-[var(--border)] text-[var(--muted)]"
+                              : "border-[var(--border)] text-[var(--muted-accessible)]"
                           }`}
                         >
                           {done ? <Icon name="check" size={13} /> : li + 1}

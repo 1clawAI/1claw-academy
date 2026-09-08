@@ -27,6 +27,10 @@
   --secondary-foreground: #e8e6e8;
   --muted-surface: #0f0e10;
   --muted-foreground: #6b6b73;
+  /* Not an official brand token: --muted-foreground reads below 4.5:1 on
+     --secondary at small sizes (measured, not eyeballed). Reserved for
+     small muted text that sits directly on a --secondary/--surface-2 panel. */
+  --muted-accessible: #84828a;
   --accent: #1c1418;
   --accent-foreground: #ffffff;
   --destructive: #c4123a;
@@ -88,6 +92,7 @@
   --secondary-foreground: #4a1520;
   --muted-surface: #f5f0f2;
   --muted-foreground: #71717a;
+  --muted-accessible: #68666f;
   --accent: #ffe8ec;
   --accent-foreground: #0a0a0c;
   --destructive: #b71c1c;

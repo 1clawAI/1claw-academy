@@ -63,7 +63,19 @@ export function ProgressView() {
     }
   };
 
-  if (!ready) return null;
+  if (!ready) {
+    // Real stats live in localStorage, unreadable during SSR. Render the
+    // page shell immediately instead of nothing, so first paint isn't
+    // blocked on hydration — the real numbers swap in a moment later.
+    return (
+      <div className="mx-auto max-w-3xl px-5 py-12">
+        <p className="eyebrow" data-index="✓">
+          Your progress
+        </p>
+        <h1 className="section-title mt-3">Loading…</h1>
+      </div>
+    );
+  }
 
   if (completedCount === 0) {
     return (

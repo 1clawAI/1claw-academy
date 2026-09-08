@@ -28,12 +28,12 @@ export function CodeBlock({
     <figure className="my-5">
       <div className="card overflow-hidden !rounded-xl">
         <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-2">
-          <span className="font-mono text-xs uppercase tracking-wider text-[var(--muted)]">
+          <span className="font-mono text-xs uppercase tracking-wider text-[var(--muted-accessible)]">
             {lang || "code"}
           </span>
           <button
             onClick={copy}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-[var(--muted)] transition hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-[var(--muted-accessible)] transition hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
           >
             {copied ? (
               <>
