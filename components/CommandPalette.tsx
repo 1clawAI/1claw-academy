@@ -110,23 +110,33 @@ export function CommandPalette() {
   }, [active]);
 
   // Trap Tab/Shift+Tab inside the dialog so focus never escapes to the page
-  // behind it while open, per standard modal dialog behaviour.
-  const trapTab = useCallback((e: React.KeyboardEvent) => {
-    if (e.key !== "Tab" || !dialogRef.current) return;
-    const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-      'button:not([disabled]), input, [href], [tabindex]:not([tabindex="-1"])',
-    );
-    if (focusable.length === 0) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  }, []);
+  // behind it while open, per standard modal dialog behaviour. Escape closes
+  // regardless of which element inside currently has focus — it was
+  // previously wired only on the search input, so it silently did nothing
+  // once Tab moved focus onto a result row.
+  const onDialogKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Escape") {
+        close();
+        return;
+      }
+      if (e.key !== "Tab" || !dialogRef.current) return;
+      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input, [href], [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    },
+    [close],
+  );
 
   if (!open) return null;
 
@@ -140,7 +150,7 @@ export function CommandPalette() {
         ref={dialogRef}
         className="w-full max-w-xl overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={trapTab}
+        onKeyDown={onDialogKeyDown}
         role="dialog"
         aria-modal="true"
         aria-label="Search lessons"
@@ -152,8 +162,7 @@ export function CommandPalette() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Escape") close();
-              else if (e.key === "ArrowDown") {
+              if (e.key === "ArrowDown") {
                 e.preventDefault();
                 setActive((i) => Math.min(i + 1, results.length - 1));
               } else if (e.key === "ArrowUp") {
