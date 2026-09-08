@@ -132,7 +132,7 @@ export function CurriculumView() {
                           {l.title}
                           <KindBadge kind={l.kind} size="sm" />
                         </span>
-                        <span className="hidden text-xs text-[var(--muted)] sm:block">
+                        <span className="hidden text-xs text-[var(--muted-accessible)] sm:block">
                           {l.quiz.length} Q
                         </span>
                         <span className="text-[var(--muted)]">→</span>

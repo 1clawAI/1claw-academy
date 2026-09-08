@@ -34,7 +34,7 @@ export function LessonSidebar({
             <Link
               key={t.id}
               href={`/learn/${t.id}/${t.lessons[0].id}`}
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-[var(--muted)] transition hover:text-[var(--foreground)]"
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-[var(--muted-accessible)] transition hover:text-[var(--foreground)]"
             >
               <span className="font-mono opacity-60">
                 {String(ti + 1).padStart(2, "0")}
@@ -57,7 +57,7 @@ export function LessonSidebar({
               </span>
               <span
                 className={`truncate text-xs font-semibold ${
-                  isCurrent ? "" : "text-[var(--muted)]"
+                  isCurrent ? "" : "text-[var(--muted-accessible)]"
                 }`}
               >
                 {t.title}
@@ -76,7 +76,7 @@ export function LessonSidebar({
                         className={`-ml-px flex items-start gap-2 border-l-2 py-1.5 pl-3 pr-2 text-xs leading-snug transition ${
                           here
                             ? "border-[var(--signature)] font-medium text-[var(--foreground)]"
-                            : "border-transparent text-[var(--muted)] hover:border-[var(--border)] hover:text-[var(--foreground)]"
+                            : "border-transparent text-[var(--muted-accessible)] hover:border-[var(--border)] hover:text-[var(--foreground)]"
                         }`}
                       >
                         <span className="mt-0.5 shrink-0">

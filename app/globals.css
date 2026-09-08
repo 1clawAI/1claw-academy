@@ -28,9 +28,10 @@
   --muted-surface: #0f0e10;
   --muted-foreground: #6b6b73;
   /* Not an official brand token: --muted-foreground reads below 4.5:1 on
-     --secondary at small sizes (measured, not eyeballed). Reserved for
-     small muted text that sits directly on a --secondary/--surface-2 panel. */
-  --muted-accessible: #84828a;
+     --secondary, --card, and --hover-strong at small sizes (measured with
+     axe-core, not eyeballed). Reserved for small muted text that sits
+     directly on a dark surface, including hovered/active rows. */
+  --muted-accessible: #88868d;
   --accent: #1c1418;
   --accent-foreground: #ffffff;
   --destructive: #c4123a;

@@ -234,7 +234,7 @@ export function ProgressView() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-[var(--muted)]">
+                    <span className="font-mono text-xs text-[var(--muted-accessible)]">
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <span className="truncate text-sm font-medium">
@@ -257,7 +257,7 @@ export function ProgressView() {
                     />
                   </div>
                 </div>
-                <span className="shrink-0 font-mono text-xs text-[var(--muted)]">
+                <span className="shrink-0 font-mono text-xs text-[var(--muted-accessible)]">
                   {pct}%
                 </span>
               </Link>

@@ -110,7 +110,7 @@ export function TrackView({
                   className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs ${
                     done
                       ? "border-[var(--success)] bg-[var(--success)]/15 text-[var(--success)]"
-                      : "border-[var(--border)] text-[var(--muted)]"
+                      : "border-[var(--border)] text-[var(--muted-accessible)]"
                   }`}
                 >
                   {done ? <Icon name="check" size={13} /> : i + 1}
@@ -120,11 +120,11 @@ export function TrackView({
                     {l.title}
                     <KindBadge kind={l.kind} size="sm" />
                   </span>
-                  <span className="mt-0.5 block text-xs leading-relaxed text-[var(--muted)]">
+                  <span className="mt-0.5 block text-xs leading-relaxed text-[var(--muted-accessible)]">
                     {l.summary}
                   </span>
                 </span>
-                <span className="hidden shrink-0 font-mono text-xs text-[var(--muted)] sm:block">
+                <span className="hidden shrink-0 font-mono text-xs text-[var(--muted-accessible)] sm:block">
                   {readingMinutes(l.blocks)} min
                 </span>
               </Link>

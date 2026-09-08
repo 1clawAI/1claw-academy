@@ -63,7 +63,7 @@ export function MobileContents({
             aria-label="Course contents"
           >
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">
+              <span className="text-xs font-medium uppercase tracking-wider text-[var(--muted-accessible)]">
                 Contents
               </span>
               <button

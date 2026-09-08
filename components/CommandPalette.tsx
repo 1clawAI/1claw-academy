@@ -167,14 +167,14 @@ export function CommandPalette() {
             placeholder="Search 63 lessons — try 'injection', 'rotate', 'MPC'…"
             className="w-full bg-transparent py-4 text-sm outline-none placeholder:text-[var(--muted)]"
           />
-          <kbd className="hidden shrink-0 rounded border border-[var(--border)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--muted)] sm:block">
+          <kbd className="hidden shrink-0 rounded border border-[var(--border)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--muted-accessible)] sm:block">
             ESC
           </kbd>
         </div>
 
         <div ref={listRef} className="max-h-[52vh] overflow-y-auto p-2">
           {results.length === 0 ? (
-            <p className="px-3 py-8 text-center text-sm text-[var(--muted)]">
+            <p className="px-3 py-8 text-center text-sm text-[var(--muted-accessible)]">
               No lessons match “{query}”.
             </p>
           ) : (
@@ -212,7 +212,7 @@ export function CommandPalette() {
                         />
                       ) : null}
                     </span>
-                    <span className="block truncate text-xs text-[var(--muted)]">
+                    <span className="block truncate text-xs text-[var(--muted-accessible)]">
                       {e.trackTitle}
                     </span>
                   </span>
