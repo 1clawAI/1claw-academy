@@ -52,6 +52,7 @@ export function CommandPalette() {
   const { isDone, ready } = useProgress();
   const listRef = useRef<HTMLDivElement>(null);
   const restoreRef = useRef<HTMLElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -108,6 +109,25 @@ export function CommandPalette() {
       ?.scrollIntoView({ block: "nearest" });
   }, [active]);
 
+  // Trap Tab/Shift+Tab inside the dialog so focus never escapes to the page
+  // behind it while open, per standard modal dialog behaviour.
+  const trapTab = useCallback((e: React.KeyboardEvent) => {
+    if (e.key !== "Tab" || !dialogRef.current) return;
+    const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input, [href], [tabindex]:not([tabindex="-1"])',
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }, []);
+
   if (!open) return null;
 
   return (
@@ -117,8 +137,10 @@ export function CommandPalette() {
       role="presentation"
     >
       <div
+        ref={dialogRef}
         className="w-full max-w-xl overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={trapTab}
         role="dialog"
         aria-modal="true"
         aria-label="Search lessons"

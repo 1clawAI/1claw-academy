@@ -5,9 +5,10 @@ import { useProgress } from "@/lib/progress";
 import { Logo } from "./Logo";
 import { Search } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { Icon, type IconName } from "./Icon";
 
 export function Nav() {
-  const { percent, ready, completedCount } = useProgress();
+  const { percent, ready, completedCount, tier } = useProgress();
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--background)]/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-5 py-3">
@@ -58,7 +59,18 @@ export function Nav() {
           </a>
           <ThemeToggle />
           {ready && completedCount > 0 ? (
-            <div className="ml-2 hidden items-center gap-2 sm:flex">
+            <Link
+              href="/progress"
+              title={tier ? `${tier.name} · ${percent}% complete` : `${percent}% complete`}
+              className="ml-2 hidden items-center gap-2 rounded-lg px-1.5 py-1 transition hover:bg-[var(--hover)] sm:flex"
+            >
+              {tier ? (
+                <Icon
+                  name={tier.icon as IconName}
+                  size={13}
+                  className="text-[var(--signature)]"
+                />
+              ) : null}
               <div className="h-1.5 w-24 overflow-hidden rounded-full bg-[var(--surface-2)]">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-[var(--signature-soft)] to-[var(--signature)] transition-all"
@@ -68,7 +80,7 @@ export function Nav() {
               <span className="font-mono text-xs text-[var(--muted)]">
                 {percent}%
               </span>
-            </div>
+            </Link>
           ) : null}
         </nav>
       </div>

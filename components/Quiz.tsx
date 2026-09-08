@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Check, X } from "lucide-react";
 import type { QuizQuestion } from "@/lib/types";
 
@@ -13,6 +13,7 @@ export function Quiz({
 }) {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState<Record<number, boolean>>({});
+  const groupId = useId();
 
   const correctCount = useMemo(
     () =>
@@ -50,15 +51,42 @@ export function Quiz({
       {questions.map((q, qi) => {
         const chosen = answers[qi];
         const isSub = submitted[qi];
+        const questionId = `${groupId}-q${qi}`;
         return (
           <div key={qi} className="card p-5">
             <div className="mb-3 flex items-start gap-2">
               <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-xs font-semibold text-[var(--primary-2)]">
                 {qi + 1}
               </span>
-              <p className="font-medium text-[var(--foreground)]">{q.question}</p>
+              <p id={questionId} className="font-medium text-[var(--foreground)]">
+                {q.question}
+              </p>
             </div>
-            <div className="space-y-2">
+            <div
+              role="radiogroup"
+              aria-labelledby={questionId}
+              className="space-y-2"
+              onKeyDown={(e) => {
+                if (isSub) return;
+                const dir =
+                  e.key === "ArrowDown" || e.key === "ArrowRight"
+                    ? 1
+                    : e.key === "ArrowUp" || e.key === "ArrowLeft"
+                      ? -1
+                      : 0;
+                if (!dir) return;
+                e.preventDefault();
+                const from = chosen ?? -1;
+                const next =
+                  (from + dir + q.options.length) % q.options.length;
+                choose(qi, next);
+                (
+                  e.currentTarget.querySelector(
+                    `[data-oi="${next}"]`,
+                  ) as HTMLElement | null
+                )?.focus();
+              }}
+            >
               {q.options.map((opt, oi) => {
                 const isChosen = chosen === oi;
                 const isCorrect = q.correctIndex === oi;
@@ -74,7 +102,12 @@ export function Quiz({
                 return (
                   <button
                     key={oi}
+                    type="button"
+                    role="radio"
+                    aria-checked={isChosen}
+                    data-oi={oi}
                     disabled={isSub}
+                    tabIndex={isChosen || (chosen === undefined && oi === 0) ? 0 : -1}
                     onClick={() => choose(qi, oi)}
                     className={`flex w-full items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm transition ${cls}`}
                   >
@@ -104,6 +137,7 @@ export function Quiz({
               </button>
             ) : (
               <div
+                role="status"
                 className={`mt-3 rounded-lg border px-4 py-3 text-sm ${
                   chosen === q.correctIndex
                     ? "border-[var(--success)]/40 bg-[var(--success)]/5 text-[#a9ead9]"
@@ -121,7 +155,10 @@ export function Quiz({
       })}
 
       {finished ? (
-        <div className="card border-[var(--signature)]/40 bg-[var(--signature)]/5 p-5 text-center fadeup">
+        <div
+          role="status"
+          className="card border-[var(--signature)]/40 bg-[var(--signature)]/5 p-5 text-center fadeup"
+        >
           <p className="text-lg font-semibold">
             You scored {correctCount} / {questions.length}
           </p>

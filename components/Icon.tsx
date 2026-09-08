@@ -16,6 +16,12 @@ import {
   Check,
   Lock,
   Crosshair,
+  Trophy,
+  Star,
+  Zap,
+  Sprout,
+  Footprints,
+  GraduationCap,
   type LucideProps,
 } from "lucide-react";
 
@@ -40,6 +46,13 @@ const registry = {
   trend: TrendingUp,
   terminal: Terminal,
   check: Check,
+  // Achievement tiers, lowest to highest
+  "tier-newcomer": Footprints,
+  "tier-apprentice": Sprout,
+  "tier-practitioner": Zap,
+  "tier-specialist": Star,
+  "tier-rockstar": Trophy,
+  graduate: GraduationCap,
 } as const;
 
 export type IconName = keyof typeof registry;

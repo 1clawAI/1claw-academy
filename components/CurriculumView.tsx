@@ -25,6 +25,12 @@ export function CurriculumView() {
             <div className="font-mono text-sm text-[var(--muted)]">
               {completedCount}/{totalLessons} complete · {percent}%
             </div>
+            <Link
+              href="/progress"
+              className="mt-1 block text-xs font-medium text-[var(--signature-soft)] transition hover:text-[var(--signature)]"
+            >
+              View achievements →
+            </Link>
             <button
               onClick={() => {
                 if (confirm("Reset all progress? This cannot be undone."))
@@ -75,6 +81,15 @@ export function CurriculumView() {
                     >
                       {t.level}
                     </span>
+                    {ready && tp === 100 ? (
+                      <span
+                        title="100% complete"
+                        className="flex items-center gap-1 rounded-full border border-[var(--success)]/40 bg-[var(--success)]/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--success)]"
+                      >
+                        <Icon name="graduate" size={10} />
+                        Graduate
+                      </span>
+                    ) : null}
                   </div>
                   <p className="text-sm text-[var(--muted)]">{t.tagline}</p>
                   <p className="mt-1 text-sm text-[var(--prose-fg)]">
