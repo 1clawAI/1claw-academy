@@ -45,15 +45,15 @@ export default function RootLayout({
       </head>
       <body className="flex min-h-full flex-col">
         <ProgressProvider>
-          <Nav />
-          <CommandPalette />
           <a
             href="#content"
             className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-[var(--primary)] focus:px-4 focus:py-2 focus:text-sm focus:text-white"
           >
             Skip to content
           </a>
-          <main id="content" className="flex-1">
+          <Nav />
+          <CommandPalette />
+          <main id="content" tabIndex={-1} className="flex-1 outline-none">
             {children}
           </main>
           <footer className="border-t border-[var(--border)] px-5 py-8 text-center text-xs text-[var(--muted)]">
