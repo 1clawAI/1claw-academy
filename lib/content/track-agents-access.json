@@ -1089,6 +1089,138 @@
     ]
   },
   {
+    "id": "peer-memory-and-derived-data",
+    "title": "Peer memory: access control for what nobody granted",
+    "summary": "Several agents can share a model of one human. That model is derived, not granted, which changes what access control has to mean.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Everything so far in this track has been about access to something a human explicitly created or owns: a secret, a vault, a delegation. Peer memory is different in kind. When several agents serve the same person, each one that learns their approval habits independently learns less than the group could learn together. A peer is that shared model: what a person has approved, how confidently, and why the system believes it."
+      },
+      {
+        "type": "prose",
+        "text": "It is also the most sensitive thing an agent can read about someone, and unlike a secret, nobody deliberately granted it. A password exists because a human typed it in. A behavioral profile exists because the system noticed a pattern. That difference is why the access model here is stricter than anything else in this track, not looser."
+      },
+      {
+        "type": "points",
+        "items": [
+          "An agent may read or write a peer only if it is named in observer_agent_ids, full stop.",
+          "Same organization grants nothing. Same platform connection grants nothing. A broad scope grants nothing.",
+          "A peer with no observers is readable by no agent at all, not by every agent.",
+          "Creating a peer, which decides who observes it, is human-only. An agent that could create one could add itself as an observer."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "That third point is deliberate, not an oversight. If an empty observer list meant \"everyone\", forgetting to set observers would expose someone's behavioral profile to every agent in the org, silently and totally. Empty means nobody, the same deny-by-default default this course has taught since Access Control Models."
+      },
+      {
+        "type": "prose",
+        "text": "What actually gets derived is narrower than it sounds. The system tracks approval tendencies, and only from a consistent history: per fingerprint bucket (action, amount band, new-or-known recipient), never per action type in general, so three approvals of $5 do not become a belief that spans $500. Three observations minimum: two is a coincidence. A mixed history, someone who sometimes says no, is not recorded as a tendency at all, because deciding case by case is the opposite of a pattern worth automating. And confidence is capped below certainty; a score of 1.0 would read downstream as \"no need to check\", which is never true."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "POST /v1/peers/{id}/predict-approval returns likelihood (an observation about the person) and suggest_auto (a statement about your own action_approval_policy) as two separate fields. suggest_auto is true only where a rule you already wrote would auto-approve this exact case, and it carries a blocked_reason when it is not."
+      },
+      {
+        "type": "prose",
+        "text": "That separation is the whole point. A confident model of a person never becomes new authority by itself. If you never wrote a rule for this action, no_matching_rule comes back regardless of how many times the person has said yes before. An absent rule is not permission, the same principle behind deny-by-default policy engines, applied to a prediction instead of a request."
+      },
+      {
+        "type": "prose",
+        "text": "Every derived fact carries provenance, naming the events it came from. When those events pass the 90-day retention window, each entry becomes a tombstone: it keeps the kind of event and the decision, and drops the content. The belief outlives its transcript without losing its basis, so \"why does this system think that about me\" stays answerable years later. A human correction always outranks a re-derived inference; editing a fact stops the processor from overwriting it, because a correction that inference silently reverses is not a correction."
+      },
+      {
+        "type": "scenario",
+        "situation": "Two of your agents serve the same customer-support user: a triage bot and a refund bot. The refund bot's policy auto-approves refunds under $20 for a peer with a strong approval history. The triage bot calls predict-approval on that peer to decide whether to fast-track a $15 refund request it received.",
+        "question": "What does the triage bot's call return, and why?",
+        "options": [
+          {
+            "text": "suggest_auto: true, because the peer has a strong approval history for refunds.",
+            "feedback": "Likelihood is about the person; suggest_auto is about the calling agent's own policy. The peer's history does not change what the triage bot is itself configured to do."
+          },
+          {
+            "text": "suggest_auto: false with blocked_reason no_matching_rule, because the rule that would auto-approve this lives on the refund bot's policy, not the triage bot's.",
+            "correct": true,
+            "feedback": "Correct. predict-approval consults the calling agent's own action_approval_policy. A rule on the refund bot does not transfer to the triage bot just because they observe the same peer. Authority does not travel with the data."
+          },
+          {
+            "text": "The call fails, because only one agent can observe a given peer at a time.",
+            "feedback": "Multiple agents can be named in observer_agent_ids simultaneously; that is the entire point of a shared peer model. The call succeeds and returns a prediction."
+          },
+          {
+            "text": "suggest_auto: true, because $15 is under the refund bot's $20 threshold.",
+            "feedback": "The $20 threshold belongs to the refund bot's policy, which the triage bot is not evaluated against. Each agent's suggest_auto reflects only its own rules."
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Platform connections provision a peer automatically on bootstrap, with that connection's agents as observers, and re-running bootstrap merges observers rather than replacing them, so adding a new agent to a connection does not revoke the ones already watching. MCP exposes only get_peer_context to agents; creating a peer and changing its observer list have no MCP tool and stay human actions, the same pattern this course has taught for every action with a high blast radius."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "An agent is in the same organization as a peer but not named in its observer_agent_ids. What can it read?",
+        "options": [
+          "Nothing. Organization membership grants no access to a peer.",
+          "Everything, since organization membership is sufficient.",
+          "Only the peer's tombstoned facts, not live ones.",
+          "The peer's context, but not individual facts."
+        ],
+        "correctIndex": 0,
+        "explanation": "Access to a peer is by observer list and nothing else. Same org, same connection, and broad scopes all grant nothing on their own."
+      },
+      {
+        "question": "Why does an empty observer_agent_ids list mean \"no agent may read this peer\" rather than \"every agent may\"?",
+        "options": [
+          "Because empty lists are rejected by the API and cannot be created.",
+          "Because if empty meant everyone, forgetting to set observers would silently expose a behavioral profile org-wide.",
+          "Because peers with no observers are deleted automatically after 90 days.",
+          "Both interpretations are supported, chosen by a per-org setting."
+        ],
+        "correctIndex": 1,
+        "explanation": "This is the same deny-by-default logic as an unscoped policy: an omission should fail closed, not open. A missing observer list must never be read as a wildcard."
+      },
+      {
+        "question": "predict-approval returns likelihood: 0.9 and suggest_auto: false with blocked_reason: no_matching_rule. What does this mean?",
+        "options": [
+          "The prediction is unreliable and should be ignored.",
+          "The person is very likely to approve, but the calling agent has no rule that would auto-approve this case, so nothing is authorized.",
+          "The peer's data has expired past the retention window.",
+          "The agent is not permitted to observe this peer."
+        ],
+        "correctIndex": 1,
+        "explanation": "likelihood is an observation about the person. suggest_auto is a statement about the calling agent's own policy. A confident model never becomes new authority by itself; an absent rule is not permission."
+      },
+      {
+        "question": "A fact's supporting event passes the 90-day retention window. What happens to the fact?",
+        "options": [
+          "It is deleted along with the event.",
+          "It becomes a tombstone: the kind of event and the decision remain, the content does not.",
+          "It is silently re-derived from newer events with the same content.",
+          "It is frozen and can never be corrected again."
+        ],
+        "correctIndex": 1,
+        "explanation": "The belief outlives its transcript without losing its basis. A tombstone keeps enough to answer \"why does the system think that\" without holding onto expired event content."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "security-foundations",
+        "lessonId": "access-control-models",
+        "note": "deny-by-default applied to derived, not granted, data"
+      },
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "excessive-agency-confused-deputy",
+        "note": "a confident prediction is not authority to act on"
+      }
+    ]
+  },
+  {
     "id": "sub-agent-delegation",
     "title": "Sub-agents and delegation",
     "summary": "Let one agent hand work to another under a human-authored delegation, with tool allowlists, depth limits, and daily caps.",
@@ -1343,6 +1475,27 @@
         "text": "Pair this with the previous lesson and the loop closes: an agent discovers a peer in the directory, and a human-authored delegation decides whether it may actually hand it work."
       },
       {
+        "type": "prose",
+        "text": "The directory job board takes discovery one step further: instead of just finding an agent, post a task to the board, receive bids from discoverable agents, and award the work. Awarding hands the bidder an a2a_url pointing at its own runtime; 1claw hosts the board, not the work itself."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Job and bid text is written by one party and read by another party's model. That is a prompt-injection surface by definition, the same class of risk taught in the agent threat model track, just arriving through a job description instead of a scraped web page or a support ticket."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Every field is inspected server-side before it is stored. High-confidence injection is refused outright.",
+          "Anything below that threshold is returned as an untrusted-content envelope, not a plain string, for every client that reads it. The SDK types it so passing it straight into a prompt is a type error, not a runtime surprise.",
+          "MCP gets read-and-bid tools only for the job board. Nothing here lets an agent award work or move funds without a human step in between."
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "This is the lethal trifecta's second circle showing up somewhere new. A job board is untrusted content by construction: it exists so a stranger's text reaches your agent's context. Wrapping that text in a typed envelope instead of a string is the same idea as fail-closed content inspection elsewhere in this course, applied at the boundary where the untrusted content actually enters."
+      },
+      {
         "type": "callout",
         "variant": "tip",
         "text": "The directory and card endpoints are unauthenticated by design. Publish only what you would put on a public web page; the card is not a place for internal detail."
@@ -1405,6 +1558,17 @@
         ],
         "correctIndex": 2,
         "explanation": "Discovery and authorization are separate. Finding an agent tells you it exists; a human-created delegation decides whether work can actually be handed to it."
+      },
+      {
+        "question": "Why does the directory job board return low-confidence-injection text as an untrusted-content envelope instead of a plain string?",
+        "options": [
+          "To save bandwidth on large job descriptions",
+          "So the SDK's type system makes passing it straight into a prompt a type error rather than a silent injection risk",
+          "Envelopes are required for all API responses regardless of content",
+          "It only applies to bids, not job postings"
+        ],
+        "correctIndex": 1,
+        "explanation": "Job and bid text is written by one party and read by another party's model, the textbook shape of a prompt-injection surface. Typing it as an envelope rather than a string forces every client to handle it deliberately instead of by accident."
       }
     ],
     "concepts": [

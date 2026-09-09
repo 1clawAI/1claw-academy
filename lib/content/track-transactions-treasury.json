@@ -699,6 +699,221 @@
     ]
   },
   {
+    "id": "agent-initiated-payments",
+    "title": "The other direction: an agent pays someone else's paywall",
+    "summary": "x402 micropayments covered your org paying 1Claw. This is an agent paying a paywall it does not control, under a cap it does not choose for itself.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The earlier x402 lesson is about being on the receiving end of a 402: your org's own API usage, billed by 1Claw. 1claw pay is the other direction. Your agent's task hits somebody else's paywall mid-run and needs to pay it to continue. The two problems look similar and the trust model is the opposite: last time you were deciding whether to sign 1Claw's own challenge. Now your agent is deciding whether to sign a stranger's."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The CLI holds the network connection and nothing else. It sends the vault the exact bytes the paywall served; the vault computes the digest and decides what may be signed.",
+          "The digest binds the transfer value that will actually leave the wallet, not the challenge's maxAmountRequired ceiling. What a human approves and what gets signed cannot drift apart.",
+          "Keys never leave the vault. The CLI gets back an X-PAYMENT header, never key material.",
+          "Pay is off until a human turns it on with PATCH /v1/agents/{id}/pay/settings, and an agent cannot turn it on for itself."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "The raw 402 challenge is the preimage the vault signs against. The CLI never re-parses it into fields and sends those instead, because anything reinterpreted first would fall outside what was actually approved. This is the same principle as validating the raw x402 challenge rather than a summary of it, taught in the earlier x402 lesson, applied to the paying side instead of the receiving side."
+      },
+      {
+        "type": "prose",
+        "text": "--mode is a request, not a guarantee: the vault only honours it where the agent's own configured policy already allows it. strict asks for a passkey touch on every payment. session asks for a spending grant instead, a capped, time-bounded delegation created once by a human. auto asks for no ceremony at all, and is only reachable for an agent explicitly configured to run unattended."
+      },
+      {
+        "type": "points",
+        "items": [
+          "pay_require_passkey defaults to true. While it is true, every payment needs a human touch, and an allowlisted recipient does not bypass that; the allowlist only widens which recipients a grant may cover once one exists.",
+          "An agent with pay_require_passkey false and no payTo allowlist pays nobody. A null allowlist is not a wildcard for an unattended agent; it means no one.",
+          "A spending grant cannot exceed the agent's own pay_grant_max_usd or pay_grant_max_ttl_secs. A grant is a delegation inside limits already set, never a way around them.",
+          "The cap is decremented in a single guarded statement as payments are signed, so two concurrent payments from the same grant cannot both spend the last dollar."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Limits are charged at signing, not at settlement. A signature that was produced and then reported lost still consumed authority, because the paywall may yet present it. The response says so explicitly: {\"recorded\": \"signed_failed\", \"limit_released\": false}. Only a vault-verified reconciliation can return that headroom, and it is not built yet, so \"the payment failed, let me spend again\" is the one claim a client must not be able to make on its own say-so."
+      },
+      {
+        "type": "prose",
+        "text": "What can actually be paid is deliberately short. USDC and USDT on Base, Optimism, Avalanche and BNB Chain settle over EIP-3009. Solana settles the same challenge with a signed SPL transfer instead, chosen by the chain rather than by a flag, because EIP-3009 does not exist on Solana and an SPL transfer is not something an EVM paywall would ever settle. Every address and mint was verified on-chain by reading the token's own symbol and decimals rather than trusted by name; an asset that is not on the list is refused, not guessed at, because the daily limit is denominated in USD and a fabricated exchange rate would go both in front of the human and into the ledger."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "BNB Chain's USDC and USDT are 18 decimals, not the 6 decimals you would assume from Base or Ethereum. Treating them as 6 decimals the way the earlier x402 lab treated Base USDC would understate a payment by a factor of 10^12, the same class of atomic-unit error taught in Lab: send a trillion dollars by mistake, just hiding on a different chain this time."
+      },
+      {
+        "type": "scenario",
+        "situation": "An agent configured with pay_require_passkey: false has a payTo allowlist containing one address on Base. Mid-task, it hits an x402 paywall on Solana, from an address that happens to match a name on its Base allowlist string-for-string.",
+        "question": "Does the payment go through?",
+        "options": [
+          {
+            "text": "Yes. The address matches the allowlist, and the amount is within the agent's daily cap.",
+            "feedback": "An address string matching across chains is coincidence, not authorization. Base and Solana addresses are different formats entirely, and even where a symbol like USDC matches by name, it resolves within the stated network only, because the same symbol names a different token on every chain."
+          },
+          {
+            "text": "No. A symbol or address only resolves within the network the challenge actually names; matching across chains is not how the allowlist or the asset table work.",
+            "correct": true,
+            "feedback": "Correct. Assets are named by contract address, SPL mint, or symbol, but a symbol resolves only within the stated network. An allowlist entry for a Base address says nothing about a Solana one, even where two strings happen to look alike."
+          },
+          {
+            "text": "Yes, because unattended mode with an allowlist authorizes any chain the allowlisted recipient appears on.",
+            "feedback": "Unattended mode still requires the specific network and asset to be one of the ones 1claw pay actually verified on-chain and lists as supported. A recipient existing on multiple chains does not carry the allowlist entry across them."
+          },
+          {
+            "text": "No, because Solana payments always require a passkey regardless of agent settings.",
+            "feedback": "Solana is one of the supported networks with no special passkey carve-out; the same pay_require_passkey and allowlist rules apply. The reason this payment is refused is the network mismatch, not the chain itself."
+          }
+        ]
+      }
+    ],
+    "quiz": [
+      {
+        "question": "What does the payment digest bind, and why does that matter?",
+        "options": [
+          "The challenge's maxAmountRequired ceiling, so any lower amount is also covered",
+          "The transfer value that will actually leave the wallet, so what a human approves and what gets signed cannot drift apart",
+          "Only the recipient address, not the amount",
+          "Nothing; the digest is informational only"
+        ],
+        "correctIndex": 1,
+        "explanation": "Binding the actual transfer value, not the ceiling a paywall requests, is what keeps the authorize page honest: it shows exactly what will be signed, not the maximum the paywall was allowed to ask for."
+      },
+      {
+        "question": "An agent has pay_require_passkey set to false and no payTo allowlist configured. What happens when it tries to pay?",
+        "options": [
+          "It pays any recipient, since a null allowlist means unrestricted",
+          "It pays nobody. A null allowlist is not a wildcard for an unattended agent",
+          "It falls back to requiring a passkey after all",
+          "It pays only 1Claw's own facilitator address"
+        ],
+        "correctIndex": 1,
+        "explanation": "For an unattended agent, an absent allowlist means no one, not everyone. This mirrors the deny-by-default logic used throughout this course's access-control lessons."
+      },
+      {
+        "question": "A payment is signed, then the client reports the paywall never returned a 200. What does the response say about the spending limit?",
+        "options": [
+          "limit_released: true, since the payment did not settle",
+          "limit_released: false; a signature that was produced still consumed authority even if it is later lost",
+          "The signing key is automatically rotated",
+          "The daily limit resets immediately on any reported failure"
+        ],
+        "correctIndex": 1,
+        "explanation": "Limits are charged at signing, not settlement, because the paywall may still present the signature later. Only a vault-verified reconciliation, not built yet, can return that headroom."
+      },
+      {
+        "question": "Why does Solana use a signed SPL transfer instead of EIP-3009 for the same x402 challenge?",
+        "options": [
+          "Solana is not supported yet",
+          "EIP-3009 is an ERC-20 extension that does not exist on Solana, so the scheme is chosen by the chain rather than a flag",
+          "SPL transfers are only used for amounts under a cent",
+          "1claw pay always uses EIP-3009 regardless of chain"
+        ],
+        "correctIndex": 1,
+        "explanation": "EIP-3009 is EVM-specific; Solana has no equivalent, and an SPL transfer is not something an EVM paywall would settle. The scheme follows the chain the challenge actually names."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "transactions-treasury",
+        "lessonId": "x402-micropayments",
+        "note": "the receiving side of the same protocol"
+      },
+      {
+        "trackId": "transactions-treasury",
+        "lessonId": "lab-off-by-a-million",
+        "note": "atomic-unit and decimal errors, now on a chain with 18-decimal stablecoins"
+      }
+    ]
+  },
+  {
+    "id": "lab-spend-under-a-grant",
+    "title": "Lab: pay a paywall without funding a wallet",
+    "summary": "Run the actual 1claw pay flow against a mock paywall in dev mode: challenge capture, digest binding, the paid retry, all without a chain or a cent.",
+    "kind": "lab",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Everything in the previous lesson was about what the vault refuses to sign and why. This lab runs the part that is safe to run without any of that infrastructure: the flow itself, end to end, against a local paywall."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "ONECLAW_PAY_DEV=1 short-circuits the vault entirely. The dev signer never contacts it and produces a header no real paywall would ever honour, precisely so this exercise cannot be mistaken for a real payment."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Clone the example and start the mock paywall. It listens on :4022 and returns a real, spec-shaped 402.",
+            "code": "git clone https://github.com/1clawAI/1claw-examples.git\ncd 1claw-examples/x402-pay-cli\nnode paywall.mjs &",
+            "lang": "bash"
+          },
+          {
+            "text": "Confirm the 402 shape yourself before paying it. This is the same accepts[] structure from the earlier x402 lesson: scheme, network, maxAmountRequired, payTo, asset.",
+            "code": "curl -s -i http://localhost:4022/premium",
+            "lang": "bash"
+          },
+          {
+            "text": "Pay it, in dev mode. --agent takes any string here; dev mode never asks the vault to resolve it.",
+            "code": "ONECLAW_PAY_DEV=1 1claw pay --agent any http://localhost:4022/premium",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "tip",
+        "text": "Real output from this exact command: three status lines (402, signed, 200) followed by the paid resource. The recipient shown after the 402 line is the dev signer's placeholder address, not the paywall's real payTo, which is the tell that nothing here touched a chain."
+      },
+      {
+        "type": "prose",
+        "text": "Run it a second time. The output is identical: the mock paywall issues a fresh, spec-shaped 402 every call, and dev mode always signs instantly with no passkey wait. Against a real vault, the first payment in strict mode would instead print an authorize link and wait for a passkey touch before the signed line ever appears, and --mode session would create a spending grant on that touch so later payments inside its cap and window need no further prompt."
+      },
+      {
+        "type": "prose",
+        "text": "That gap, between what dev mode lets you run in two minutes and what a real vault actually enforces, is the lesson. A digest that binds the transfer value, a grant that cannot exceed the agent's own configured maximum, an allowlist that means nobody when it is empty: none of that is visible from the CLI output of a successful payment. It only shows up when something is refused, which is exactly why the earlier lesson's scenario exercise mattered more than this lab's happy path."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "In this lab's output, why does the recipient shown after the 402 line differ from the paywall's real payTo address?",
+        "options": [
+          "The mock paywall is broken",
+          "ONECLAW_PAY_DEV=1 uses a dev signer that never contacts the vault, so it never resolves or displays the real recipient",
+          "The CLI redacts recipient addresses by default",
+          "The payment actually settled to a different address than requested"
+        ],
+        "correctIndex": 1,
+        "explanation": "Dev mode is a flow exercise, not a payment. Its placeholder recipient is a deliberate signal that nothing here touched a real vault, key, or chain."
+      },
+      {
+        "question": "What would differ if this lab ran against a real, pay-enabled agent instead of dev mode?",
+        "options": [
+          "Nothing; dev mode reproduces every real behavior exactly",
+          "The first payment in strict mode would print an authorize link and wait for a passkey touch before signing",
+          "The paywall would return a 500 instead of a 402",
+          "The X-PAYMENT header would be optional"
+        ],
+        "correctIndex": 1,
+        "explanation": "A real vault decides what may be signed and, in strict mode, requires a human touch first. Dev mode skips straight to signing because it never asks the vault anything."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "transactions-treasury",
+        "lessonId": "agent-initiated-payments",
+        "note": "the flow this lab exercises"
+      }
+    ]
+  },
+  {
     "id": "lab-off-by-a-million",
     "title": "Lab: send a trillion dollars by mistake",
     "summary": "Convert amounts between human and atomic units, get the decimals wrong in both directions, and read what you actually sent.",
@@ -985,6 +1200,35 @@
       },
       {
         "type": "prose",
+        "text": "An approval prompt saying an agent wants to send 2 ETH was flagged above as too thin to decide on. Approvals for business actions (v0.59.14) fix the same problem for non-transaction actions: a refund, a post, an invoice. POST /v1/approvals/request now accepts a payload, the fields that describe what the action will actually do, separately from summary, the sentence a human reads. The risk tier is derived from the payload, never from the summary, so a summary that flatters the request changes what your operator sees and nothing about how strong the approval must be."
+      },
+      {
+        "type": "points",
+        "items": [
+          "declared_risk_tier is advisory. 1claw derives its own floor from the payload and takes the higher of the two, so an agent declaring tier 1 on a $500 refund still gets tier 2.",
+          "Five actions are rejected on this endpoint when an agent requests them directly: policy_change, card_order, agent_transaction, agent_execution, agent_sign_intent. These are the approvals 1claw itself executes when a human approves, so the wording a human reads has to come from the same place as the side effect that follows, not from whatever text the agent supplied.",
+          "human_summary is the exact line your operator receives on SMS, push, or email, rendered from the agent's own summary_template on action_approval_policy. Widening that policy (raising a threshold, changing what auto-approves) counts as widening a guardrail and routes through the same approval flow as raising a spend cap."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "SMS approval-by-reply exists for the lowest risk tier only, and for a reason: a valid Twilio signature proves the message came from Twilio, not from the right person, since anyone who knows the number can text it. Higher tiers get a link and cannot be approved by replying, and the message body never uses the word \"reply\" at those tiers, because an instruction the server will refuse is a habit not worth teaching a human to trust."
+      },
+      {
+        "type": "prose",
+        "text": "Learned auto-approval closes the loop the other direction: instead of writing action_approval_policy rules by hand, GET /v1/org/approval-learning/shadow-report reports which patterns would already have been automated, based on every decision made through the approvals path since it shipped. Promotion is the only write, and it is human-only, for the same reason creating a peer is human-only: an agent that could promote a rule for itself could grant itself standing authority."
+      },
+      {
+        "type": "points",
+        "items": [
+          "A promoted rule is bounded by the amount band it was earned in. A run of $5 approvals never licenses a $500 one, the same fingerprint-bucket narrowness taught for peer memory's derived approval tendencies.",
+          "A profile promotes onto the agent whose approvals built it, and no other. It does not transfer the way a template's settings do across a fleet.",
+          "Promotion refuses entirely while the org is in shadow mode. The report is a read over data being collected now; turning it into authority is a separate, deliberate step."
+        ]
+      },
+      {
+        "type": "prose",
         "text": "Where this goes wrong in practice. Graduated HITL introduces a human decision into an automated path, and the humans are the part that degrades."
       },
       {
@@ -1060,6 +1304,28 @@
         ],
         "correctIndex": 0,
         "explanation": "A hard cap refuses. An approval policy routes the transaction to a human, so legitimate large transfers can proceed with oversight rather than simply failing."
+      },
+      {
+        "question": "An agent requests approval for a $500 refund with declared_risk_tier: 1. 1claw's own derivation would set the floor at tier 2. What risk_tier is actually enforced?",
+        "options": [
+          "Tier 1, since the agent's declaration is authoritative",
+          "Tier 2, because the enforced tier is the higher of the derived floor and the declared tier, never lower",
+          "The request is rejected outright for declaring the wrong tier",
+          "Tier 3, as a penalty for under-declaring"
+        ],
+        "correctIndex": 1,
+        "explanation": "An agent can ask for a stricter review than the floor requires, never a weaker one. declared_below_floor is returned alongside the enforced risk_tier so the mismatch is visible, but the floor always wins."
+      },
+      {
+        "question": "Why is promoting a learned auto-approval rule a human-only action?",
+        "options": [
+          "Promotion is expensive to compute and rate-limited",
+          "An agent that could promote a rule could grant itself standing authority it was never explicitly given",
+          "Only tier-1 actions can be promoted",
+          "MCP does not support write operations of any kind"
+        ],
+        "correctIndex": 1,
+        "explanation": "The same principle that makes peer creation human-only applies here: a system that can widen its own future authority based on its own past behavior is not really under the human's control anymore."
       }
     ],
     "concepts": [

@@ -26,7 +26,7 @@
         "type": "steps",
         "steps": [
           {
-            "text": "Set your API key. Replace with your 1ck_ key from Settings → API Keys.",
+            "text": "Set your API key. Replace with your 1ck_ key from Settings \u2192 API Keys.",
             "code": "export TOKEN=1ck_your_key_here",
             "lang": "bash"
           },
@@ -772,6 +772,160 @@
         "trackId": "security-foundations",
         "lessonId": "access-control-models",
         "note": "isolation between tenants"
+      }
+    ]
+  },
+  {
+    "id": "fleet-management-at-scale",
+    "title": "Fleet management at platform scale",
+    "summary": "One bootstrap template can provision a thousand agents. Manage them as a cohort without any single request becoming the largest privilege change the API can express.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "The Agent fleet management lesson earlier in this track covers fleets you built by hand: loops of 1claw agent create, per-agent vault binding, per-agent guardrails. That works at dozens of agents. It stops working once a Platform API template has bootstrapped a thousand end users, because at that scale the template is the only thing left that describes them all, and nothing aggregates how far the live cohort has drifted from it."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Requires: a Platform API app and template from Platform API multitenancy, and a Pro or higher plan. Fleet routes accept your plt_ app key or a user JWT for the org that owns the app."
+      },
+      {
+        "type": "prose",
+        "text": "A fleet is simply every agent one template provisioned. The routes answer the two questions a template alone cannot: how many agents are behind the current version, and how do you move them forward without reviewing each one."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "Check the fleet's status. version_skew breaks the cohort down by the template version each agent was bootstrapped from; spec_hash tells you whether the current version actually changed anything meaningful, since a version number moves on every edit including ones that changed nothing.",
+            "code": "1claw platform fleet status $APP_ID $TEMPLATE_ID",
+            "lang": "bash"
+          },
+          {
+            "text": "Read what is bulk-patchable off the response, rather than assuming it. The allowlist is narrower than a single-agent PATCH and may narrow further over time.",
+            "code": "1claw platform fleet status $APP_ID $TEMPLATE_ID | jq '.bulk_patchable_fields'",
+            "lang": "bash"
+          },
+          {
+            "text": "Dry-run a rollout first. A dry run reports the plan and claims no job, so job_id comes back null and it never blocks the real rollout that follows.",
+            "code": "1claw platform fleet rollout $APP_ID $TEMPLATE_ID --dry-run",
+            "lang": "bash"
+          },
+          {
+            "text": "Run the rollout. Agents someone edited outside fleet control are skipped, not overwritten, and named in the response under skipped_drifted.",
+            "code": "1claw platform fleet rollout $APP_ID $TEMPLATE_ID",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "prose",
+        "text": "Every route on this page does what it does a thousand times, and nobody reviews it per agent. That single fact explains every restriction below. A patch that would be unremarkable on one agent, raising a spend limit, turning on transaction signing, is a different kind of act when it lands on an entire cohort in one request. So the fleet surface is deliberately narrower than the per-agent API, not wider."
+      },
+      {
+        "type": "points",
+        "items": [
+          "Guardrails (max_transaction_value_usd, daily_spend_limit_usd, and the rest) are never bulk-patchable. Raising a limit across a fleet is a thousand separate decisions that happen to share a form, and each one still routes through the per-agent guardrail approval flow.",
+          "Capability flags (intents_api_enabled, execution_intents_enabled) are never bulk-patchable. Turning on transaction signing for a whole cohort in one call is the largest privilege change this API can express.",
+          "A field outside the allowlist returns 400 naming the field, and refuses the entire patch rather than applying the acceptable parts. A partially-applied bulk patch across a thousand agents is worse than a rejected one.",
+          "Hand edits are skipped, not corrected. An agent changed outside fleet control is left alone and the field is recorded on it as drift, the standing answer to \"why is this agent still behind\". --force overrides the skip but still cannot carry a guardrail or a capability flag, forced or not.",
+          "Only one rollout runs per template at a time. A second returns 409, because two concurrent rollouts would race and leave the cohort split across versions."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "The MCP server exposes fleets read-only: platform_get_fleet, platform_list_fleet_agents, and platform_plan_fleet_rollout, which always runs as a dry run regardless of what an agent passes. Bulk-patch and pause have no MCP tool. Changing a thousand agents from one call, with no per-agent review, stays a decision for a human at a terminal."
+      },
+      {
+        "type": "prose",
+        "text": "Pausing a fleet deactivates every agent in the cohort at once. The blast radius is the point: this exists for the moment you need a thousand agents to stop immediately, not for routine maintenance."
+      },
+      {
+        "type": "audit",
+        "scenario": "You are reviewing a proposed fleet-management PR before it ships. It adds a new fleet endpoint that lets a plt_ key raise daily_spend_limit_usd for every agent in a fleet in one call, guarded only by a confirm: true flag in the request body.",
+        "tools": [
+          {
+            "name": "bulk-set-guardrails (proposed)",
+            "description": "Raises a guardrail field across every agent a template provisioned, in one request.",
+            "circles": [
+              "private-data",
+              "external-comms"
+            ],
+            "rationale": "It reaches every agent's spend authority in one call (private-data: it touches financial configuration for every end user's agent at once) and, once raised, that authority can move funds externally without further review (external-comms). A confirm flag is a checkbox, not the per-agent guardrail approval flow every other spend-limit change in this API routes through."
+          },
+          {
+            "name": "fleet rollout --dry-run (existing)",
+            "description": "Reports what a rollout would change without applying anything.",
+            "circles": [],
+            "rationale": "A dry run changes nothing and claims no job. It has no capability to raise or spend anything, so it closes none of the three circles regardless of what fields the template contains."
+          },
+          {
+            "name": "fleet bulk-patch on system_prompt (existing)",
+            "description": "Bulk-patches an allowlisted, non-guardrail field like system_prompt across a fleet.",
+            "circles": [],
+            "rationale": "The allowlist is deliberately built to exclude guardrails and capability flags. A field like system_prompt changes what an agent is told, not what it is authorized to spend or sign, so this stays outside all three circles by design."
+          }
+        ],
+        "verdict": "Reject the proposed endpoint as designed. A confirm flag is not a substitute for the per-agent guardrail approval flow: it collapses a thousand individual spend-limit decisions into one click by one caller, which is exactly the failure mode the real fleet API was built to refuse. If bulk guardrail changes are genuinely needed, they still belong behind the same approval path each individual agent's guardrail widening already requires, not a fleet-scoped shortcut around it."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "Why are guardrails like daily_spend_limit_usd excluded from bulk-patchable fields?",
+        "options": [
+          "Guardrails cannot be changed through the API at all",
+          "Raising a spend limit across a fleet is a thousand separate decisions that happen to share a form, so each one still routes through per-agent approval",
+          "Guardrails are only readable, never writable",
+          "Bulk-patching guardrails requires a separate subscription tier"
+        ],
+        "correctIndex": 1,
+        "explanation": "The fleet API is deliberately narrower than the per-agent API for exactly this class of field. A patch that is unremarkable on one agent is a different kind of act at cohort scale."
+      },
+      {
+        "question": "A rollout finds that three agents in the fleet were manually edited outside fleet control. What happens to those three by default?",
+        "options": [
+          "They are overwritten to match the template",
+          "They are skipped and recorded as drifted, left alone unless --force is used",
+          "The entire rollout fails",
+          "They are automatically deactivated"
+        ],
+        "correctIndex": 1,
+        "explanation": "Hand edits are skipped, not corrected. Someone changed them for a reason, and a rollout that silently overwrites a thousand such reasons at once is worse than one that names them as drift."
+      },
+      {
+        "question": "A field outside bulk_patchable_fields is included in a bulk-patch request across 500 agents. What happens?",
+        "options": [
+          "The valid fields are applied and the invalid one is silently dropped",
+          "The whole patch is refused with a 400 naming the offending field",
+          "The request succeeds and the field is ignored server-side without a warning",
+          "Only the first 100 agents receive the patch"
+        ],
+        "correctIndex": 1,
+        "explanation": "A partially-applied bulk patch across hundreds of agents is far worse than a rejected one, so the whole patch refuses rather than applying only the acceptable parts."
+      },
+      {
+        "question": "What does fleet rollout --dry-run actually do?",
+        "options": [
+          "Applies the rollout to a random 10% sample of the fleet",
+          "Reports the plan and changes nothing; job_id comes back null so it never blocks the real rollout",
+          "Runs the rollout but reverts it after 24 hours",
+          "Requires the same approval as a real rollout, just logged differently"
+        ],
+        "correctIndex": 1,
+        "explanation": "A dry run claims no job. Because job_id is null, it never collides with the one-rollout-per-template rule, so you can preview freely before committing."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "agent-threat-model",
+        "lessonId": "owasp-agentic-top-10",
+        "note": "ASI10: a single overpowered bulk action is a rogue-agent-shaped risk even when a human triggers it"
+      },
+      {
+        "trackId": "security-foundations",
+        "lessonId": "zero-trust-and-least-privilege",
+        "note": "the fleet API is narrower than the per-agent API on purpose"
       }
     ]
   },
