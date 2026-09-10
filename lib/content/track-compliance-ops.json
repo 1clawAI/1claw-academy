@@ -874,23 +874,23 @@
       {
         "question": "Why are guardrails like daily_spend_limit_usd excluded from bulk-patchable fields?",
         "options": [
-          "Guardrails cannot be changed through the API at all",
           "Raising a spend limit across a fleet is a thousand separate decisions that happen to share a form, so each one still routes through per-agent approval",
+          "Guardrails cannot be changed through the API at all",
           "Guardrails are only readable, never writable",
           "Bulk-patching guardrails requires a separate subscription tier"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "The fleet API is deliberately narrower than the per-agent API for exactly this class of field. A patch that is unremarkable on one agent is a different kind of act at cohort scale."
       },
       {
         "question": "A rollout finds that three agents in the fleet were manually edited outside fleet control. What happens to those three by default?",
         "options": [
           "They are overwritten to match the template",
-          "They are skipped and recorded as drifted, left alone unless --force is used",
           "The entire rollout fails",
+          "They are skipped and recorded as drifted, left alone unless --force is used",
           "They are automatically deactivated"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Hand edits are skipped, not corrected. Someone changed them for a reason, and a rollout that silently overwrites a thousand such reasons at once is worse than one that names them as drift."
       },
       {
@@ -908,11 +908,11 @@
         "question": "What does fleet rollout --dry-run actually do?",
         "options": [
           "Applies the rollout to a random 10% sample of the fleet",
-          "Reports the plan and changes nothing; job_id comes back null so it never blocks the real rollout",
           "Runs the rollout but reverts it after 24 hours",
-          "Requires the same approval as a real rollout, just logged differently"
+          "Requires the same approval as a real rollout, just logged differently",
+          "Reports the plan and changes nothing; job_id comes back null so it never blocks the real rollout"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "A dry run claims no job. Because job_id is null, it never collides with the one-rollout-per-template rule, so you can preview freely before committing."
       }
     ],
@@ -1016,12 +1016,12 @@
       {
         "question": "A chart removes an agent that was previously listed. What does the next apply do to that agent?",
         "options": [
+          "Leaves it alone; there is no --prune",
           "Deletes it immediately",
           "Deactivates it but preserves its audit trail",
-          "Leaves it alone; there is no --prune",
           "Queues a deletion approval"
         ],
-        "correctIndex": 2,
+        "correctIndex": 0,
         "explanation": "Apply never deletes. A resource removed from the chart is simply left alone; tearing something down stays a separate, explicit action."
       },
       {
@@ -1039,11 +1039,11 @@
         "question": "Why does 1claw apply refuse to change guardrail fields like tx_max_value directly, even when they're written into the chart?",
         "options": [
           "Guardrails cannot be expressed in YAML syntax",
-          "A reconciler writing guardrails directly would be a way around the guardrail approval flow every other edit to them requires",
           "Guardrails are read-only in this API version",
-          "Charts are limited to five resource types"
+          "Charts are limited to five resource types",
+          "A reconciler writing guardrails directly would be a way around the guardrail approval flow every other edit to them requires"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Guardrail edits route through the approval flow specifically because they are privileged changes. A declarative tool that could set them directly would bypass that review entirely."
       }
     ],

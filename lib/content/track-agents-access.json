@@ -534,12 +534,12 @@
       {
         "question": "A Cedar export from a policy preset comes back with residual_guardrails listing a $5000 daily cap. Why doesn't that cap appear as a value_gwei condition inside the Cedar text itself?",
         "options": [
-          "Cedar does not support numeric comparisons",
           "Converting a USD limit to a native-token amount needs a live price, and a price baked into the policy at write time would be silently wrong from that moment on",
+          "Cedar does not support numeric comparisons",
           "residual_guardrails is a display-only field with no real enforcement behind it",
           "Dollar limits only apply to human-authored policies, not generated ones"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "The compiler deliberately does not convert. The dollar limit stays enforced by the guardrail columns, where a live price is applied at evaluation time, and is repeated in residual_guardrails so a reader does not mistake the Cedar text alone for the complete policy."
       }
     ],
@@ -901,23 +901,23 @@
       {
         "question": "What is the main security advantage of executing through a binding rather than reading the secret?",
         "options": [
-          "The request is faster",
           "The credential is injected server-side and never enters the agent's context",
+          "The request is faster",
           "The agent gets a longer-lived token",
           "The credential is rotated after every call"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "The agent sends an intent, not a key. The credential stays server-side, so it cannot leak into the context window, logs, or model memory."
       },
       {
         "question": "Why choose credential_source vault_ref over an inline credential?",
         "options": [
-          "The credential resolves from the vault at execution time, so rotation needs no binding update",
           "It removes the need for allowed_hosts",
           "It encrypts the credential more strongly",
+          "The credential resolves from the vault at execution time, so rotation needs no binding update",
           "It makes the binding usable by every agent"
         ],
-        "correctIndex": 0,
+        "correctIndex": 2,
         "explanation": "Inline copies the credential at creation. A vault_ref is a live pointer resolved at execution, so rotating the underlying secret is picked up automatically."
       },
       {
@@ -934,12 +934,12 @@
       {
         "question": "You install the Gmail connector and request only the readonly scope, narrower than the preset's default list. What happens if you then try to widen it to a scope outside the preset entirely?",
         "options": [
-          "It succeeds, since you already proved you can narrow the request",
           "It returns 400. Requested scopes may narrow a preset's list but never extend it",
+          "It succeeds, since you already proved you can narrow the request",
           "It silently falls back to the preset's default scopes",
           "It succeeds only on Business tier and above"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "The reviewed scope list is what makes a one-click install different from a general OAuth initiator. Narrowing is always allowed; asking for anything the preset does not already cover is a 400."
       }
     ],
@@ -1231,45 +1231,45 @@
       {
         "question": "An agent is in the same organization as a peer but not named in its observer_agent_ids. What can it read?",
         "options": [
-          "Nothing. Organization membership grants no access to a peer.",
           "Everything, since organization membership is sufficient.",
+          "Nothing. Organization membership grants no access to a peer.",
           "Only the peer's tombstoned facts, not live ones.",
           "The peer's context, but not individual facts."
         ],
-        "correctIndex": 0,
+        "correctIndex": 1,
         "explanation": "Access to a peer is by observer list and nothing else. Same org, same connection, and broad scopes all grant nothing on their own."
       },
       {
         "question": "Why does an empty observer_agent_ids list mean \"no agent may read this peer\" rather than \"every agent may\"?",
         "options": [
           "Because empty lists are rejected by the API and cannot be created.",
-          "Because if empty meant everyone, forgetting to set observers would silently expose a behavioral profile org-wide.",
           "Because peers with no observers are deleted automatically after 90 days.",
-          "Both interpretations are supported, chosen by a per-org setting."
+          "Both interpretations are supported, chosen by a per-org setting.",
+          "Because if empty meant everyone, forgetting to set observers would silently expose a behavioral profile org-wide."
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "This is the same deny-by-default logic as an unscoped policy: an omission should fail closed, not open. A missing observer list must never be read as a wildcard."
       },
       {
         "question": "predict-approval returns likelihood: 0.9 and suggest_auto: false with blocked_reason: no_matching_rule. What does this mean?",
         "options": [
-          "The prediction is unreliable and should be ignored.",
           "The person is very likely to approve, but the calling agent has no rule that would auto-approve this case, so nothing is authorized.",
+          "The prediction is unreliable and should be ignored.",
           "The peer's data has expired past the retention window.",
           "The agent is not permitted to observe this peer."
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "likelihood is an observation about the person. suggest_auto is a statement about the calling agent's own policy. A confident model never becomes new authority by itself; an absent rule is not permission."
       },
       {
         "question": "A fact's supporting event passes the 90-day retention window. What happens to the fact?",
         "options": [
           "It is deleted along with the event.",
-          "It becomes a tombstone: the kind of event and the decision remain, the content does not.",
           "It is silently re-derived from newer events with the same content.",
+          "It becomes a tombstone: the kind of event and the decision remain, the content does not.",
           "It is frozen and can never be corrected again."
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "The belief outlives its transcript without losing its basis. A tombstone keeps enough to answer \"why does the system think that\" without holding onto expired event content."
       }
     ],
@@ -1596,11 +1596,11 @@
         "question": "Can an agent publish itself to the public directory?",
         "options": [
           "Yes, if it has the discovery scope",
-          "Yes, with its own token",
           "No: updating discovery settings is human-only",
+          "Yes, with its own token",
           "Only if it is Business tier"
         ],
-        "correctIndex": 2,
+        "correctIndex": 1,
         "explanation": "PATCH /v1/agents/{id}/discovery is human-only. Discovery is opt-in and stays under human control."
       },
       {
@@ -1619,21 +1619,21 @@
         "options": [
           "True, if both agents are in the same org",
           "True, if the card lists the tool",
-          "False: delegation still needs a human-authored delegation record",
-          "True, discovery implies permission"
+          "True, discovery implies permission",
+          "False: delegation still needs a human-authored delegation record"
         ],
-        "correctIndex": 2,
+        "correctIndex": 3,
         "explanation": "Discovery and authorization are separate. Finding an agent tells you it exists; a human-created delegation decides whether work can actually be handed to it."
       },
       {
         "question": "Why does the directory job board return low-confidence-injection text as an untrusted-content envelope instead of a plain string?",
         "options": [
           "To save bandwidth on large job descriptions",
-          "So the SDK's type system makes passing it straight into a prompt a type error rather than a silent injection risk",
           "Envelopes are required for all API responses regardless of content",
+          "So the SDK's type system makes passing it straight into a prompt a type error rather than a silent injection risk",
           "It only applies to bids, not job postings"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Job and bid text is written by one party and read by another party's model, the textbook shape of a prompt-injection surface. Typing it as an envelope rather than a string forces every client to handle it deliberately instead of by accident."
       }
     ],

@@ -778,33 +778,33 @@
         "question": "What does the payment digest bind, and why does that matter?",
         "options": [
           "The challenge's maxAmountRequired ceiling, so any lower amount is also covered",
-          "The transfer value that will actually leave the wallet, so what a human approves and what gets signed cannot drift apart",
           "Only the recipient address, not the amount",
-          "Nothing; the digest is informational only"
+          "Nothing; the digest is informational only",
+          "The transfer value that will actually leave the wallet, so what a human approves and what gets signed cannot drift apart"
         ],
-        "correctIndex": 1,
+        "correctIndex": 3,
         "explanation": "Binding the actual transfer value, not the ceiling a paywall requests, is what keeps the authorize page honest: it shows exactly what will be signed, not the maximum the paywall was allowed to ask for."
       },
       {
         "question": "An agent has pay_require_passkey set to false and no payTo allowlist configured. What happens when it tries to pay?",
         "options": [
-          "It pays any recipient, since a null allowlist means unrestricted",
           "It pays nobody. A null allowlist is not a wildcard for an unattended agent",
+          "It pays any recipient, since a null allowlist means unrestricted",
           "It falls back to requiring a passkey after all",
           "It pays only 1Claw's own facilitator address"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "For an unattended agent, an absent allowlist means no one, not everyone. This mirrors the deny-by-default logic used throughout this course's access-control lessons."
       },
       {
         "question": "A payment is signed, then the client reports the paywall never returned a 200. What does the response say about the spending limit?",
         "options": [
           "limit_released: true, since the payment did not settle",
-          "limit_released: false; a signature that was produced still consumed authority even if it is later lost",
           "The signing key is automatically rotated",
+          "limit_released: false; a signature that was produced still consumed authority even if it is later lost",
           "The daily limit resets immediately on any reported failure"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "Limits are charged at signing, not settlement, because the paywall may still present the signature later. Only a vault-verified reconciliation, not built yet, can return that headroom."
       },
       {
@@ -896,12 +896,12 @@
       {
         "question": "What would differ if this lab ran against a real, pay-enabled agent instead of dev mode?",
         "options": [
-          "Nothing; dev mode reproduces every real behavior exactly",
           "The first payment in strict mode would print an authorize link and wait for a passkey touch before signing",
+          "Nothing; dev mode reproduces every real behavior exactly",
           "The paywall would return a 500 instead of a 402",
           "The X-PAYMENT header would be optional"
         ],
-        "correctIndex": 1,
+        "correctIndex": 0,
         "explanation": "A real vault decides what may be signed and, in strict mode, requires a human touch first. Dev mode skips straight to signing because it never asks the vault anything."
       }
     ],
@@ -1309,11 +1309,11 @@
         "question": "An agent requests approval for a $500 refund with declared_risk_tier: 1. 1claw's own derivation would set the floor at tier 2. What risk_tier is actually enforced?",
         "options": [
           "Tier 1, since the agent's declaration is authoritative",
-          "Tier 2, because the enforced tier is the higher of the derived floor and the declared tier, never lower",
           "The request is rejected outright for declaring the wrong tier",
+          "Tier 2, because the enforced tier is the higher of the derived floor and the declared tier, never lower",
           "Tier 3, as a penalty for under-declaring"
         ],
-        "correctIndex": 1,
+        "correctIndex": 2,
         "explanation": "An agent can ask for a stricter review than the floor requires, never a weaker one. declared_below_floor is returned alongside the enforced risk_tier so the mismatch is visible, but the floor always wins."
       },
       {
