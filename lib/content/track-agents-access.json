@@ -447,6 +447,32 @@
         "text": "Cedar is Team+ and OPA is Business+. On a lower tier these endpoints exist but return a tier error, so check your plan before designing around them."
       },
       {
+        "type": "prose",
+        "text": "You rarely write Cedar by hand for a first agent. Policy presets (Team+ for the Cedar export) answer a plainer question instead: read-only-assistant, small-business-spender, inbox-agent, treasury-operator, each a sentence that compiles to the same guardrail columns, access policies and approval rules you would otherwise write by hand."
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Preview before you apply. POST /v1/agents/{id}/policy-preset/preview returns exactly which fields the preset would widen relative to what the agent can already do, so \"this raises your daily limit from $10 to $100\" is what a human reads, not a generic warning."
+      },
+      {
+        "type": "prose",
+        "text": "A preset is not a way around approval. Applying one that loosens a guardrail returns 202 or 403, never a silent 200, because a preset builds the same request a person editing the agent by hand would send and passes it to the same handler: same widening classification, same approval queue, same step-up. A wizard that wrote guardrail columns directly would be a way around that flow wearing a friendlier interface."
+      },
+      {
+        "type": "prose",
+        "text": "The Cedar export makes the same discipline visible in the generated policy itself. Presets state limits in dollars; Cedar's schema only exposes transaction value as value_gwei, a native-token amount. Converting needs a live price, and a price baked into a policy at write time is wrong the moment it is written and stays silently wrong from then on."
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "So the compiler does not convert. USD limits come back separately as residual_guardrails and stay enforced by the guardrail columns, where a live price applies at evaluation time. Render residual_guardrails next to the Cedar text: a generated policy shown alone reads as complete while actually permitting every amount, the same silent gap a decimal-place error leaves in a transaction value."
+      },
+      {
+        "type": "prose",
+        "text": "Policies created from a Cedar export start in shadow mode, the same enforcement: log setting taught earlier in this course, reporting what they would decide without deciding anything until someone promotes them. Dry-run one with the same test endpoint you already used above before promoting it."
+      },
+      {
         "type": "scenario",
         "situation": "You have written a Cedar policy that forbids agents from reading production secrets outside business hours. It is your first Cedar policy and production traffic runs continuously.",
         "question": "How do you roll it out?",
@@ -504,6 +530,17 @@
         ],
         "correctIndex": 3,
         "explanation": "Cedar requires Team or above; OPA requires Business or above. On lower tiers the endpoints return a tier error."
+      },
+      {
+        "question": "A Cedar export from a policy preset comes back with residual_guardrails listing a $5000 daily cap. Why doesn't that cap appear as a value_gwei condition inside the Cedar text itself?",
+        "options": [
+          "Cedar does not support numeric comparisons",
+          "Converting a USD limit to a native-token amount needs a live price, and a price baked into the policy at write time would be silently wrong from that moment on",
+          "residual_guardrails is a display-only field with no real enforcement behind it",
+          "Dollar limits only apply to human-authored policies, not generated ones"
+        ],
+        "correctIndex": 1,
+        "explanation": "The compiler deliberately does not convert. The dollar limit stays enforced by the guardrail columns, where a live price is applied at evaluation time, and is repeated in residual_guardrails so a reader does not mistake the Cedar text alone for the complete policy."
       }
     ],
     "concepts": [
@@ -818,6 +855,24 @@
         "text": "Set execution_require_tee on the agent to force every execution through Shroud AND block the agent's direct secret reads outright. It is the strongest form of this pattern, but it requires execution_intents_enabled first."
       },
       {
+        "type": "prose",
+        "text": "The Stripe binding above was hand-configured: base URL, allowed hosts, allowed paths, all chosen by you. Connectors are the same binding for common providers with those three decisions already made. Installing Gmail, Slack, GitHub, Notion or Discord is one call instead of four, but the interesting part is what that call refuses to let you skip."
+      },
+      {
+        "type": "points",
+        "items": [
+          "The binding a connector install creates is scoped to that connector: gmail reaches gmail.googleapis.com/gmail/v1/ and nothing else, the same allowed_hosts and allowed_paths discipline you just configured by hand for Stripe.",
+          "That is the actual difference from a bare OAuth connection. An HTTP binding with no allowed_hosts has no host restriction, so a binding holding a user's Google token could be pointed anywhere; a connector's cannot.",
+          "Requested scopes may narrow a preset's list and may not extend it. A scope outside the preset is a 400, and so is dropping one the preset marks required.",
+          "Installed is not connected. A 201 means the binding exists; it holds no credential until the human finishes the OAuth round trip, and GET /v1/agents/{id}/connectors reports connected separately from installed."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Installing a connector is human-only, the same rule as everything else in this lesson with a high blast radius. An agent calling the install endpoint for itself gets a 403: giving an agent reach into a third-party account starts a flow that runs in a person's browser, not an agent's context."
+      },
+      {
         "type": "scenario",
         "situation": "A binding holds a partner API key inline. The partner rotates the credential on a schedule, and every rotation breaks your agent until someone updates the binding by hand. A colleague proposes storing the key in the vault and giving the agent read access to that path, so it can fetch the current value before each call.",
         "question": "What do you do?",
@@ -875,6 +930,17 @@
         ],
         "correctIndex": 3,
         "explanation": "It forces execution through the TEE and blocks direct secret reads by that agent, pushing it entirely onto bindings. It requires execution_intents_enabled to be on first."
+      },
+      {
+        "question": "You install the Gmail connector and request only the readonly scope, narrower than the preset's default list. What happens if you then try to widen it to a scope outside the preset entirely?",
+        "options": [
+          "It succeeds, since you already proved you can narrow the request",
+          "It returns 400. Requested scopes may narrow a preset's list but never extend it",
+          "It silently falls back to the preset's default scopes",
+          "It succeeds only on Business tier and above"
+        ],
+        "correctIndex": 1,
+        "explanation": "The reviewed scope list is what makes a one-click install different from a general OAuth initiator. Narrowing is always allowed; asking for anything the preset does not already cover is a 400."
       }
     ],
     "concepts": [

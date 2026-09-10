@@ -26,7 +26,7 @@
         "type": "steps",
         "steps": [
           {
-            "text": "Set your API key. Replace with your 1ck_ key from Settings \u2192 API Keys.",
+            "text": "Set your API key. Replace with your 1ck_ key from Settings → API Keys.",
             "code": "export TOKEN=1ck_your_key_here",
             "lang": "bash"
           },
@@ -926,6 +926,137 @@
         "trackId": "security-foundations",
         "lessonId": "zero-trust-and-least-privilege",
         "note": "the fleet API is narrower than the per-agent API on purpose"
+      }
+    ]
+  },
+  {
+    "id": "declarative-charts",
+    "title": "Declarative charts: provisioning that refuses more than it does",
+    "summary": "One YAML file describes a whole swarm. What 1claw apply will not do to reality is more interesting than what it will.",
+    "blocks": [
+      {
+        "type": "prose",
+        "text": "Every provisioning step in this course so far has been imperative: create this vault, then this agent, then this policy, one call at a time. 1claw apply takes a single file describing what you want, vaults, agents, policies, connectors, and reconciles reality toward it. If you have used Terraform or Kubernetes manifests, the shape is familiar. What is worth studying closely is not the YAML, it is the list of things apply is built to refuse."
+      },
+      {
+        "type": "steps",
+        "steps": [
+          {
+            "text": "See what a chart would change before it changes anything. This never writes.",
+            "code": "1claw diff -f chart.yaml",
+            "lang": "bash"
+          },
+          {
+            "text": "Apply it. Names in the chart are the reconcile keys: a second apply finds what the first one made by name, not by position.",
+            "code": "1claw apply -f chart.yaml",
+            "lang": "bash"
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "info",
+        "text": "Both diff and apply are human-only, POST /v1/org/apply/diff and POST /v1/org/apply, and both are server-side reconciliation, not client logic. A chart provisions agents, vaults and access policies, so an agent that could apply one could grant itself access to a vault it cannot currently read."
+      },
+      {
+        "type": "points",
+        "items": [
+          "It never deletes. A resource removed from the chart is left alone; there is no --prune. An apply that silently deletes is an apply nobody runs twice, and tearing down stays explicit and separate.",
+          "It skips anything edited outside the chart, naming the field that differs, rather than overwriting it. Someone changed it for a reason, and a reconciler that erases that reason at three in the morning is worse than one that does nothing.",
+          "It refuses guardrails outright. Transaction limits, host allowlists and approval policies are not chart fields; a reconciler that wrote them directly would be a way around the guardrail approval flow wearing a deployment tool's clothes.",
+          "It does not skip your org's approval gates. Apply calls the same handlers the API routes call, so a resource that needs consensus queues an approval exactly as a dashboard click would, and the rest of the chart still applies around it.",
+          "Unknown fields are errors, not warnings. A misspelled field that was silently dropped would report success while doing nothing you asked for, and the field's absence would be the only clue."
+        ]
+      },
+      {
+        "type": "callout",
+        "variant": "warn",
+        "text": "Renaming an agent in the chart does not rename the agent. It creates a new one under the new name and leaves the old one running, because apply reconciles by name and a changed name is, to the reconciler, a resource it has never seen before."
+      },
+      {
+        "type": "prose",
+        "text": "The drift detection needs a state file, .1claw/apply-state.json, which apply itself writes and reads. That file is what distinguishes \"someone edited this since I last applied\" from \"this existed before I ever ran\": a resource that predates your first apply is not drift, and treating it as such would make apply refuse to manage anything that already existed in your org."
+      },
+      {
+        "type": "prose",
+        "text": "This is the same rule fleet rollouts use for hand-edited agents, applied one layer up: a reconciler's job is to move reality toward the declared state, not to erase whatever a human did in between. The two features share that rule because it is the same failure mode either way, an automated tool overwriting a deliberate manual intervention because a file says otherwise."
+      },
+      {
+        "type": "audit",
+        "scenario": "A teammate proposes a --force flag for 1claw apply that would let a chart overwrite fields changed outside the chart, and a --prune flag that deletes any resource no longer listed, to make onboarding new environments faster.",
+        "tools": [
+          {
+            "name": "apply --force (proposed)",
+            "description": "Overwrites hand-edited fields to match the chart, bypassing the drift-skip.",
+            "circles": [
+              "private-data"
+            ],
+            "rationale": "It reaches every resource the chart describes and overwrites configuration a human changed for a reason, without that human being consulted again. That is a standing capability to silently erase manual interventions across a whole org's agents and policies, not a one-time convenience."
+          },
+          {
+            "name": "apply --prune (proposed)",
+            "description": "Deletes any resource not currently listed in the chart.",
+            "circles": [
+              "private-data",
+              "external-comms"
+            ],
+            "rationale": "Deleting a vault, agent or policy because a line was removed from a YAML file (accidentally or otherwise) destroys standing access and any credentials or bindings that depended on it, reachable by anyone who can edit the chart file, not only someone with direct API access."
+          },
+          {
+            "name": "1claw diff -f chart.yaml (existing)",
+            "description": "Reports what an apply would change, writing nothing.",
+            "circles": [],
+            "rationale": "A read with no side effects closes none of the three circles regardless of what the chart describes, because nothing is created, changed, or deleted by running it."
+          }
+        ],
+        "verdict": "Reject both flags as designed, for the same reason the real apply refuses guardrail edits: a deployment tool that can silently overwrite a deliberate manual fix, or delete a resource because a line vanished from a file, is a way around the org's actual controls wearing a convenience feature's clothes. If faster environment teardown is the real need, it belongs behind an explicit, separately-authorized teardown command that names what it is about to remove, not a flag on the tool that is supposed to only ever add and reconcile."
+      }
+    ],
+    "quiz": [
+      {
+        "question": "A chart removes an agent that was previously listed. What does the next apply do to that agent?",
+        "options": [
+          "Deletes it immediately",
+          "Deactivates it but preserves its audit trail",
+          "Leaves it alone; there is no --prune",
+          "Queues a deletion approval"
+        ],
+        "correctIndex": 2,
+        "explanation": "Apply never deletes. A resource removed from the chart is simply left alone; tearing something down stays a separate, explicit action."
+      },
+      {
+        "question": "An agent's system_prompt was changed by hand during an incident, outside any chart. What happens on the next apply of a chart that also sets system_prompt?",
+        "options": [
+          "The chart's value silently overwrites the hand edit",
+          "The apply fails entirely",
+          "The field is skipped and named as changed outside the chart; the hand edit is left alone",
+          "Both values are merged into one string"
+        ],
+        "correctIndex": 2,
+        "explanation": "Apply distinguishes drift (changed since the last apply) from a fresh resource using its own state file, and skips drifted fields rather than overwriting the reason someone changed them."
+      },
+      {
+        "question": "Why does 1claw apply refuse to change guardrail fields like tx_max_value directly, even when they're written into the chart?",
+        "options": [
+          "Guardrails cannot be expressed in YAML syntax",
+          "A reconciler writing guardrails directly would be a way around the guardrail approval flow every other edit to them requires",
+          "Guardrails are read-only in this API version",
+          "Charts are limited to five resource types"
+        ],
+        "correctIndex": 1,
+        "explanation": "Guardrail edits route through the approval flow specifically because they are privileged changes. A declarative tool that could set them directly would bypass that review entirely."
+      }
+    ],
+    "concepts": [
+      {
+        "trackId": "compliance-ops",
+        "lessonId": "fleet-management-at-scale",
+        "note": "the same hand-edits-are-skipped rule, one layer up"
+      },
+      {
+        "trackId": "security-foundations",
+        "lessonId": "zero-trust-and-least-privilege",
+        "note": "a tool that can provision access is scoped as tightly as the access itself"
       }
     ]
   },
