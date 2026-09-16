@@ -1,20 +1,68 @@
 {
   "redirects": [
     {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "1claw-academy.vercel.app" }],
-      "destination": "https://academy.1claw.co/:path*",
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "1claw-academy.vercel.app"
+        }
+      ],
+      "destination": "https://academy.1claw.co/",
       "permanent": true
     },
     {
       "source": "/:path*",
-      "has": [{ "type": "host", "value": "1claw-academy-kevinkevinjonescrs-projects.vercel.app" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "1claw-academy.vercel.app"
+        }
+      ],
       "destination": "https://academy.1claw.co/:path*",
       "permanent": true
     },
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "1claw-academy-kevinkevinjonescrs-projects.vercel.app"
+        }
+      ],
+      "destination": "https://academy.1claw.co/",
+      "permanent": true
+    },
+    {
       "source": "/:path*",
-      "has": [{ "type": "host", "value": "1claw-academy-git-main-kevinkevinjonescrs-projects.vercel.app" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "1claw-academy-kevinkevinjonescrs-projects.vercel.app"
+        }
+      ],
+      "destination": "https://academy.1claw.co/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "1claw-academy-git-main-kevinkevinjonescrs-projects.vercel.app"
+        }
+      ],
+      "destination": "https://academy.1claw.co/",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "1claw-academy-git-main-kevinkevinjonescrs-projects.vercel.app"
+        }
+      ],
       "destination": "https://academy.1claw.co/:path*",
       "permanent": true
     }
